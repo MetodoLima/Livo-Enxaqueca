@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="theme-color" content="#0a0a12"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<title>Livo teste</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@300;400&display=swap" rel="stylesheet">
+<style>
+/* ── Reset & tokens ─────────────────────────────────────────── */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+  --bg:        #080810;
+  --surface:   #10101e;
+  --surface2:  #181828;
+  --border:    rgba(120,100,255,.18);
+  --accent:    #7c5cff;
+  --accent2:   #c45cff;
+  --danger:    #ff4f6a;
+  --ok:        #3effb8;
+  --text:      #e8e4ff;
+  --muted:     #7a748e;
+  --ff-head:   'Syne', sans-serif;
+  --ff-mono:   'DM Mono', monospace;
+  --r:         16px;
+  --r-lg:      24px;
+}
+
+html, body {
+  height: 100%; width: 100%;
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--ff-head);
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ── Noise overlay ──────────────────────────────────────────── */
+body::before {
+  content: '';
+  position: fixed; inset: 0; z-index: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+}
+
+/* ── Ambient glow ───────────────────────────────────────────── */
+.glow-bg {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background:
+    radial-gradient(ellipse 60% 40% at 30% 20%, rgba(124,92,255,.12) 0%, transparent 70%),
+    radial-gradient(ellipse 50% 35% at 75% 80%, rgba(196,92,255,.08) 0%, transparent 70%);
+}
+
+/* ── Layout ─────────────────────────────────────────────────── */
+.app {
+  position: relative; z-index: 1;
+  min-height: 100dvh;
+  display: flex; flex-direction: column;
+  padding: env(safe-area-inset-top, 12px) 20px env(safe-area-inset-bottom, 24px);
+  max-width: 480px; margin: 0 auto;
+}
+
+/* ── Header ─────────────────────────────────────────────────── */
+header {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 18px 0 12px;
+}
+.logo {
+  display: flex; align-items: center; gap: 10px;
+}
+.logo-icon {
+  width: 36px; height: 36px;
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border-radius: 10px;
+  display: grid; place-items: center;
+  font-size: 18px;
+}
+.logo-text { font-size: 17px; font-weight: 700; letter-spacing: -.3px; }
+.logo-sub  { font-size: 11px; color: var(--muted); font-weight: 400; }
+
+.status-dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--muted);
+  box-shadow: 0 0 0 0 transparent;
+  transition: background .3s, box-shadow .3s;
+}
+.status-dot.ok      { background: var(--ok);    box-shadow: 0 0 8px var(--ok); }
+.status-dot.error   { background: var(--danger); box-shadow: 0 0 8px var(--danger); }
+.status-dot.pulsing { animation: pulse-dot 1.2s ease-in-out infinite; }
+
+@keyframes pulse-dot {
+  0%,100% { opacity:1; transform:scale(1); }
+  50%      { opacity:.4; transform:scale(.7); }
+}
+
+/* ── Hero record button ─────────────────────────────────────── */
+.record-section {
+  flex: 1; display: flex; flex-direction: column;
+  align-items: center; justify-content: center;
+  gap: 28px; padding: 20px 0 10px;
+}
+
+.record-btn-wrap {
+  position: relative; display: grid; place-items: center;
+}
+
+/* ripple rings */
+.ring {
+  position: absolute; border-radius: 50%;
+  border: 1.5px solid var(--accent);
+  opacity: 0;
+  pointer-events: none;
+}
+.ring-1 { width: 140px; height: 140px; }
+.ring-2 { width: 180px; height: 180px; }
+.ring-3 { width: 220px; height: 220px; }
+
+.recording .ring-1 { animation: ripple 1.6s ease-out infinite; }
+.recording .ring-2 { animation: ripple 1.6s ease-out .4s infinite; }
+.recording .ring-3 { animation: ripple 1.6s ease-out .8s infinite; }
+
+@keyframes ripple {
+  0%   { opacity: .5; transform: scale(.85); }
+  100% { opacity: 0;  transform: scale(1.1); }
+}
+
+.record-btn {
+  position: relative; z-index: 1;
+  width: 110px; height: 110px; border-radius: 50%; border: none;
+  background: linear-gradient(145deg, var(--accent), var(--accent2));
+  cursor: pointer;
+  display: grid; place-items: center;
+  box-shadow: 0 0 0 6px rgba(124,92,255,.15), 0 12px 40px rgba(124,92,255,.4);
+  transition: transform .15s, box-shadow .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.record-btn:active { transform: scale(.93); }
+.record-btn.recording {
+  background: linear-gradient(145deg, var(--danger), #ff8c4a);
+  box-shadow: 0 0 0 6px rgba(255,79,106,.15), 0 12px 40px rgba(255,79,106,.4);
+}
+
+.record-icon {
+  width: 36px; height: 36px; transition: all .2s;
+}
+
+.state-label {
+  font-size: 14px; font-weight: 600; letter-spacing: .5px;
+  color: var(--muted); text-transform: uppercase;
+  transition: color .3s;
+}
+.state-label.active { color: var(--danger); }
+
+/* ── Timer ──────────────────────────────────────────────────── */
+.timer {
+  font-family: var(--ff-mono);
+  font-size: 42px; font-weight: 300;
+  letter-spacing: 2px; color: var(--text);
+  opacity: 0; transform: translateY(6px);
+  transition: opacity .3s, transform .3s;
+}
+.timer.visible { opacity: 1; transform: none; }
+
+/* ── Waveform ────────────────────────────────────────────────── */
+.waveform {
+  display: flex; align-items: center; gap: 3px;
+  height: 40px; opacity: 0; transition: opacity .3s;
+}
+.waveform.visible { opacity: 1; }
+.wave-bar {
+  width: 3px; border-radius: 2px;
+  background: linear-gradient(to top, var(--accent), var(--accent2));
+  height: 6px;
+  animation: none;
+}
+.waveform.active .wave-bar {
+  animation: wave-anim .8s ease-in-out infinite alternate;
+}
+.wave-bar:nth-child(1)  { animation-delay: 0s; }
+.wave-bar:nth-child(2)  { animation-delay: .07s; }
+.wave-bar:nth-child(3)  { animation-delay: .14s; }
+.wave-bar:nth-child(4)  { animation-delay: .21s; }
+.wave-bar:nth-child(5)  { animation-delay: .28s; }
+.wave-bar:nth-child(6)  { animation-delay: .35s; }
+.wave-bar:nth-child(7)  { animation-delay: .42s; }
+.wave-bar:nth-child(8)  { animation-delay: .49s; }
+.wave-bar:nth-child(9)  { animation-delay: .56s; }
+.wave-bar:nth-child(10) { animation-delay: .63s; }
+.wave-bar:nth-child(11) { animation-delay: .70s; }
+.wave-bar:nth-child(12) { animation-delay: .77s; }
+
+@keyframes wave-anim {
+  0%   { height: 4px; }
+  100% { height: 28px; }
+}
+
+/* ── Hint ────────────────────────────────────────────────────── */
+.hint {
+  text-align: center; font-size: 13px; color: var(--muted);
+  line-height: 1.6; max-width: 280px;
+  padding: 12px 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  background: rgba(255,255,255,.02);
+}
+.hint strong { color: var(--text); font-weight: 600; }
+
+/* ── Processing overlay ─────────────────────────────────────── */
+.processing-overlay {
+  display: none; position: fixed; inset: 0; z-index: 50;
+  background: rgba(8,8,16,.85);
+  backdrop-filter: blur(12px);
+  flex-direction: column; align-items: center; justify-content: center;
+  gap: 20px;
+}
+.processing-overlay.visible { display: flex; }
+
+.spinner {
+  width: 52px; height: 52px;
+  border: 3px solid var(--border);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+@keyframes spin { to { transform: rotate(360deg); } }
+
+.processing-label {
+  font-size: 15px; color: var(--muted); font-weight: 500;
+  font-family: var(--ff-mono);
+}
+
+/* ── Result panel ───────────────────────────────────────────── */
+.result-panel {
+  display: none; flex-direction: column; gap: 16px;
+  animation: slide-up .35s ease;
+}
+.result-panel.visible { display: flex; }
+
+@keyframes slide-up {
+  from { opacity:0; transform: translateY(20px); }
+  to   { opacity:1; transform: none; }
+}
+
+.panel-header {
+  display: flex; align-items: center; justify-content: space-between;
+}
+.panel-title { font-size: 18px; font-weight: 700; }
+.badge {
+  font-size: 11px; font-weight: 600; letter-spacing: .5px;
+  padding: 4px 10px; border-radius: 20px; text-transform: uppercase;
+}
+.badge.ok { background: rgba(62,255,184,.15); color: var(--ok); }
+
+/* ── Transcript ─────────────────────────────────────────────── */
+.transcript-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px;
+}
+.box-label {
+  font-size: 10px; letter-spacing: 1px; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 8px; font-weight: 600;
+}
+.transcript-text {
+  font-size: 14px; line-height: 1.7;
+  color: var(--text); font-style: italic;
+}
+
+/* ── Data grid ───────────────────────────────────────────────── */
+.data-grid {
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.data-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 14px;
+}
+.data-card.full { grid-column: 1 / -1; }
+.data-card .label {
+  font-size: 10px; letter-spacing: .8px; text-transform: uppercase;
+  color: var(--muted); margin-bottom: 6px; font-weight: 600;
+}
+.data-card .value {
+  font-size: 20px; font-weight: 700; color: var(--text);
+}
+.data-card .value.small { font-size: 14px; font-weight: 500; line-height: 1.5; }
+
+/* pain meter */
+.pain-meter {
+  display: flex; align-items: center; gap: 8px; margin-top: 4px;
+}
+.pain-bar-bg {
+  flex: 1; height: 6px; border-radius: 3px;
+  background: var(--surface2);
+  overflow: hidden;
+}
+.pain-bar-fill {
+  height: 100%; border-radius: 3px;
+  background: linear-gradient(to right, var(--ok), var(--accent), var(--danger));
+  transition: width .6s cubic-bezier(.34,1.56,.64,1);
+}
+.pain-num {
+  font-family: var(--ff-mono); font-size: 13px; color: var(--muted);
+  min-width: 28px; text-align: right;
+}
+
+/* symptom chips */
+.chip-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 2px; }
+.chip {
+  font-size: 11px; font-weight: 600; padding: 4px 10px;
+  border-radius: 20px; letter-spacing: .3px;
+}
+.chip.active  { background: rgba(124,92,255,.2); color: #b39cff; border: 1px solid rgba(124,92,255,.3); }
+.chip.inactive{ background: rgba(255,255,255,.04); color: var(--muted); border: 1px solid var(--border); text-decoration: line-through; }
+
+/* ── JSON raw toggle ─────────────────────────────────────────── */
+.json-toggle {
+  background: none; border: 1px solid var(--border);
+  color: var(--muted); font-family: var(--ff-mono);
+  font-size: 12px; padding: 8px 16px; border-radius: var(--r);
+  cursor: pointer; width: 100%; transition: all .2s;
+}
+.json-toggle:hover { border-color: var(--accent); color: var(--text); }
+
+.json-box {
+  display: none;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r);
+  padding: 16px; overflow-x: auto;
+}
+.json-box.visible { display: block; }
+.json-box pre {
+  font-family: var(--ff-mono); font-size: 11px;
+  color: #9d91cc; line-height: 1.8; white-space: pre-wrap;
+}
+
+/* ── New recording button ────────────────────────────────────── */
+.new-btn {
+  background: linear-gradient(135deg, var(--accent), var(--accent2));
+  border: none; border-radius: var(--r);
+  color: #fff; font-family: var(--ff-head);
+  font-size: 15px; font-weight: 700;
+  padding: 16px; cursor: pointer;
+  letter-spacing: .3px; transition: opacity .2s, transform .15s;
+  -webkit-tap-highlight-color: transparent;
+}
+.new-btn:active { opacity: .85; transform: scale(.98); }
+
+/* ── Error banner ────────────────────────────────────────────── */
+.error-banner {
+  display: none; align-items: center; gap: 10px;
+  background: rgba(255,79,106,.12);
+  border: 1px solid rgba(255,79,106,.3);
+  border-radius: var(--r); padding: 14px 16px;
+  font-size: 13px; color: #ff8fa0;
+}
+.error-banner.visible { display: flex; }
+
+/* ── Scrollable content area ─────────────────────────────────── */
+.scroll-area {
+  flex: 1; overflow-y: auto; padding-bottom: 20px;
+  display: flex; flex-direction: column; gap: 0;
+}
+.scroll-area::-webkit-scrollbar { display: none; }
+
+/* ── Text input ──────────────────────────────────────────────── */
+.text-fallback {
+  display: flex; flex-direction: column; gap: 8px;
+}
+.text-fallback.hidden { display: none; }
+.text-input {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--r); padding: 14px;
+  color: var(--text); font-family: var(--ff-head);
+  font-size: 14px; resize: none; min-height: 100px;
+  line-height: 1.6; outline: none;
+  transition: border-color .2s;
+}
+.text-input:focus { border-color: var(--accent); }
+.text-input::placeholder { color: var(--muted); }
+
+.send-btn {
+  background: var(--surface2);
+  border: 1px solid var(--accent);
+  border-radius: var(--r); padding: 13px;
+  color: var(--accent); font-family: var(--ff-head);
+  font-size: 14px; font-weight: 600; cursor: pointer;
+  transition: background .2s;
+}
+.send-btn:hover { background: rgba(124,92,255,.15); }
+
+/* ── Severity colors ─────────────────────────────────────────── */
+.sev-leve     { color: var(--ok) !important; }
+.sev-moderado { color: #ffb940 !important; }
+.sev-severo   { color: var(--danger) !important; }
+
+/* ── Divider ─────────────────────────────────────────────────── */
+hr.divider {
+  border: none; border-top: 1px solid var(--border);
+  margin: 4px 0;
+}
+
+/* ── Footer ──────────────────────────────────────────────────── */
+footer {
+  text-align: center; font-size: 11px;
+  color: var(--muted); padding: 8px 0 4px;
+}
+footer span { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="glow-bg"></div>
+
+<!-- Processing overlay -->
+<div class="processing-overlay" id="processingOverlay">
+  <div class="spinner"></div>
+  <div class="processing-label" id="processingLabel">transcrevendo...</div>
+</div>
+
+<div class="app">
+  <header>
+    <div class="logo">
+      <div class="logo-icon">🧠</div>
+      <div>
+        <div class="logo-text">Livo teste</div>
+        <div class="logo-sub">registro por voz</div>
+      </div>
+    </div>
+    <div id="statusDot" class="status-dot" title="status do servidor"></div>
+  </header>
+
+  <div class="scroll-area">
+
+    <!-- Record section -->
+    <div class="record-section" id="recordSection">
+      <div class="record-btn-wrap" id="btnWrap">
+        <div class="ring ring-1"></div>
+        <div class="ring ring-2"></div>
+        <div class="ring ring-3"></div>
+        <button class="record-btn" id="recordBtn" onclick="toggleRecord()">
+          <!-- mic icon -->
+          <svg class="record-icon" id="micIcon" viewBox="0 0 24 24" fill="none"
+               xmlns="http://www.w3.org/2000/svg">
+            <rect x="9" y="2" width="6" height="12" rx="3"
+                  fill="rgba(255,255,255,.95)"/>
+            <path d="M5 11a7 7 0 0 0 14 0" stroke="rgba(255,255,255,.95)"
+                  stroke-width="1.8" stroke-linecap="round" fill="none"/>
+            <line x1="12" y1="18" x2="12" y2="22"
+                  stroke="rgba(255,255,255,.95)" stroke-width="1.8" stroke-linecap="round"/>
+            <line x1="9" y1="22" x2="15" y2="22"
+                  stroke="rgba(255,255,255,.95)" stroke-width="1.8" stroke-linecap="round"/>
+          </svg>
+          <!-- stop icon (hidden) -->
+          <svg class="record-icon" id="stopIcon" viewBox="0 0 24 24" fill="none"
+               xmlns="http://www.w3.org/2000/svg" style="display:none">
+            <rect x="6" y="6" width="12" height="12" rx="2"
+                  fill="rgba(255,255,255,.95)"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="waveform" id="waveform">
+        <div class="wave-bar"></div><div class="wave-bar"></div>
+        <div class="wave-bar"></div><div class="wave-bar"></div>
+        <div class="wave-bar"></div><div class="wave-bar"></div>
+        <div class="wave-bar"></div><div class="wave-bar"></div>
+        <div class="wave-bar"></div><div class="wave-bar"></div>
+        <div class="wave-bar"></div><div class="wave-bar"></div>
+      </div>
+
+      <div class="timer" id="timer">00:00</div>
+
+      <div class="state-label" id="stateLabel">Toque para gravar</div>
+
+      <div class="hint" id="hint">
+        <strong>Fale naturalmente.</strong><br>
+        Descreva sua dor, localização, sintomas como náusea, fotofobia e há quanto tempo começou.
+      </div>
+
+      <!-- Text input (always visible) -->
+      <hr class="divider" style="margin: 8px 0; width: 100%;">
+      <div class="text-fallback" id="textFallback">
+        <div class="box-label">Ou descreva por texto</div>
+        <textarea class="text-input" id="textInput"
+          placeholder="Ex: Dor forte na têmpora direita há 2 horas, latejante, com náusea e sensibilidade à luz..."></textarea>
+        <button class="send-btn" onclick="sendText()">Analisar texto →</button>
+      </div>
+    </div>
+
+    <!-- Error banner -->
+    <div class="error-banner" id="errorBanner">
+      <span>⚠️</span>
+      <span id="errorMsg">Erro desconhecido.</span>
+    </div>
+
+    <!-- Result panel -->
+    <div class="result-panel" id="resultPanel">
+      <div class="panel-header">
+        <div class="panel-title">Registro capturado</div>
+        <div class="badge ok">✓ processado</div>
+      </div>
+
+      <div class="transcript-box">
+        <div class="box-label">Transcrição</div>
+        <div class="transcript-text" id="transcriptText">—</div>
+      </div>
+
+      <div class="data-grid">
+        <!-- Intensidade -->
+        <div class="data-card full">
+          <div class="label">Intensidade da dor</div>
+          <div class="pain-meter">
+            <div class="pain-bar-bg">
+              <div class="pain-bar-fill" id="painBar" style="width:0%"></div>
+            </div>
+            <div class="pain-num" id="painNum">—</div>
+          </div>
+        </div>
+
+        <!-- Localização -->
+        <div class="data-card">
+          <div class="label">Localização</div>
+          <div class="value small" id="locValue">—</div>
+        </div>
+
+        <!-- Lado -->
+        <div class="data-card">
+          <div class="label">Lado</div>
+          <div class="value small" id="sideValue">—</div>
+        </div>
+
+        <!-- Severidade -->
+        <div class="data-card">
+          <div class="label">Incapacidade</div>
+          <div class="value small" id="sevValue">—</div>
+        </div>
+
+        <!-- Início -->
+        <div class="data-card">
+          <div class="label">Início</div>
+          <div class="value small" id="onsetValue">—</div>
+        </div>
+
+        <!-- Sintomas -->
+        <div class="data-card full">
+          <div class="label">Sintomas associados</div>
+          <div class="chip-list" id="symptomsChips"></div>
+        </div>
+
+        <!-- Medicamentos -->
+        <div class="data-card full" id="medsCard">
+          <div class="label">Medicamentos tomados</div>
+          <div class="value small" id="medsValue">—</div>
+        </div>
+
+        <!-- Resumo -->
+        <div class="data-card full">
+          <div class="label">Resumo do episódio</div>
+          <div class="value small" id="resumoValue">—</div>
+        </div>
+      </div>
+
+      <button class="json-toggle" onclick="toggleJson()">{ ver JSON bruto }</button>
+      <div class="json-box" id="jsonBox">
+        <pre id="jsonPre"></pre>
+      </div>
+
+      <button class="new-btn" onclick="resetApp()">+ Nova gravação</button>
+    </div>
+
+  </div><!-- end scroll-area -->
+
+  <footer>
+    IA local · <span>Whisper</span> + <span>Ollama</span>
+  </footer>
+</div>
+
+<script>
+/* ── State ──────────────────────────────────────────────────── */
+const API = window.location.origin; // same origin as backend
+let mediaRecorder = null;
+let audioChunks   = [];
+let timerInterval = null;
+let seconds       = 0;
+let isRecording   = false;
+
+/* ── DOM refs ───────────────────────────────────────────────── */
+const recordBtn      = document.getElementById('recordBtn');
+const btnWrap        = document.getElementById('btnWrap');
+const micIcon        = document.getElementById('micIcon');
+const stopIcon       = document.getElementById('stopIcon');
+const stateLabel     = document.getElementById('stateLabel');
+const timerEl        = document.getElementById('timer');
+const waveform       = document.getElementById('waveform');
+const hint           = document.getElementById('hint');
+const processingOvl  = document.getElementById('processingOverlay');
+const processingLbl  = document.getElementById('processingLabel');
+const statusDot      = document.getElementById('statusDot');
+const errorBanner    = document.getElementById('errorBanner');
+const errorMsg       = document.getElementById('errorMsg');
+const resultPanel    = document.getElementById('resultPanel');
+const recordSection  = document.getElementById('recordSection');
+const textFallback   = document.getElementById('textFallback');
+
+/* ── Health check ───────────────────────────────────────────── */
+async function checkHealth() {
+  try {
+    const r = await fetch(`${API}/api/health`);
+    const d = await r.json();
+    statusDot.className = 'status-dot ' + ((d.ollama || d.whisper) ? 'ok' : 'error');
+    statusDot.title = `Ollama: ${d.ollama ? '✓' : '✗'}  Whisper: ${d.whisper ? '✓' : '✗'}`;
+  } catch {
+    statusDot.className = 'status-dot error';
+    statusDot.title = 'Servidor offline';
+  }
+}
+checkHealth();
+setInterval(checkHealth, 30000);
+
+/* ── Timer ──────────────────────────────────────────────────── */
+function pad(n) { return String(n).padStart(2, '0'); }
+function startTimer() {
+  seconds = 0;
+  timerEl.textContent = '00:00';
+  timerEl.classList.add('visible');
+  timerInterval = setInterval(() => {
+    seconds++;
+    timerEl.textContent = `${pad(Math.floor(seconds/60))}:${pad(seconds%60)}`;
+  }, 1000);
+}
+function stopTimer() {
+  clearInterval(timerInterval);
+  timerEl.classList.remove('visible');
+}
+
+/* ── Record toggle ──────────────────────────────────────────── */
+async function toggleRecord() {
+  if (!isRecording) await startRecording();
+  else               stopRecording();
+}
+
+async function startRecording() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    mediaRecorder = new MediaRecorder(stream, { mimeType: getBestMime() });
+    audioChunks = [];
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) audioChunks.push(e.data); };
+    mediaRecorder.onstop = () => { stream.getTracks().forEach(t => t.stop()); processAudio(); };
+    mediaRecorder.start();
+    isRecording = true;
+    setRecordingUI(true);
+    startTimer();
+  } catch (err) {
+    if (err.name === 'NotAllowedError') showError('Permissão de microfone negada. Libere o acesso e tente novamente.');
+    else { showError(`Microfone indisponível: ${err.message}`); }
+  }
+}
+
+function stopRecording() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') mediaRecorder.stop();
+  isRecording = false;
+  setRecordingUI(false);
+  stopTimer();
+}
+
+function getBestMime() {
+  for (const t of ['audio/webm;codecs=opus','audio/webm','audio/ogg','audio/mp4']) {
+    if (MediaRecorder.isTypeSupported(t)) return t;
+  }
+  return '';
+}
+
+function setRecordingUI(recording) {
+  recordBtn.classList.toggle('recording', recording);
+  btnWrap.classList.toggle('recording', recording);
+  micIcon.style.display   = recording ? 'none'   : 'block';
+  stopIcon.style.display  = recording ? 'block'  : 'none';
+  stateLabel.textContent  = recording ? 'Gravando... toque para parar' : 'Toque para gravar';
+  stateLabel.classList.toggle('active', recording);
+  waveform.classList.toggle('visible', recording);
+  waveform.classList.toggle('active', recording);
+  hint.style.opacity = recording ? '0' : '1';
+}
+
+/* ── Process audio ──────────────────────────────────────────── */
+async function processAudio() {
+  if (!audioChunks.length) return;
+  showProcessing('transcrevendo com Whisper...');
+
+  const blob = new Blob(audioChunks, { type: mediaRecorder.mimeType || 'audio/webm' });
+  const ext  = (mediaRecorder.mimeType || '').includes('ogg') ? '.ogg' : '.webm';
+  const fd   = new FormData();
+  fd.append('file', blob, `gravacao${ext}`);
+
+  try {
+    processingLbl.textContent = 'analisando com IA...';
+    const r = await fetch(`${API}/api/process-audio`, { method: 'POST', body: fd });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'Erro no servidor');
+    hideProcessing();
+    showResult(d);
+  } catch (err) {
+    hideProcessing();
+    showError(`Falha no processamento: ${err.message}`);
+  }
+}
+
+/* ── Text fallback ──────────────────────────────────────────── */
+async function sendText() {
+  const text = document.getElementById('textInput').value.trim();
+  if (!text) return;
+  showProcessing('analisando com IA...');
+  try {
+    const r = await fetch(`${API}/api/process-text`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text })
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.detail || 'Erro no servidor');
+    hideProcessing();
+    showResult(d);
+  } catch (err) {
+    hideProcessing();
+    showError(`Falha: ${err.message}`);
+  }
+}
+
+/* ── Processing overlay ─────────────────────────────────────── */
+function showProcessing(label) {
+  processingLbl.textContent = label;
+  processingOvl.classList.add('visible');
+  statusDot.classList.add('pulsing');
+}
+function hideProcessing() {
+  processingOvl.classList.remove('visible');
+  statusDot.classList.remove('pulsing');
+}
+
+/* ── Render result ──────────────────────────────────────────── */
+function showResult(data) {
+  const s = data.structured || {};
+
+  document.getElementById('transcriptText').textContent = data.transcript || '—';
+
+  // Pain
+  const pain = s.intensidade_dor;
+  document.getElementById('painBar').style.width  = pain != null ? `${pain*10}%` : '0%';
+  document.getElementById('painNum').textContent  = pain != null ? `${pain}/10` : '—';
+
+  document.getElementById('locValue').textContent   = capitalize(s.localizacao) || '—';
+  document.getElementById('sideValue').textContent  = capitalize(s.lado)        || '—';
+  document.getElementById('onsetValue').textContent = s.inicio_estimado         || '—';
+  document.getElementById('resumoValue').textContent= s.resumo                  || '—';
+
+  const sevEl = document.getElementById('sevValue');
+  sevEl.textContent = capitalize(s.nivel_incapacidade) || '—';
+  sevEl.className = 'value small sev-' + (s.nivel_incapacidade || '');
+
+  // Symptoms
+  const chips  = document.getElementById('symptomsChips');
+  chips.innerHTML = '';
+  const sym = s.sintomas_associados || {};
+  const map = { nausea:'Náusea', vomito:'Vômito', fotofobia:'Fotofobia',
+                fonofobia:'Fonofobia', aura:'Aura', tontura:'Tontura' };
+  Object.entries(map).forEach(([k,v]) => {
+    const chip = document.createElement('span');
+    chip.className = 'chip ' + (sym[k] ? 'active' : 'inactive');
+    chip.textContent = v;
+    chips.appendChild(chip);
+  });
+  (sym.outros || []).forEach(o => {
+    const chip = document.createElement('span');
+    chip.className = 'chip active';
+    chip.textContent = o;
+    chips.appendChild(chip);
+  });
+
+  // Meds
+  const meds = (s.medicamentos_tomados || []);
+  document.getElementById('medsValue').textContent = meds.length ? meds.join(', ') : 'Nenhum informado';
+
+  // JSON raw
+  document.getElementById('jsonPre').textContent = JSON.stringify(s, null, 2);
+
+  recordSection.style.display = 'none';
+  errorBanner.classList.remove('visible');
+  resultPanel.classList.add('visible');
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+
+function toggleJson() {
+  document.getElementById('jsonBox').classList.toggle('visible');
+}
+
+/* ── Error ──────────────────────────────────────────────────── */
+function showError(msg) {
+  errorMsg.textContent = msg;
+  errorBanner.classList.add('visible');
+}
+
+/* ── Reset ──────────────────────────────────────────────────── */
+function resetApp() {
+  resultPanel.classList.remove('visible');
+  recordSection.style.display = '';
+  errorBanner.classList.remove('visible');
+  document.getElementById('textInput').value = '';
+  document.getElementById('jsonBox').classList.remove('visible');
+  audioChunks = [];
+}
+
+/* ── Helpers ─────────────────────────────────────────────────── */
+function capitalize(s) {
+  if (!s) return s;
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+</script>
+</body>
+</html>
