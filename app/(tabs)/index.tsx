@@ -114,7 +114,7 @@ export default function HomeScreen() {
                   <Text className="text-muted text-sm font-epilogue">3 dias consecutivos sem crises</Text>
                 </View>
               </View>
-              <Link href="/emergency" asChild>
+              <Link href="/record-crisis" asChild>
                 <TouchableOpacity className="mt-6 bg-accent py-4 rounded-2xl flex-row items-center justify-center">
                   <Zap size={18} color="white" fill="white" />
                   <Text className="text-white ml-2 font-epilogue-bold">Registrar Crise</Text>

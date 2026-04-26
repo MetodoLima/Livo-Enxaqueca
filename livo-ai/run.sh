@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 # ────────────────────────────────────────────────────────────────
-#  script de setup e execução (refatorado)
 #  Uso: bash run.sh [start|setup|whisper-server|check|download-whisper]
 # ────────────────────────────────────────────────────────────────
 set -e
@@ -125,9 +124,9 @@ start_server() {
 
   echo ""
   echo -e "${BOLD}  ┌─────────────────────────────────────┐${NC}"
-  echo -e "${BOLD}  │   🧠  MigraineLog MVP               │${NC}"
-  echo -e "${BOLD}  │   App:  http://localhost:8000      │${NC}"
-  echo -e "${BOLD}  │   Docs: http://localhost:8000/docs │${NC}"
+  echo -e "${BOLD}  │             Livo MVP                │${NC}"
+  echo -e "${BOLD}  │   App:  http://localhost:8000       │${NC}"
+  echo -e "${BOLD}  │   Docs: http://localhost:8000/docs  │${NC}"
   echo -e "${BOLD}  └─────────────────────────────────────┘${NC}"
   echo ""
 

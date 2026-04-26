@@ -34,7 +34,7 @@ WHISPER_CLI   = os.getenv("WHISPER_CLI",   "whisper-cli")
 
 
 async def transcribe_via_server(audio_bytes: bytes, filename: str) -> str:
-    # Converte para WAV usando ffmpeg (necessário: apt install ffmpeg)
+    # Converte para WAV 
     suffix = os.path.splitext(filename)[1] or ".webm"
     
     with tempfile.NamedTemporaryFile(suffix=suffix, delete=False) as f_in:
