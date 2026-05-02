@@ -21,7 +21,7 @@ export {
 } from 'expo-router';
 
 export const unstable_settings = {
-  initialRouteName: '(tabs)',
+  initialRouteName: '(tabs)', // caso seja necessário testar o setup troque '(tabs)' para '(setup)'
 };
 
 SplashScreen.preventAutoHideAsync();
@@ -59,13 +59,13 @@ export default function RootLayout() {
     return null;
   }
 
-  return (
-    <ThemeProvider value={LivoTheme}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+  return (                 
+    <ThemeProvider value={LivoTheme}> 
+      <Stack> 
+        <Stack.Screen name="(tabs)" options={{ headerShown: false }} /> 
         <Stack.Screen name="emergency" options={{ presentation: 'modal', headerShown: false }} />
         <Stack.Screen name="record-crisis" options={{ presentation: 'modal', headerShown: false }} />
       </Stack>
     </ThemeProvider>
   );
-}
+}  //caso necessário testar o setup adicionar "<Stack.Screen name ="(setup)" options={{headerShown: false}} />" nos stacks 
