@@ -6,66 +6,62 @@ import {
   ScrollView,
   StatusBar,
 } from 'react-native';
-import { router } from 'expo-router';
+import { router, useLocalSearchParams } from 'expo-router';
 
 
 
-type OptionValue = '2' | '7' | '12' | '16' | 'unknown';
+type MealFrequency = 'regular' | 'fasting' | 'irregular' | null;
 
 interface Option {
-  value: OptionValue;
+  value: MealFrequency;
   label: string;
   sublabel: string;
-  userType: 'episodic' | 'chronic' | null;
+  emoji: string;
+  risk: 'low' | 'medium' | 'high';
   color: string;
+  feedback: string;
 }
 
 
 
 const TOTAL_STEPS = 9;
-const CURRENT_STEP = 1;
+const CURRENT_STEP = 5;
 
 const OPTIONS: Option[] = [
   {
-    value: '2',
-    label: '1 – 4 dias',
-    sublabel: 'Raramente',
-    userType: 'episodic',
+    value: 'regular',
+    label: 'Regular',
+    sublabel: 'Como a cada 3h aproximadamente',
+    emoji: '🍽️',
+    risk: 'low',
     color: '#00BFA5',
+    feedback: 'Ótimo hábito. Manter a glicemia estável reduz bastante o risco de crises.',
   },
   {
-    value: '7',
-    label: '5 – 9 dias',
-    sublabel: 'Às vezes',
-    userType: 'episodic',
-    color: '#00BFA5',
-  },
-  {
-    value: '12',
-    label: '10 – 14 dias',
-    sublabel: 'Com frequência',
-    userType: 'episodic',
-    color: '#F5A623',
-  },
-  {
-    value: '16',
-    label: '15 dias ou mais',
-    sublabel: 'Quase todo dia',
-    userType: 'chronic',
+    value: 'fasting',
+    label: 'Longos períodos de jejum',
+    sublabel: 'Fico muitas horas sem comer',
+    emoji: '⏳',
+    risk: 'high',
     color: '#E85D75',
+    feedback: 'O jejum prolongado é um dos principais gatilhos metabólicos de enxaqueca.',
   },
   {
-    value: 'unknown',
-    label: 'Não sei',
-    sublabel: 'Posso descobrir depois',
-    userType: null,
-    color: '#4A6A82',
+    value: 'irregular',
+    label: 'Irregular',
+    sublabel: 'Varia bastante de dia para dia',
+    emoji: '🎲',
+    risk: 'medium',
+    color: '#F5A623',
+    feedback: 'Irregularidade nas refeições pode desestabilizar a glicemia e provocar crises.',
   },
 ];
 
 
-export default function Step1Fenotipagem() {
-  const [selected, setSelected] = useState<OptionValue | null>(null);
+
+export default function Step5Jejum() {
+  const params = useLocalSearchParams();
+  const [selected, setSelected] = useState<MealFrequency>(null);
 
   const selectedOption = OPTIONS.find((o) => o.value === selected) ?? null;
   const isValid = selected !== null;
@@ -74,10 +70,10 @@ export default function Step1Fenotipagem() {
     if (!isValid || !selectedOption) return;
 
      router.push({
-       pathname: '/(setup)/step2',
+       pathname: '/(setup)/step6',
        params: {
-         frequency: selectedOption.value,
-         userType: selectedOption.userType ?? 'unknown',
+         ...params,
+         mealFrequency: selected,
        },
      });
   }
@@ -119,7 +115,7 @@ export default function Step1Fenotipagem() {
               marginBottom: 8,
             }}
           >
-            Passo {CURRENT_STEP} de {TOTAL_STEPS} · Fenotipagem
+            Passo {CURRENT_STEP} de {TOTAL_STEPS} · Gatilhos Alimentares
           </Text>
 
           {/* Título */}
@@ -132,18 +128,18 @@ export default function Step1Fenotipagem() {
               marginBottom: 8,
             }}
           >
-            Com que frequência você tem crises?
+            Qual a frequência das suas refeições?
           </Text>
 
           {/* Subtítulo */}
           <Text style={{ fontSize: 15, color: '#7A99B2', lineHeight: 22 }}>
-            Pense nos últimos 3 meses. Inclua dias com dor leve ou moderada também.
+            O jejum é um dos principais gatilhos metabólicos de enxaqueca. Queremos entender seu padrão.
           </Text>
         </View>
 
-        {/* ── Badge de classificação (aparece ao selecionar) ── */}
-        <View style={{ paddingHorizontal: 24, marginTop: 20, minHeight: 48 }}>
-          {selectedOption && selectedOption.userType ? (
+        {/* ── Badge de feedback ── */}
+        <View style={{ paddingHorizontal: 24, marginTop: 20, minHeight: 64 }}>
+          {selectedOption && (
             <View
               style={{
                 backgroundColor: selectedOption.color + '18',
@@ -173,22 +169,16 @@ export default function Step1Fenotipagem() {
                   lineHeight: 18,
                 }}
               >
-                {selectedOption.userType === 'chronic'
-                  ? 'Enxaqueca Crônica — o app vai adaptar seu acompanhamento.'
-                  : selectedOption.value === '12'
-                  ? 'Atenção: você está próximo do limiar crônico.'
-                  : 'Enxaqueca Episódica — foco em identificar seus gatilhos.'}
+                {selectedOption.feedback}
               </Text>
             </View>
-          ) : null}
+          )}
         </View>
 
         {/* ── Opções ── */}
         <View style={{ paddingHorizontal: 24, marginTop: 12, gap: 12 }}>
           {OPTIONS.map((option) => {
             const isSelected = selected === option.value;
-            const isUnknown = option.value === 'unknown';
-
             return (
               <TouchableOpacity
                 key={option.value}
@@ -203,12 +193,14 @@ export default function Step1Fenotipagem() {
                   paddingHorizontal: 20,
                   flexDirection: 'row',
                   alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginTop: isUnknown ? 8 : 0,
-                  borderStyle: isUnknown ? 'dashed' : 'solid',
+                  gap: 14,
                 }}
               >
-                <View style={{ gap: 2 }}>
+                {/* Emoji */}
+                <Text style={{ fontSize: 26 }}>{option.emoji}</Text>
+
+                {/* Texto */}
+                <View style={{ flex: 1, gap: 2 }}>
                   <Text
                     style={{
                       fontSize: 16,
@@ -223,7 +215,7 @@ export default function Step1Fenotipagem() {
                   </Text>
                 </View>
 
-                {/* Indicador de seleção */}
+                {/* Radio button */}
                 <View
                   style={{
                     width: 22,

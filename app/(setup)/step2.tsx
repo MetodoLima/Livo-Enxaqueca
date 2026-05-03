@@ -29,7 +29,7 @@ interface Sign {
 
 
 
-const TOTAL_STEPS = 10;
+const TOTAL_STEPS = 9;
 const CURRENT_STEP = 2;
 
 const PREMONITORY_SIGNS: Sign[] = [

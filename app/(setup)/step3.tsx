@@ -29,7 +29,7 @@ interface AuraSign {
 
 
 
-const TOTAL_STEPS = 10;
+const TOTAL_STEPS = 9;
 const CURRENT_STEP = 3;
 
 const AURA_SIGNS: AuraSign[] = [
@@ -90,14 +90,14 @@ export default function Step3Aura() {
   function handleNext() {
     if (!isValid) return;
 
-    // router.push({
-    //   pathname: '/(setup)/step4',
-    //   params: {
-    //     ...params,                              // repassa tudo das telas anteriores
-    //     hasAura: hasAura,                       // 'yes' | 'no'
-    //     auraSigns: selectedSigns.join(','),     // ex: 'visual,sensory'
-    //   },
-    // });
+     router.push({
+       pathname: '/(setup)/step4',
+       params: {
+         ...params,                              
+         hasAura: hasAura,                       
+         auraSigns: selectedSigns.join(','),     
+       },
+     });
   }
 
   return (
