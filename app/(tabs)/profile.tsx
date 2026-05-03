@@ -2,6 +2,8 @@ import React from 'react';
 import { View, Text, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
 import { User, ChevronRight, Shield, Moon as MoonIcon, Bell as BellIcon, FileText, LogOut } from 'lucide-react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
+import { supabase } from '@/lib/supabase';
+import { Alert, Platform } from 'react-native';
 import Card from '@/components/Card';
 import { Colors } from '@/constants/Colors';
 
@@ -13,6 +15,20 @@ const menuItems = [
 ];
 
 export default function ProfileScreen() {
+  const handleLogout = async () => {
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm('Tem certeza que deseja sair?');
+      if (confirmed) {
+        await supabase.auth.signOut();
+      }
+    } else {
+      Alert.alert('Sair da conta', 'Tem certeza que deseja sair?', [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Sair', style: 'destructive', onPress: async () => await supabase.auth.signOut() },
+      ]);
+    }
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bgDark }}>
       <ScrollView
@@ -58,7 +74,7 @@ export default function ProfileScreen() {
         </Animated.View>
 
         <Animated.View entering={FadeInUp.delay(400)} className="mt-8 mb-10">
-          <TouchableOpacity className="flex-row items-center justify-center gap-2 py-4">
+          <TouchableOpacity onPress={handleLogout} className="flex-row items-center justify-center gap-2 py-4">
             <LogOut size={20} color="#EF4444" />
             <Text className="text-red-500 font-epilogue-bold">Sair da conta</Text>
           </TouchableOpacity>

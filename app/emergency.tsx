@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, SafeAreaView } from 'react-native';
+import { View, Text, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
 import { X, Check } from 'lucide-react-native';
 import Animated, { ZoomIn } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
