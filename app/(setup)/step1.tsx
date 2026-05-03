@@ -1,12 +1,12 @@
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
   ScrollView,
   StatusBar,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { router } from 'expo-router';
 
 
 
@@ -22,7 +22,7 @@ interface Option {
 
 
 
-const TOTAL_STEPS = 10;
+const TOTAL_STEPS = 9;
 const CURRENT_STEP = 1;
 
 const OPTIONS: Option[] = [
@@ -73,13 +73,13 @@ export default function Step1Fenotipagem() {
   function handleNext() {
     if (!isValid || !selectedOption) return;
 
-     router.push({
-       pathname: '/(setup)/step2',
-       params: {
-         frequency: selectedOption.value,
-         userType: selectedOption.userType ?? 'unknown',
-       },
-     });
+    router.push({
+      pathname: '/(setup)/step2',
+      params: {
+        frequency: selectedOption.value,
+        userType: selectedOption.userType ?? 'unknown',
+      },
+    });
   }
 
   return (
@@ -176,8 +176,8 @@ export default function Step1Fenotipagem() {
                 {selectedOption.userType === 'chronic'
                   ? 'Enxaqueca Crônica — o app vai adaptar seu acompanhamento.'
                   : selectedOption.value === '12'
-                  ? 'Atenção: você está próximo do limiar crônico.'
-                  : 'Enxaqueca Episódica — foco em identificar seus gatilhos.'}
+                    ? 'Atenção: você está próximo do limiar crônico.'
+                    : 'Enxaqueca Episódica — foco em identificar seus gatilhos.'}
               </Text>
             </View>
           ) : null}

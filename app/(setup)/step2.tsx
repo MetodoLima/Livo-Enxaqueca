@@ -1,15 +1,15 @@
+import { router, useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  StatusBar,
   LayoutAnimation,
   Platform,
+  ScrollView,
+  StatusBar,
+  Text,
+  TouchableOpacity,
   UIManager,
+  View,
 } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
 
 // Necessário para LayoutAnimation funcionar no Android
 if (Platform.OS === 'android') {
@@ -29,7 +29,7 @@ interface Sign {
 
 
 
-const TOTAL_STEPS = 10;
+const TOTAL_STEPS = 9;
 const CURRENT_STEP = 2;
 
 const PREMONITORY_SIGNS: Sign[] = [
@@ -86,14 +86,14 @@ export default function Step2Premonitoria() {
   function handleNext() {
     if (!isValid) return;
 
-     router.push({
-       pathname: '/(setup)/step3',
-       params: {
-         ...params,                                  
-         hasSigns: hasSigns,                         
-         premonitorySigns: selectedSigns.join(','),  
-       },
-     });
+    router.push({
+      pathname: '/(setup)/step3',
+      params: {
+        ...params,
+        hasSigns: hasSigns,
+        premonitorySigns: selectedSigns.join(','),
+      },
+    });
   }
 
   return (
