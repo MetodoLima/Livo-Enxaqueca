@@ -7,6 +7,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { CrisisProvider } from '@/contexts/CrisisContext';
 import { useRouter, useSegments, useRootNavigationState } from 'expo-router';
 
 import {
@@ -112,7 +113,9 @@ export default function RootLayout() {
 
   return (
     <AuthProvider>
-      <RootLayoutNav />
+      <CrisisProvider>
+        <RootLayoutNav />
+      </CrisisProvider>
     </AuthProvider>
   );
 }
