@@ -1,17 +1,17 @@
+import { useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  StatusBar,
   LayoutAnimation,
   Platform,
+  ScrollView,
+  StatusBar,
+  Text,
+  TouchableOpacity,
   UIManager,
+  View,
 } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
-import { supabase } from '../../lib/supabase';
 import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -97,8 +97,8 @@ export default function Step3Aura() {
 
     setIsSubmitting(true);
     try {
-      // Por enquanto, como é o último passo criado, vamos finalizar o setup.
-      // Futuramente, se houver o step4, mude a navegação de volta para o router.push
+      // Por enquanto, como é o último passo criado, vamos finalizar o setup
+      // Futuramente, se houver o step4, so mudar a navegação de volta para o router.push
       const { error } = await supabase.auth.updateUser({
         data: { setupCompleted: true }
       });
