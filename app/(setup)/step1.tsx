@@ -22,7 +22,7 @@ interface Option {
 
 
 
-const TOTAL_STEPS = 9;
+const TOTAL_STEPS = 10;
 const CURRENT_STEP = 1;
 
 const OPTIONS: Option[] = [
