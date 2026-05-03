@@ -1,15 +1,17 @@
+import { useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  StatusBar,
   LayoutAnimation,
   Platform,
+  ScrollView,
+  StatusBar,
+  Text,
+  TouchableOpacity,
   UIManager,
+  View,
 } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useAuth } from '../../contexts/AuthContext';
+import { supabase } from '../../lib/supabase';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -87,17 +89,32 @@ export default function Step3Aura() {
     );
   }
 
-  function handleNext() {
-    if (!isValid) return;
+  const { checkSetupStatus } = useAuth();
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // router.push({
-    //   pathname: '/(setup)/step4',
-    //   params: {
-    //     ...params,                              // repassa tudo das telas anteriores
-    //     hasAura: hasAura,                       // 'yes' | 'no'
-    //     auraSigns: selectedSigns.join(','),     // ex: 'visual,sensory'
-    //   },
-    // });
+  async function handleNext() {
+    if (!isValid || isSubmitting) return;
+
+    setIsSubmitting(true);
+    try {
+      // Por enquanto, como é o último passo criado, vamos finalizar o setup
+      // Futuramente, se houver o step4, so mudar a navegação de volta para o router.push
+      const { error } = await supabase.auth.updateUser({
+        data: { setupCompleted: true }
+      });
+
+      if (error) {
+        console.error("Erro ao atualizar perfil:", error.message);
+        return;
+      }
+
+      // Atualiza o estado global para acionar o redirecionamento no _layout.tsx
+      await checkSetupStatus();
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsSubmitting(false);
+    }
   }
 
   return (
@@ -343,11 +360,10 @@ export default function Step3Aura() {
           </View>
         )}
 
-        {/* ── Botão de avançar ── */}
         <View style={{ paddingHorizontal: 24, marginTop: 32 }}>
           <TouchableOpacity
             onPress={handleNext}
-            disabled={!isValid}
+            disabled={!isValid || isSubmitting}
             style={{
               backgroundColor: isValid ? '#00BFA5' : '#1E3A52',
               borderRadius: 16,
@@ -364,7 +380,7 @@ export default function Step3Aura() {
                 letterSpacing: 0.3,
               }}
             >
-              Continuar
+              {isSubmitting ? 'Salvando...' : 'Continuar'}
             </Text>
           </TouchableOpacity>
         </View>

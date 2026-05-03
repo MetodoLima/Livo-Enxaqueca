@@ -1,9 +1,11 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
-import { User, ChevronRight, Shield, Moon as MoonIcon, Bell as BellIcon, FileText, LogOut } from 'lucide-react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
 import Card from '@/components/Card';
 import { Colors } from '@/constants/Colors';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
+import { Bell as BellIcon, ChevronRight, FileText, LogOut, Moon as MoonIcon, Shield, User } from 'lucide-react-native';
+import React from 'react';
+import { Alert, Platform, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 
 const menuItems = [
   { icon: Shield, label: 'Dados de saúde', desc: 'Perfil médico e alergias' },
@@ -13,6 +15,21 @@ const menuItems = [
 ];
 
 export default function ProfileScreen() {
+  const { user } = useAuth();
+  const handleLogout = async () => {
+    if (Platform.OS === 'web') {
+      const confirmed = window.confirm('Tem certeza que deseja sair?');
+      if (confirmed) {
+        await supabase.auth.signOut();
+      }
+    } else {
+      Alert.alert('Sair da conta', 'Tem certeza que deseja sair?', [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Sair', style: 'destructive', onPress: async () => await supabase.auth.signOut() },
+      ]);
+    }
+  };
+
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bgDark }}>
       <ScrollView
@@ -32,7 +49,9 @@ export default function ProfileScreen() {
               <User size={32} color="white" />
             </View>
             <View>
-              <Text className="text-xl text-white font-epilogue-bold">Diego</Text>
+              <Text className="text-xl text-white font-epilogue-bold">
+                {user?.user_metadata?.name ? `${user.user_metadata.name}` : 'Visitante'}
+              </Text>
               <Text className="text-xs text-muted font-epilogue">Membro desde Mar 2026</Text>
               <Text className="text-xs text-accent mt-1 font-epilogue-bold">Plano Premium ✨</Text>
             </View>
@@ -58,7 +77,7 @@ export default function ProfileScreen() {
         </Animated.View>
 
         <Animated.View entering={FadeInUp.delay(400)} className="mt-8 mb-10">
-          <TouchableOpacity className="flex-row items-center justify-center gap-2 py-4">
+          <TouchableOpacity onPress={handleLogout} className="flex-row items-center justify-center gap-2 py-4">
             <LogOut size={20} color="#EF4444" />
             <Text className="text-red-500 font-epilogue-bold">Sair da conta</Text>
           </TouchableOpacity>
