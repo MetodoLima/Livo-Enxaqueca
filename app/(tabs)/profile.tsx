@@ -1,11 +1,11 @@
-import React from 'react';
-import { View, Text, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
-import { User, ChevronRight, Shield, Moon as MoonIcon, Bell as BellIcon, FileText, LogOut } from 'lucide-react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
-import { supabase } from '@/lib/supabase';
-import { Alert, Platform } from 'react-native';
 import Card from '@/components/Card';
 import { Colors } from '@/constants/Colors';
+import { useAuth } from '@/contexts/AuthContext';
+import { supabase } from '@/lib/supabase';
+import { Bell as BellIcon, ChevronRight, FileText, LogOut, Moon as MoonIcon, Shield, User } from 'lucide-react-native';
+import React from 'react';
+import { Alert, Platform, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 
 const menuItems = [
   { icon: Shield, label: 'Dados de saúde', desc: 'Perfil médico e alergias' },
@@ -15,6 +15,7 @@ const menuItems = [
 ];
 
 export default function ProfileScreen() {
+  const { user } = useAuth();
   const handleLogout = async () => {
     if (Platform.OS === 'web') {
       const confirmed = window.confirm('Tem certeza que deseja sair?');
@@ -48,7 +49,9 @@ export default function ProfileScreen() {
               <User size={32} color="white" />
             </View>
             <View>
-              <Text className="text-xl text-white font-epilogue-bold">Diego</Text>
+              <Text className="text-xl text-white font-epilogue-bold">
+                {user?.user_metadata?.name ? `${user.user_metadata.name}` : 'Visitante'}
+              </Text>
               <Text className="text-xs text-muted font-epilogue">Membro desde Mar 2026</Text>
               <Text className="text-xs text-accent mt-1 font-epilogue-bold">Plano Premium ✨</Text>
             </View>
