@@ -1,5 +1,6 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
+import { useSetup } from '../../contexts/SetupContext';
 import {
     ActivityIndicator,
     ScrollView,
@@ -55,7 +56,7 @@ const CATEGORY_LABELS: Record<Medication['category'], { label: string; color: st
 
 
 export default function Step7Medicamentos() {
-    const params = useLocalSearchParams();
+    const { updateSetupData } = useSetup();
 
     const [search, setSearch] = useState('');
     const [selected, setSelected] = useState<Medication[]>([]);
@@ -80,12 +81,6 @@ export default function Step7Medicamentos() {
 
         setLoading(true);
         debounceRef.current = setTimeout(() => {
-            // ── Substituir este bloco pela chamada à API de medicamentos ──
-            // Exemplo:
-            // const res = await fetch(`https://api.medicamentos.com/search?q=${search}`);
-            // const data = await res.json();
-            // setResults(data.items);
-            // ─────────────────────────────────────────────────────────────
             const filtered = MEDICATION_DB.filter(
                 (m) =>
                     m.name.toLowerCase().includes(search.toLowerCase()) ||
@@ -136,12 +131,15 @@ export default function Step7Medicamentos() {
     function handleNext() {
         if (!isValid) return;
 
+        // Se o usuário marcou "Não uso medicamentos", descartamos (regra de negócio)
+        if (!noMedication) {
+            updateSetupData({
+                medications: selected.map((m) => m.name),
+            });
+        }
+
         router.push({
             pathname: '/(setup)/step8',
-            params: {
-                ...params,
-                medications: noMedication ? 'none' : selected.map((m) => m.id).join(','),
-            },
         });
     }
 

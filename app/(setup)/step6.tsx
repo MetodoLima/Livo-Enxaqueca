@@ -1,5 +1,6 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
+import { useSetup } from '../../contexts/SetupContext';
 import {
     ScrollView,
     StatusBar,
@@ -37,7 +38,7 @@ const SUGGESTED_CONDITIONS: Condition[] = [
 
 
 export default function Step6Comorbidades() {
-    const params = useLocalSearchParams();
+    const { updateSetupData } = useSetup();
 
     const [search, setSearch] = useState('');
     const [selected, setSelected] = useState<string[]>([]);
@@ -81,12 +82,21 @@ export default function Step6Comorbidades() {
     function handleNext() {
         if (!isValid) return;
 
+        // Se o usuário marcou "Nenhuma condição", descartamos (regra de negócio)
+        if (!noCondition) {
+            const labels = selected.map((id) => {
+                const condition = SUGGESTED_CONDITIONS.find((c) => c.id === id);
+                return condition
+                    ? condition.label
+                    : id.replace('custom_', '').replace(/_/g, ' ');
+            });
+            updateSetupData({
+                comorbidities: labels,
+            });
+        }
+
         router.push({
             pathname: '/(setup)/step7',
-            params: {
-                ...params,
-                comorbidities: noCondition ? 'none' : selected.join(','),
-            },
         });
     }
 

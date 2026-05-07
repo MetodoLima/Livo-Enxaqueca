@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
   LayoutAnimation,
@@ -10,6 +10,7 @@ import {
   UIManager,
   View,
 } from 'react-native';
+import { useSetup } from '../../contexts/SetupContext';
 
 // Necessário para LayoutAnimation funcionar no Android
 if (Platform.OS === 'android') {
@@ -62,7 +63,7 @@ const PREMONITORY_SIGNS: Sign[] = [
 
 
 export default function Step2Premonitoria() {
-  const params = useLocalSearchParams();
+  const { updateSetupData } = useSetup();
 
   const [hasSigns, setHasSigns] = useState<HasSigns>(null);
   const [selectedSigns, setSelectedSigns] = useState<string[]>([]);
@@ -86,13 +87,16 @@ export default function Step2Premonitoria() {
   function handleNext() {
     if (!isValid) return;
 
+    const hasSignsLabel = hasSigns === 'yes' ? 'true' : 'false';
+    const premonitorySignsLabels = selectedSigns.map(id => PREMONITORY_SIGNS.find(s => s.id === id)?.label).filter(Boolean);
+
+    updateSetupData({
+      hasSigns: hasSignsLabel,
+      premonitorySigns: premonitorySignsLabels,
+    });
+
     router.push({
       pathname: '/(setup)/step3',
-      params: {
-        ...params,
-        hasSigns: hasSigns,
-        premonitorySigns: selectedSigns.join(','),
-      },
     });
   }
 

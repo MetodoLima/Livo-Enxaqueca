@@ -1,4 +1,3 @@
-import { useLocalSearchParams } from 'expo-router';
 import React, { useState } from 'react';
 import {
     ScrollView,
@@ -8,6 +7,7 @@ import {
     View,
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
+import { useSetup } from '../../contexts/SetupContext';
 import { supabase } from '../../lib/supabase';
 
 
@@ -47,10 +47,166 @@ const ACTIVITY_STOP_OPTIONS: {
         { value: 'always', label: 'Sempre preciso parar tudo', sublabel: 'Toda crise me tira de ação', emoji: '🛑', color: '#E85D75' },
     ];
 
+// Mapeamento de cada campo do contexto para seu passo e tipo esperado no banco.
+// O `tipo` aqui é o valor da coluna `tipo` em `perguntas_setup`.
+const FIELD_META: Record<string, { passo: number; tipo: string }> = {
+    frequency: { passo: 1, tipo: 'single_choice' },
+    hasSigns: { passo: 2, tipo: 'boolean' },
+    premonitorySigns: { passo: 2, tipo: 'multi_choice' },
+    hasAura: { passo: 3, tipo: 'boolean' },
+    auraSigns: { passo: 3, tipo: 'multi_choice' },
+    sleepBaseline: { passo: 4, tipo: 'range' },
+    mealFrequency: { passo: 5, tipo: 'single_choice' },
+    comorbidities: { passo: 6, tipo: 'text' },
+    medications: { passo: 7, tipo: 'text' },
+    abortiveFrequency: { passo: 8, tipo: 'single_choice' },
+    abortiveEffectiveness: { passo: 8, tipo: 'single_choice' },
+    impactLevel: { passo: 9, tipo: 'range' },
+    activityStop: { passo: 9, tipo: 'single_choice' },
+};
+
+type DBOpcao = { id: number; texto: string };
+type DBPergunta = {
+    id: number;
+    texto: string;
+    tipo: string;
+    passo_setup: number;
+    opcoes_pergunta: DBOpcao[];
+};
+
+/**
+ * Busca o usuario_id (bigint) da tabela usuarios a partir do auth.user.id (uuid).
+ */
+async function getUsuarioId(authUserId: string): Promise<number | null> {
+    const { data, error } = await supabase
+        .from('usuarios')
+        .select('id')
+        .eq('user_id', authUserId)
+        .single();
+    if (error || !data) return null;
+    return data.id;
+}
+
+/**
+ * Salva todas as respostas do setup no banco de dados.
+ *
+ * Usa o campo `tipo` da tabela `perguntas_setup` como fonte da verdade:
+ * - 'range'         → valor_numero  (Number)
+ * - 'boolean'       → valor_booleano (true/false)
+ * - 'text'          → valor_texto   (String)
+ * - 'single_choice' → opcao_id      (cruzamento por label)
+ * - 'multi_choice'  → opcao_id      (cruzamento por label, uma linha por opção)
+ */
+async function saveSetupAnswers(
+    finalData: Record<string, any>,
+    usuarioId: number,
+    perguntas: DBPergunta[]
+): Promise<void> {
+    const rows: Record<string, any>[] = [];
+
+    for (const [key, value] of Object.entries(finalData)) {
+        if (value === undefined || value === null) continue;
+
+        const metadados = FIELD_META[key];
+        if (!metadados) {
+            console.warn('[Setup] Campo não mapeado em FIELD_META:', key);
+            continue;
+        }
+
+        // Normaliza para array para tratar single e multi de forma uniforme
+        const values: any[] = Array.isArray(value) ? value : [value];
+
+        for (const val of values) {
+            if (val === undefined || val === null) continue;
+
+            // ── range ───────────────────────────────────────────────────
+            if (metadados.tipo === 'range') {
+                const pergunta = perguntas.find(
+                    (p) => p.passo_setup === metadados.passo && p.tipo === 'range'
+                );
+                if (pergunta) {
+                    const numVal = Number(val);
+                    const acimaMax = metadados.passo === 4 && numVal > 12;
+                    rows.push({
+                        user_id: usuarioId,
+                        pergunta_id: pergunta.id,
+                        valor_numero: acimaMax ? 12 : numVal,
+                        ...(metadados.passo === 4 ? { valor_acima_max: acimaMax } : {}),
+                    });
+                }
+                continue;
+            }
+
+            // ── boolean ─────────────────────────────────────────────────
+            if (metadados.tipo === 'boolean') {
+                const pergunta = perguntas.find(
+                    (p) => p.passo_setup === metadados.passo && p.tipo === 'boolean'
+                );
+                if (pergunta) {
+                    rows.push({
+                        user_id: usuarioId,
+                        pergunta_id: pergunta.id,
+                        valor_booleano: val === true || val === 'true',
+                    });
+                }
+                continue;
+            }
+
+            // ── text ─────────────────────────────────────────────────────
+            if (metadados.tipo === 'text') {
+                const pergunta = perguntas.find(
+                    (p) => p.passo_setup === metadados.passo && p.tipo === 'text'
+                );
+                if (pergunta) {
+                    rows.push({
+                        user_id: usuarioId,
+                        pergunta_id: pergunta.id,
+                        valor_texto: String(val),
+                    });
+                }
+                continue;
+            }
+
+            // ── single_choice / multi_choice: cruzamento por label ───────
+            const valNorm = String(val).toLowerCase().trim();
+            let matched = false;
+            for (const pergunta of perguntas) {
+                if (pergunta.passo_setup !== metadados.passo) continue;
+                const opcao = pergunta.opcoes_pergunta.find(
+                    (o) => o.texto.toLowerCase().trim() === valNorm
+                );
+                if (opcao) {
+                    rows.push({
+                        user_id: usuarioId,
+                        pergunta_id: pergunta.id,
+                        opcao_id: opcao.id,
+                    });
+                    matched = true;
+                    break;
+                }
+            }
+
+            if (!matched) {
+                console.warn('[Setup] Opção sem correspondência no banco:', key, '=', val);
+            }
+        }
+    }
+
+    if (rows.length === 0) return;
+
+    console.log(rows);
+
+    const { error } = await supabase.from('respostas_setup').insert(rows);
+    if (error) throw error;
+}
+
+
+
 
 
 export default function Step9Impacto() {
-    const params = useLocalSearchParams();
+    const { setupData, clearSetupData } = useSetup();
+    const { checkSetupStatus } = useAuth();
 
     const [impactLevel, setImpactLevel] = useState<ImpactLevel>(null);
     const [activityStop, setActivityStop] = useState<ActivityStop>(null);
@@ -62,27 +218,47 @@ export default function Step9Impacto() {
     const needsPreventive =
         (impactLevel ?? 0) >= 4 || activityStop === 'often' || activityStop === 'always';
 
-    const { checkSetupStatus } = useAuth();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     async function handleNext() {
-        if (!isValid || isSubmitting) return;
+        if (!isValid || isSubmitting || !selectedImpact) return;
+
+        const selectedActivityStop = ACTIVITY_STOP_OPTIONS.find((o) => o.value === activityStop);
+
+        const finalData = {
+            ...setupData,
+            impactLevel: selectedImpact.value,
+            activityStop: selectedActivityStop?.label ?? activityStop,
+        };
 
         setIsSubmitting(true);
         try {
-            const { error } = await supabase.auth.updateUser({
+            // 1. Buscar o ID interno do usuário na tabela `usuarios`
+            const { data: authData } = await supabase.auth.getUser();
+            if (!authData?.user) throw new Error('Usuário não autenticado.');
+
+            const usuarioId = await getUsuarioId(authData.user.id);
+            if (!usuarioId) throw new Error('Perfil do usuário não encontrado na tabela usuarios.');
+
+            // 2. Buscar todas as perguntas com suas opções
+            const { data: perguntas, error: pErr } = await supabase
+                .from('perguntas_setup')
+                .select('id, texto, tipo, passo_setup, opcoes_pergunta(id, texto)');
+            if (pErr || !perguntas) throw pErr ?? new Error('Falha ao buscar perguntas.');
+
+            // 3. Salvar as respostas no banco
+            await saveSetupAnswers(finalData, usuarioId, perguntas as DBPergunta[]);
+
+            // 4. Marcar setup como concluído no Supabase Auth
+            const { error: updateErr } = await supabase.auth.updateUser({
                 data: { setupCompleted: true }
             });
+            if (updateErr) throw updateErr;
 
-            if (error) {
-                console.error("Erro ao atualizar perfil:", error.message);
-                return;
-            }
-
-            // Atualiza o estado global para acionar o redirecionamento no _layout.tsx
+            clearSetupData();
             await checkSetupStatus();
-        } catch (err) {
-            console.error(err);
+        } catch (err: any) {
+            console.error('[Setup] Erro ao finalizar setup:', err?.message ?? err);
         } finally {
             setIsSubmitting(false);
         }

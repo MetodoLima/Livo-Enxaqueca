@@ -1,5 +1,6 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
+import { useSetup } from '../../contexts/SetupContext';
 import {
     ScrollView,
     StatusBar,
@@ -60,7 +61,7 @@ const OPTIONS: Option[] = [
 
 
 export default function Step5Jejum() {
-    const params = useLocalSearchParams();
+    const { updateSetupData } = useSetup();
     const [selected, setSelected] = useState<MealFrequency>(null);
 
     const selectedOption = OPTIONS.find((o) => o.value === selected) ?? null;
@@ -69,12 +70,12 @@ export default function Step5Jejum() {
     function handleNext() {
         if (!isValid || !selectedOption) return;
 
+        updateSetupData({
+            mealFrequency: selectedOption.label,
+        });
+
         router.push({
             pathname: '/(setup)/step6',
-            params: {
-                ...params,
-                mealFrequency: selected,
-            },
         });
     }
 

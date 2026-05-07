@@ -1,6 +1,7 @@
 import Slider from '@react-native-community/slider';
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
+import { useSetup } from '../../contexts/SetupContext';
 import {
     ScrollView,
     StatusBar,
@@ -53,7 +54,7 @@ function getSleepFeedback(value: number): { label: string; color: string; descri
 
 
 export default function Step4Sono() {
-    const params = useLocalSearchParams();
+    const { updateSetupData } = useSetup();
 
     const [hours, setHours] = useState<number>(7);
     const [touched, setTouched] = useState(false);
@@ -64,12 +65,13 @@ export default function Step4Sono() {
     function handleNext() {
         if (!isValid) return;
 
+        // Sono é uma resposta numérica (valor_numero), salva o número
+        updateSetupData({
+            sleepBaseline: hours >= 13 ? 12.5 : hours,
+        });
+
         router.push({
             pathname: '/(setup)/step5',
-            params: {
-                ...params,
-                sleepBaseline: hours >= 13 ? '12+' : String(hours),
-            },
         });
     }
 

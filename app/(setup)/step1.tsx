@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSetup } from '../../contexts/SetupContext';
 
 
 
@@ -28,21 +29,21 @@ const CURRENT_STEP = 1;
 const OPTIONS: Option[] = [
   {
     value: '2',
-    label: '1 – 4 dias',
+    label: '1 - 4 dias',
     sublabel: 'Raramente',
     userType: 'episodic',
     color: '#00BFA5',
   },
   {
     value: '7',
-    label: '5 – 9 dias',
+    label: '5 - 9 dias',
     sublabel: 'Às vezes',
     userType: 'episodic',
     color: '#00BFA5',
   },
   {
     value: '12',
-    label: '10 – 14 dias',
+    label: '10 - 14 dias',
     sublabel: 'Com frequência',
     userType: 'episodic',
     color: '#F5A623',
@@ -65,6 +66,7 @@ const OPTIONS: Option[] = [
 
 
 export default function Step1Fenotipagem() {
+  const { updateSetupData } = useSetup();
   const [selected, setSelected] = useState<OptionValue | null>(null);
 
   const selectedOption = OPTIONS.find((o) => o.value === selected) ?? null;
@@ -73,12 +75,14 @@ export default function Step1Fenotipagem() {
   function handleNext() {
     if (!isValid || !selectedOption) return;
 
+    if (selectedOption.value !== 'unknown') {
+      updateSetupData({
+        frequency: selectedOption.label,
+      });
+    }
+
     router.push({
       pathname: '/(setup)/step2',
-      params: {
-        frequency: selectedOption.value,
-        userType: selectedOption.userType ?? 'unknown',
-      },
     });
   }
 

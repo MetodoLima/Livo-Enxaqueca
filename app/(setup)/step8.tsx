@@ -1,5 +1,6 @@
-import { router, useLocalSearchParams as useParams } from 'expo-router';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
+import { useSetup } from '../../contexts/SetupContext';
 import {
     ScrollView,
     StatusBar,
@@ -81,24 +82,25 @@ const EFFECTIVENESS_OPTIONS = [
 
 
 export default function Step8Abortivos() {
-    const params = useParams();
+    const { updateSetupData } = useSetup();
 
     const [frequency, setFrequency] = useState<FrequencyOption>(null);
     const [effectiveness, setEffectiveness] = useState<EffectivenessOption>(null);
 
     const selectedFrequency = FREQUENCY_OPTIONS.find((o) => o.value === frequency) ?? null;
+    const selectedEffectiveness = EFFECTIVENESS_OPTIONS.find((o) => o.value === effectiveness) ?? null;
     const isValid = frequency !== null && effectiveness !== null;
 
     function handleNext() {
-        if (!isValid) return;
+        if (!isValid || !selectedFrequency || !selectedEffectiveness) return;
+
+        updateSetupData({
+            abortiveFrequency: selectedFrequency.label,
+            abortiveEffectiveness: selectedEffectiveness.label,
+        });
 
         router.push({
             pathname: '/(setup)/step9',
-            params: {
-                ...params,
-                abortiveFrequency: frequency,
-                abortiveEffectiveness: effectiveness,
-            },
         });
     }
 

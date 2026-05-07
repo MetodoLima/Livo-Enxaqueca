@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
   LayoutAnimation,
@@ -10,6 +10,7 @@ import {
   UIManager,
   View,
 } from 'react-native';
+import { useSetup } from '../../contexts/SetupContext';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -66,7 +67,7 @@ const AURA_SIGNS: AuraSign[] = [
 
 
 export default function Step3Aura() {
-  const params = useLocalSearchParams();
+  const { updateSetupData } = useSetup();
 
   const [hasAura, setHasAura] = useState<HasAura>(null);
   const [selectedSigns, setSelectedSigns] = useState<string[]>([]);
@@ -90,13 +91,16 @@ export default function Step3Aura() {
   function handleNext() {
     if (!isValid) return;
 
+    const hasAuraLabel = hasAura === 'yes' ? 'true' : 'false';
+    const auraSignsLabels = selectedSigns.map(id => AURA_SIGNS.find(s => s.id === id)?.label).filter(Boolean);
+
+    updateSetupData({
+      hasAura: hasAuraLabel,
+      auraSigns: auraSignsLabels,
+    });
+
     router.push({
       pathname: '/(setup)/step4',
-      params: {
-        ...params,
-        hasAura: hasAura,
-        auraSigns: selectedSigns.join(','),
-      },
     });
   }
 
