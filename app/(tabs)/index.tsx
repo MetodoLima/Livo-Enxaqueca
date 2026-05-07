@@ -25,8 +25,10 @@ import { Colors } from '@/constants/Colors';
 import { HABITS, MoodId } from '@/constants/data';
 import MoodSelector from '@/components/MoodSelector';
 import Card from '@/components/Card';
+import { useAuth } from '@/contexts/AuthContext';
 
 export default function HomeScreen() {
+  const { user } = useAuth();
   const [selectedMood, setSelectedMood] = useState<MoodId | null>(null);
 
   const now = new Date();
@@ -50,7 +52,7 @@ export default function HomeScreen() {
                 {greeting},
               </Text>
               <Text className="text-[32px] text-white font-epilogue-bold">
-                Diego!
+                {user?.user_metadata?.name ? `${user.user_metadata.name}!` : 'Visitante!'}
               </Text>
             </View>
             <TouchableOpacity className="w-12 h-12 rounded-full bg-white/5 items-center justify-center">

@@ -1,0 +1,767 @@
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  SafeAreaView,
+  ScrollView,
+  TextInput,
+  ActivityIndicator,
+  StyleSheet,
+} from 'react-native';
+import {
+  Wind,
+  Zap,
+  Clock,
+  MapPin,
+  Thermometer,
+  Mic,
+  Send,
+  StopCircle,
+  ChevronRight,
+  X,
+} from 'lucide-react-native';
+import { Check } from 'lucide-react-native';
+import Animated, {
+  FadeInUp,
+  FadeIn,
+  ZoomIn,
+  useSharedValue,
+  useAnimatedStyle,
+  withRepeat,
+  withTiming,
+  Easing,
+  interpolate,
+} from 'react-native-reanimated';
+import { useRouter } from 'expo-router';
+import { Colors } from '@/constants/Colors';
+import { useCrisis } from '@/contexts/CrisisContext';
+import Card from '@/components/Card';
+import {
+  INTENSITY_CONFIG,
+  LOCATIONS,
+  SIDES,
+  SYMPTOMS,
+} from '@/types/crisis';
+import { processAudio, processText } from '@/services/api';
+import { IntensityEditor, LocationEditor, SymptomsEditor } from '@/components/crisis/EditModals';
+
+// ── Audio imports (graceful) ──────────────────────────────────────────
+let useAudioRecorder: any;
+let RecordingPresets: any;
+let requestRecordingPermissionsAsync: any;
+let setAudioModeAsync: any;
+try {
+  const m = require('expo-audio');
+  useAudioRecorder = m.useAudioRecorder;
+  RecordingPresets = m.RecordingPresets;
+  requestRecordingPermissionsAsync = m.requestRecordingPermissionsAsync;
+  setAudioModeAsync = m.setAudioModeAsync;
+} catch {}
+
+// ── Pulsing mic ───────────────────────────────────────────────────────
+function PulsingMic({ onStop }: { onStop: () => void }) {
+  const pulse = useSharedValue(1);
+  useEffect(() => {
+    pulse.value = withRepeat(
+      withTiming(1.5, { duration: 900, easing: Easing.inOut(Easing.ease) }),
+      -1, true,
+    );
+  }, []);
+  const ring = useAnimatedStyle(() => ({
+    transform: [{ scale: pulse.value }],
+    opacity: interpolate(pulse.value, [1, 1.5], [0.35, 0]),
+  }));
+  return (
+    <View style={styles.micWrapper}>
+      <Animated.View style={[styles.pulseRing, ring]} />
+      <TouchableOpacity onPress={onStop} style={styles.micBtnRecording}>
+        <StopCircle size={28} color="white" />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+// ── Empty state ───────────────────────────────────────────────────────
+function EmptyState() {
+  const router = useRouter();
+  return (
+    <View style={styles.emptyContainer}>
+      <View style={styles.emptyIcon}>
+        <Wind size={36} color={Colors.accent} />
+      </View>
+      <Text style={styles.emptyTitle}>Nenhuma crise ativa</Text>
+      <Text style={styles.emptySub}>
+        Quando registrar uma crise, ela aparecerá aqui para você editar e complementar.
+      </Text>
+      <TouchableOpacity
+        onPress={() => router.push('/record-crisis')}
+        style={styles.emptyBtn}
+      >
+        <Wind size={18} color="white" />
+        <Text style={styles.emptyBtnText}>Registrar crise</Text>
+      </TouchableOpacity>
+    </View>
+  );
+}
+
+// ── Main screen ───────────────────────────────────────────────────────
+export default function CrisisDetailScreen() {
+  const { activeCrisis, updateActiveCrisis, clearCrisis, hasActiveCrisis } = useCrisis();
+  const router = useRouter();
+
+  // Edit modal state
+  const [editingField, setEditingField] = useState<'intensity' | 'location' | 'symptoms' | null>(null);
+  const [finishing, setFinishing] = useState(false);
+
+  // Voice / text complement state
+  const [showVoice, setShowVoice] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [text, setText] = useState('');
+  const [recordSecs, setRecordSecs] = useState(0);
+  const [error, setError] = useState<string | null>(null);
+  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const audioAvailable = !!useAudioRecorder;
+  const recorder = audioAvailable ? useAudioRecorder(RecordingPresets.HIGH_QUALITY) : null;
+
+  useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); }, []);
+
+  // ── Handle finalize ─────────────────────────────────────────────────
+  const handleFinish = () => {
+    setFinishing(true);
+    // TODO: persist to Supabase here
+    setTimeout(() => {
+      clearCrisis();
+      setFinishing(false);
+      router.replace('/(tabs)' as any);
+    }, 2000);
+  };
+
+  // ── Success animation ───────────────────────────────────────────────
+  if (finishing && activeCrisis) {
+    return (
+      <View style={styles.successContainer}>
+        <Animated.View entering={ZoomIn} style={styles.successIcon}>
+          <Check size={36} color="#10B981" />
+        </Animated.View>
+        <Text style={styles.successTitle}>Crise registrada!</Text>
+        <Text style={styles.successSub}>
+          {activeCrisis.intensity !== null
+            ? `Intensidade ${activeCrisis.intensity}/10`
+            : 'Registro salvo com sucesso.'}
+        </Text>
+      </View>
+    );
+  }
+
+  if (!hasActiveCrisis || !activeCrisis) return <EmptyState />;
+
+  const crisis = activeCrisis;
+  const intensityConfig = crisis.intensity !== null ? INTENSITY_CONFIG[crisis.intensity] : null;
+  const locationData = LOCATIONS.find((l) => l.id === crisis.location);
+  const sideData = SIDES.find((s) => s.id === crisis.side);
+  const symptomNames = crisis.symptoms
+    .map((id) => SYMPTOMS.find((s) => s.id === id))
+    .filter(Boolean);
+
+  const fmtTime = (d: Date) =>
+    d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const fmtSecs = (s: number) =>
+    `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+
+  // ── Voice handlers ──────────────────────────────────────────────────
+  const startRecording = async () => {
+    if (!recorder) return;
+    setError(null);
+    try {
+      const { granted } = await requestRecordingPermissionsAsync();
+      if (!granted) { setError('Permissão de microfone negada.'); return; }
+      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+      await recorder.prepareToRecordAsync();
+      recorder.record();
+      setRecordSecs(0);
+      setIsRecording(true);
+      timerRef.current = setInterval(() => setRecordSecs((s: number) => s + 1), 1000);
+    } catch {
+      setError('Não foi possível iniciar a gravação.');
+    }
+  };
+
+  const stopAndProcess = async () => {
+    if (!recorder) return;
+    if (timerRef.current) clearInterval(timerRef.current);
+    setIsRecording(false);
+    try {
+      await recorder.stop();
+      const uri = recorder.uri;
+      if (!uri) throw new Error('URI inválido.');
+      setIsProcessing(true);
+      const result = await processAudio(uri);
+      updateActiveCrisis({
+        aiComplement: { audioUri: uri, textNote: null, aiResult: result },
+      });
+      setIsProcessing(false);
+      setShowVoice(false);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Erro ao processar áudio.');
+      setIsProcessing(false);
+    }
+  };
+
+  const submitText = async () => {
+    if (!text.trim()) return;
+    setError(null);
+    setIsProcessing(true);
+    try {
+      const result = await processText(text.trim());
+      updateActiveCrisis({
+        aiComplement: { audioUri: null, textNote: text.trim(), aiResult: result },
+      });
+      setText('');
+      setIsProcessing(false);
+      setShowVoice(false);
+    } catch (e: unknown) {
+      setError(e instanceof Error ? e.message : 'Erro ao processar texto.');
+      setIsProcessing(false);
+    }
+  };
+
+  // ── Duration ────────────────────────────────────────────────────────
+  const getDuration = () => {
+    if (!crisis.endTime) return 'Em andamento';
+    const diff = crisis.endTime.getTime() - crisis.startTime.getTime();
+    const mins = Math.round(diff / 60000);
+    if (mins < 60) return `${mins}m`;
+    return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+  };
+
+  return (
+    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bgDark }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 120, paddingHorizontal: 24 }}
+        showsVerticalScrollIndicator={false}
+      >
+        {/* Header */}
+        <View style={styles.header}>
+          <Text style={styles.headerTitle}>Resumo da crise</Text>
+          <TouchableOpacity
+            onPress={handleFinish}
+            style={styles.finishBtn}
+          >
+            <Text style={styles.finishBtnText}>Finalizar</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* ── Time + Duration card ── */}
+        <Animated.View entering={FadeInUp.delay(100)}>
+          <Card className="mb-4">
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+              <View>
+                <Text style={styles.cardLabel}>Hora de início</Text>
+                <Text style={styles.cardValue}>{fmtTime(crisis.startTime)}</Text>
+              </View>
+              <View style={{ alignItems: 'flex-end' }}>
+                <Text style={styles.cardLabel}>Duração</Text>
+                <Text style={[
+                  styles.cardValue,
+                  { color: crisis.endTime ? Colors.accent : Colors.orange },
+                ]}>
+                  {getDuration()}
+                </Text>
+              </View>
+            </View>
+            {!crisis.endTime && (
+              <TouchableOpacity
+                onPress={() => updateActiveCrisis({ endTime: new Date() })}
+                style={styles.endCrisisBtn}
+              >
+                <Clock size={16} color={Colors.orange} />
+                <Text style={styles.endCrisisBtnText}>Definir hora de fim</Text>
+              </TouchableOpacity>
+            )}
+          </Card>
+        </Animated.View>
+
+        {/* ── Intensity ── */}
+        <Animated.View entering={FadeInUp.delay(200)}>
+          <Card className="mb-4" onPress={() => setEditingField('intensity')}>
+            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+              <View style={[styles.iconBox, { backgroundColor: `${intensityConfig?.color ?? Colors.muted}20` }]}>
+                <Zap size={20} color={intensityConfig?.color ?? Colors.muted} fill={intensityConfig?.color ?? Colors.muted} />
+              </View>
+              <View style={{ marginLeft: 12, flex: 1 }}>
+                <Text style={styles.cardLabel}>Intensidade</Text>
+                <Text style={[styles.cardValue, { color: intensityConfig?.color ?? 'white' }]}>
+                  {crisis.intensity !== null ? `${crisis.intensity}/10` : '–'}
+                  {intensityConfig?.label ? (
+                    <Text style={{ fontSize: 14 }}> · {intensityConfig.label}</Text>
+                  ) : null}
+                </Text>
+              </View>
+              <ChevronRight size={18} color={Colors.muted} />
+            </View>
+          </Card>
+        </Animated.View>
+
+        {/* ── Location + Side ── */}
+        <Animated.View entering={FadeInUp.delay(300)}>
+          <TouchableOpacity
+            onPress={() => setEditingField('location')}
+            activeOpacity={0.7}
+            style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}
+          >
+            <Card style={{ flex: 1 }}>
+              <Text style={styles.cardLabel}>Localização</Text>
+              {locationData ? (
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
+                  <Text style={{ fontSize: 22 }}>{locationData.emoji}</Text>
+                  <Text style={[styles.smallValue]}>{locationData.label}</Text>
+                </View>
+              ) : (
+                <View style={styles.addBtn}>
+                  <Text style={styles.addBtnText}>Editar</Text>
+                </View>
+              )}
+            </Card>
+            <Card style={{ flex: 1 }}>
+              <Text style={styles.cardLabel}>Lado</Text>
+              {sideData ? (
+                <Text style={[styles.smallValue, { marginTop: 6 }]}>{sideData.label}</Text>
+              ) : (
+                <View style={styles.addBtn}>
+                  <Text style={styles.addBtnText}>Editar</Text>
+                </View>
+              )}
+            </Card>
+          </TouchableOpacity>
+        </Animated.View>
+
+        {/* ── Symptoms ── */}
+        <Animated.View entering={FadeInUp.delay(400)}>
+          <Card className="mb-4" onPress={() => setEditingField('symptoms')}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={[styles.cardLabel, { marginBottom: 10 }]}>Sintomas</Text>
+              <ChevronRight size={16} color={Colors.muted} style={{ marginBottom: 6 }} />
+            </View>
+            {symptomNames.length > 0 ? (
+              <View style={styles.tagRow}>
+                {symptomNames.map((s) => s && (
+                  <View key={s.id} style={styles.tag}>
+                    <Text style={styles.tagEmoji}>{s.emoji}</Text>
+                    <Text style={styles.tagText}>{s.label}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.addBtn}>
+                <Text style={styles.addBtnText}>Editar</Text>
+              </View>
+            )}
+          </Card>
+        </Animated.View>
+
+        {/* ── AI summary ── */}
+        {crisis.aiComplement?.aiResult?.structured.resumo && (
+          <Animated.View entering={FadeInUp.delay(500)}>
+            <Card className="mb-4" variant="accent-border">
+              <Text style={styles.cardLabel}>Análise da IA</Text>
+              <Text style={styles.aiSummary}>
+                {crisis.aiComplement.aiResult.structured.resumo}
+              </Text>
+            </Card>
+          </Animated.View>
+        )}
+
+        {/* ── Voice complement section ── */}
+        <Animated.View entering={FadeInUp.delay(600)}>
+          {!showVoice ? (
+            <TouchableOpacity
+              onPress={() => setShowVoice(true)}
+              style={styles.voiceEntryBtn}
+            >
+              <Mic size={22} color={Colors.accent} />
+              <View style={{ flex: 1, marginLeft: 12 }}>
+                <Text style={styles.voiceEntryTitle}>Adicionar mais detalhes</Text>
+                <Text style={styles.voiceEntrySub}>Por voz ou texto</Text>
+              </View>
+              <ChevronRight size={20} color={Colors.muted} />
+            </TouchableOpacity>
+          ) : (
+            <Card className="mb-4">
+              {/* Close voice panel */}
+              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
+                <Text style={[styles.cardLabel, { marginBottom: 0 }]}>Complementar registro</Text>
+                <TouchableOpacity onPress={() => { setShowVoice(false); setIsRecording(false); }}>
+                  <X size={20} color={Colors.muted} />
+                </TouchableOpacity>
+              </View>
+
+              {isProcessing ? (
+                <View style={{ alignItems: 'center', paddingVertical: 24 }}>
+                  <ActivityIndicator size="large" color={Colors.accent} />
+                  <Text style={[styles.cardLabel, { marginTop: 12 }]}>Analisando...</Text>
+                </View>
+              ) : (
+                <>
+                  {/* Mic */}
+                  {audioAvailable && (
+                    <View style={{ alignItems: 'center', marginBottom: 20 }}>
+                      {isRecording ? (
+                        <>
+                          <PulsingMic onStop={stopAndProcess} />
+                          <Text style={styles.recTime}>{fmtSecs(recordSecs)}</Text>
+                        </>
+                      ) : (
+                        <TouchableOpacity onPress={startRecording} style={styles.micBtn}>
+                          <Mic size={28} color="white" />
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  )}
+
+                  {/* Text fallback */}
+                  <TextInput
+                    value={text}
+                    onChangeText={setText}
+                    placeholder="Escreva detalhes adicionais..."
+                    placeholderTextColor={Colors.muted}
+                    multiline
+                    style={styles.textArea}
+                    editable={!isRecording}
+                  />
+
+                  {error && <Text style={styles.errorText}>{error}</Text>}
+
+                  {text.trim().length > 0 && !isRecording && (
+                    <TouchableOpacity onPress={submitText} style={styles.sendBtn}>
+                      <Send size={16} color="white" style={{ marginRight: 8 }} />
+                      <Text style={styles.sendBtnText}>Analisar</Text>
+                    </TouchableOpacity>
+                  )}
+                </>
+              )}
+            </Card>
+          )}
+        </Animated.View>
+      </ScrollView>
+
+      {/* ── Edit modals ── */}
+      <IntensityEditor
+        visible={editingField === 'intensity'}
+        onClose={() => setEditingField(null)}
+        value={crisis.intensity}
+        onChange={(v) => updateActiveCrisis({ intensity: v })}
+      />
+      <LocationEditor
+        visible={editingField === 'location'}
+        onClose={() => setEditingField(null)}
+        location={crisis.location}
+        side={crisis.side}
+        onChange={updateActiveCrisis}
+      />
+      <SymptomsEditor
+        visible={editingField === 'symptoms'}
+        onClose={() => setEditingField(null)}
+        symptoms={crisis.symptoms}
+        onChange={(symptoms) => updateActiveCrisis({ symptoms })}
+      />
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 16,
+    paddingBottom: 24,
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontFamily: 'Epilogue_700Bold',
+    color: 'white',
+  },
+  finishBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    backgroundColor: `${Colors.accent}18`,
+  },
+  finishBtnText: {
+    fontSize: 14,
+    fontFamily: 'Epilogue_600SemiBold',
+    color: Colors.accent,
+  },
+
+  // Cards
+  cardLabel: {
+    fontSize: 11,
+    fontFamily: 'Epilogue_700Bold',
+    color: Colors.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    marginBottom: 4,
+  },
+  cardValue: {
+    fontSize: 22,
+    fontFamily: 'Epilogue_700Bold',
+    color: 'white',
+  },
+  smallValue: {
+    fontSize: 16,
+    fontFamily: 'Epilogue_600SemiBold',
+    color: 'white',
+  },
+  iconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 14,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+
+  // Tags
+  tagRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  tag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 14,
+    backgroundColor: `${Colors.purple}15`,
+  },
+  tagEmoji: {
+    fontSize: 16,
+  },
+  tagText: {
+    fontSize: 13,
+    fontFamily: 'Epilogue_600SemiBold',
+    color: Colors.purple,
+  },
+
+  // Add button
+  addBtn: {
+    marginTop: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    alignSelf: 'flex-start',
+  },
+  addBtnText: {
+    fontSize: 13,
+    fontFamily: 'Epilogue_600SemiBold',
+    color: Colors.accent,
+  },
+
+  // End crisis
+  endCrisisBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 14,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    backgroundColor: `${Colors.orange}15`,
+    alignSelf: 'flex-start',
+  },
+  endCrisisBtnText: {
+    fontSize: 13,
+    fontFamily: 'Epilogue_600SemiBold',
+    color: Colors.orange,
+  },
+
+  // AI
+  aiSummary: {
+    fontSize: 15,
+    fontFamily: 'Epilogue_400Regular',
+    color: Colors.soft,
+    lineHeight: 22,
+    marginTop: 6,
+  },
+
+  // Voice entry
+  voiceEntryBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 20,
+    borderRadius: 20,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1,
+    borderColor: 'rgba(139,163,167,0.12)',
+    borderStyle: 'dashed',
+  },
+  voiceEntryTitle: {
+    fontSize: 15,
+    fontFamily: 'Epilogue_600SemiBold',
+    color: 'white',
+  },
+  voiceEntrySub: {
+    fontSize: 12,
+    fontFamily: 'Epilogue_400Regular',
+    color: Colors.muted,
+    marginTop: 2,
+  },
+
+  // Voice panel
+  micWrapper: {
+    width: 72,
+    height: 72,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pulseRing: {
+    position: 'absolute',
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#EF4444',
+  },
+  micBtn: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: Colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  micBtnRecording: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#EF4444',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  recTime: {
+    fontSize: 14,
+    fontFamily: 'Epilogue_600SemiBold',
+    color: '#EF4444',
+    marginTop: 8,
+  },
+  textArea: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(139,163,167,0.18)',
+    borderRadius: 14,
+    padding: 14,
+    color: 'white',
+    fontFamily: 'Epilogue_400Regular',
+    fontSize: 14,
+    minHeight: 80,
+    textAlignVertical: 'top',
+    marginBottom: 10,
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 13,
+    fontFamily: 'Epilogue_400Regular',
+    textAlign: 'center',
+    marginBottom: 10,
+  },
+  sendBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.accent,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  sendBtnText: {
+    color: 'white',
+    fontSize: 14,
+    fontFamily: 'Epilogue_700Bold',
+  },
+
+  // Empty
+  emptyContainer: {
+    flex: 1,
+    backgroundColor: Colors.bgDark,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+  },
+  emptyIcon: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: `${Colors.accent}15`,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  emptyTitle: {
+    fontSize: 20,
+    fontFamily: 'Epilogue_700Bold',
+    color: 'white',
+    marginBottom: 8,
+  },
+  emptySub: {
+    fontSize: 14,
+    fontFamily: 'Epilogue_400Regular',
+    color: Colors.muted,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  emptyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: Colors.accent,
+    paddingVertical: 16,
+    paddingHorizontal: 28,
+    borderRadius: 16,
+  },
+  emptyBtnText: {
+    fontSize: 16,
+    fontFamily: 'Epilogue_700Bold',
+    color: 'white',
+  },
+
+  // Success
+  successContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.bgDark,
+    paddingHorizontal: 24,
+  },
+  successIcon: {
+    width: 88,
+    height: 88,
+    borderRadius: 44,
+    backgroundColor: 'rgba(16,185,129,0.15)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 20,
+  },
+  successTitle: {
+    color: 'white',
+    fontSize: 22,
+    fontFamily: 'Epilogue_700Bold',
+    marginBottom: 8,
+  },
+  successSub: {
+    color: Colors.muted,
+    fontSize: 14,
+    fontFamily: 'Epilogue_400Regular',
+    textAlign: 'center',
+    lineHeight: 22,
+  },
+});

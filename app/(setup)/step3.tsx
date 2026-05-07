@@ -1,15 +1,16 @@
+import { router } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  ScrollView,
-  StatusBar,
   LayoutAnimation,
   Platform,
+  ScrollView,
+  StatusBar,
+  Text,
+  TouchableOpacity,
   UIManager,
+  View,
 } from 'react-native';
-import { router, useLocalSearchParams } from 'expo-router';
+import { useSetup } from '../../contexts/SetupContext';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -29,7 +30,7 @@ interface AuraSign {
 
 
 
-const TOTAL_STEPS = 10;
+const TOTAL_STEPS = 9;
 const CURRENT_STEP = 3;
 
 const AURA_SIGNS: AuraSign[] = [
@@ -66,7 +67,7 @@ const AURA_SIGNS: AuraSign[] = [
 
 
 export default function Step3Aura() {
-  const params = useLocalSearchParams();
+  const { updateSetupData } = useSetup();
 
   const [hasAura, setHasAura] = useState<HasAura>(null);
   const [selectedSigns, setSelectedSigns] = useState<string[]>([]);
@@ -90,14 +91,17 @@ export default function Step3Aura() {
   function handleNext() {
     if (!isValid) return;
 
-    // router.push({
-    //   pathname: '/(setup)/step4',
-    //   params: {
-    //     ...params,                              // repassa tudo das telas anteriores
-    //     hasAura: hasAura,                       // 'yes' | 'no'
-    //     auraSigns: selectedSigns.join(','),     // ex: 'visual,sensory'
-    //   },
-    // });
+    const hasAuraLabel = hasAura === 'yes' ? 'true' : 'false';
+    const auraSignsLabels = selectedSigns.map(id => AURA_SIGNS.find(s => s.id === id)?.label).filter(Boolean);
+
+    updateSetupData({
+      hasAura: hasAuraLabel,
+      auraSigns: auraSignsLabels,
+    });
+
+    router.push({
+      pathname: '/(setup)/step4',
+    });
   }
 
   return (
@@ -343,7 +347,6 @@ export default function Step3Aura() {
           </View>
         )}
 
-        {/* ── Botão de avançar ── */}
         <View style={{ paddingHorizontal: 24, marginTop: 32 }}>
           <TouchableOpacity
             onPress={handleNext}
