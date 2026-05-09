@@ -31,6 +31,19 @@ export const SYMPTOMS = [
 
 export type SymptomId = (typeof SYMPTOMS)[number]['id'];
 
+// ── Medication options ────────────────────────────────────────────────
+export const MEDICATIONS = [
+  { id: 'sumatriptano', label: 'Sumatriptano', emoji: '🧬' },
+  { id: 'dipirona', label: 'Dipirona', emoji: '💧' },
+  { id: 'paracetamol', label: 'Paracetamol', emoji: '💊' },
+  { id: 'ibuprofeno', label: 'Ibuprofeno', emoji: '🔴' },
+  { id: 'naproxeno', label: 'Naproxeno', emoji: '🟠' },
+  { id: 'nimesulida', label: 'Nimesulida', emoji: '🟡' },
+  { id: 'nenhum', label: 'Nenhum', emoji: '✋' },
+] as const;
+
+export type MedicationId = (typeof MEDICATIONS)[number]['id'];
+
 // ── Intensity labels ──────────────────────────────────────────────────
 export const INTENSITY_CONFIG = [
   { value: 0, label: 'Sem dor', emoji: '😌', color: '#10B981' },
@@ -65,6 +78,8 @@ export interface CrisisRecord {
   location: LocationId | null;
   side: SideId | null;
   symptoms: SymptomId[];
+  medications: MedicationId[];
+  customMedications: string[];
   aiComplement: AiComplement | null;
 }
 
@@ -76,8 +91,10 @@ export function createEmptyCrisis(): CrisisRecord {
     location: null,
     side: null,
     symptoms: [],
+    medications: [],
+    customMedications: [],
     aiComplement: null,
   };
 }
 
-export const TOTAL_STEPS = 5;
+export const TOTAL_STEPS = 6;
