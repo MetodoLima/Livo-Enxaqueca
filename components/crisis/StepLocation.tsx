@@ -24,7 +24,6 @@ export default function StepLocation({ data, onChange, onNext }: StepLocationPro
     <View style={styles.container}>
       <Animated.View entering={FadeInUp.duration(400)} style={styles.content}>
         <Text style={styles.title}>Onde dói?</Text>
-        <Text style={styles.subtitle}>Selecione a região principal da dor</Text>
 
         {/* Location grid */}
         <View style={styles.grid}>
@@ -104,7 +103,7 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontFamily: 'Epilogue_700Bold',
     color: 'white',
-    marginBottom: 8,
+    marginBottom: 20,
   },
   subtitle: {
     fontSize: 15,

@@ -24,9 +24,6 @@ export default function StepSymptoms({ data, onChange, onNext }: StepSymptomsPro
     <View style={styles.container}>
       <Animated.View entering={FadeInUp.duration(400)} style={styles.content}>
         <Text style={styles.title}>Sintomas associados</Text>
-        <Text style={styles.subtitle}>
-          Selecione o que está sentindo junto com a dor
-        </Text>
 
         <View style={styles.grid}>
           {SYMPTOMS.map((symptom, index) => {
@@ -85,7 +82,7 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontFamily: 'Epilogue_700Bold',
     color: 'white',
-    marginBottom: 8,
+    marginBottom: 20,
   },
   subtitle: {
     fontSize: 15,

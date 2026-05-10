@@ -42,6 +42,7 @@ import {
   LOCATIONS,
   SIDES,
   SYMPTOMS,
+  MEDICATIONS,
 } from '@/types/crisis';
 import { processAudio, processText } from '@/services/api';
 import { IntensityEditor, LocationEditor, SymptomsEditor } from '@/components/crisis/EditModals';
@@ -164,6 +165,9 @@ export default function CrisisDetailScreen() {
   const sideData = SIDES.find((s) => s.id === crisis.side);
   const symptomNames = crisis.symptoms
     .map((id) => SYMPTOMS.find((s) => s.id === id))
+    .filter(Boolean);
+  const medicationNames = crisis.medications
+    .map((id) => MEDICATIONS.find((m) => m.id === id))
     .filter(Boolean);
 
   const fmtTime = (d: Date) =>
@@ -359,6 +363,27 @@ export default function CrisisDetailScreen() {
               <View style={styles.addBtn}>
                 <Text style={styles.addBtnText}>Editar</Text>
               </View>
+            )}
+          </Card>
+        </Animated.View>
+
+        {/* ── Medications ── */}
+        <Animated.View entering={FadeInUp.delay(450)}>
+          <Card className="mb-4">
+            <Text style={[styles.cardLabel, { marginBottom: 10 }]}>Medicamentos</Text>
+            {medicationNames.length > 0 ? (
+              <View style={styles.tagRow}>
+                {medicationNames.map((m) => m && (
+                  <View key={m.id} style={[styles.tag, { backgroundColor: `${Colors.accent}15` }]}>
+                    <Text style={styles.tagEmoji}>{m.emoji}</Text>
+                    <Text style={[styles.tagText, { color: Colors.accent }]}>{m.label}</Text>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text style={{ fontSize: 13, fontFamily: 'Epilogue_400Regular', color: Colors.muted }}>
+                Nenhum registrado
+              </Text>
             )}
           </Card>
         </Animated.View>

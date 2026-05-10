@@ -181,12 +181,12 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
   return (
     <View style={styles.container}>
       <Animated.View entering={FadeInUp.duration(400)} style={styles.content}>
-        <Text style={styles.title}>Quer adicionar mais detalhes?</Text>
-        <Text style={styles.subtitle}>
-          {subStep === 'recording'
-            ? `Gravando  ${fmtSecs(recordSecs)}`
-            : 'Use o microfone ou escreva para complementar o registro'}
-        </Text>
+        <Text style={styles.title}>Mais detalhes?</Text>
+        {subStep === 'recording' && (
+          <Text style={styles.subtitle}>
+            {`Gravando  ${fmtSecs(recordSecs)}`}
+          </Text>
+        )}
 
         {/* Mic area */}
         {audioAvailable && (
@@ -263,7 +263,7 @@ const styles = StyleSheet.create({
     fontSize: 26,
     fontFamily: 'Epilogue_700Bold',
     color: 'white',
-    marginBottom: 8,
+    marginBottom: 20,
   },
   subtitle: {
     fontSize: 15,

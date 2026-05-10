@@ -17,9 +17,7 @@ export default function StepIntensity({ data, onChange, onNext }: StepIntensityP
   return (
     <View style={styles.container}>
       <Animated.View entering={FadeInUp.duration(400)} style={styles.content}>
-        <Text style={styles.title}>
-          Qual é o nível mais elevado de dor nesta crise?
-        </Text>
+        <Text style={styles.title}>Qual o nível da dor?</Text>
 
         {/* Scale list — 10 to 0, top to bottom */}
         <View style={styles.scaleContainer}>
@@ -100,7 +98,7 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontFamily: 'Epilogue_700Bold',
     color: 'white',
-    marginBottom: 24,
+    marginBottom: 20,
     lineHeight: 30,
   },
 
