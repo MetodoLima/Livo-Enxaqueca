@@ -80,6 +80,7 @@ export interface CrisisRecord {
   symptoms: SymptomId[];
   medications: MedicationId[];
   customMedications: string[];
+  triggers: string[];
   aiComplement: AiComplement | null;
 }
 
@@ -93,6 +94,7 @@ export function createEmptyCrisis(): CrisisRecord {
     symptoms: [],
     medications: [],
     customMedications: [],
+    triggers: [],
     aiComplement: null,
   };
 }
@@ -129,6 +131,37 @@ export function mergeAiResultIntoCrisis(
   if (s.tontura)   aiSymptoms.push('tontura');
   patch.symptoms = Array.from(new Set([...current.symptoms, ...aiSymptoms]));
 
+  // Medicamentos: separa conhecidos (MedicationId) de custom, faz união com os do questionário
+  if (structured.medicamentos_tomados.length > 0) {
+    const knownIds = MEDICATIONS.map((m) => m.id);
+    const aiKnown: MedicationId[] = [];
+    const aiCustom: string[] = [];
+
+    for (const med of structured.medicamentos_tomados) {
+      const normalized = med.toLowerCase().trim();
+      const match = knownIds.find((id) => id === normalized || normalized.includes(id));
+      if (match && match !== 'nenhum') {
+        aiKnown.push(match as MedicationId);
+      } else if (normalized !== 'nenhum') {
+        aiCustom.push(med.trim());
+      }
+    }
+
+    // Remove 'nenhum' se a IA detectou medicamentos reais
+    const baseKnown = current.medications.filter((m) => m !== 'nenhum');
+    patch.medications = Array.from(new Set([...baseKnown, ...aiKnown]));
+    patch.customMedications = Array.from(
+      new Set([...current.customMedications, ...aiCustom]),
+    );
+  }
+
+  // Fatores desencadeantes: união acumulada a cada complemento
+  if (structured.fatores_desencadeantes.length > 0) {
+    patch.triggers = Array.from(
+      new Set([...current.triggers, ...structured.fatores_desencadeantes]),
+    );
+  }
+
   return patch;
 }
 
@@ -163,8 +196,11 @@ export function crisisToMigraineStructured(crisis: CrisisRecord): MigraineStruct
     qualidade_dor: [],
     sintomas_associados: sintomas,
     inicio_estimado: null,
-    medicamentos_tomados: [],
-    fatores_desencadeantes: [],
+    medicamentos_tomados: [
+      ...crisis.medications.filter((m) => m !== 'nenhum'),
+      ...crisis.customMedications,
+    ],
+    fatores_desencadeantes: [...crisis.triggers],
     nivel_incapacidade,
     resumo: null,
   };
