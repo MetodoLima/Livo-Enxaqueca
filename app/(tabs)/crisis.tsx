@@ -391,16 +391,42 @@ export default function CrisisDetailScreen() {
         </Animated.View>
 
         {/* ── AI summary ── */}
-        {crisis.aiComplement?.aiResult?.structured.resumo && (
-          <Animated.View entering={FadeInUp.delay(500)}>
-            <Card className="mb-4" variant="accent-border">
-              <Text style={styles.cardLabel}>Análise da IA</Text>
-              <Text style={styles.aiSummary}>
-                {crisis.aiComplement.aiResult.structured.resumo}
-              </Text>
-            </Card>
-          </Animated.View>
-        )}
+        {(() => {
+          const structured = crisis.aiComplement?.aiResult?.structured;
+          const gatilhos = crisis.triggers;
+          if (!structured?.resumo && gatilhos.length === 0) return null;
+          return (
+            <Animated.View entering={FadeInUp.delay(500)}>
+              <Card className="mb-4" variant="accent-border">
+                <Text style={styles.cardLabel}>Análise da IA</Text>
+                {structured?.resumo && (
+                  <Text style={styles.aiSummary}>{structured.resumo}</Text>
+                )}
+                {gatilhos.length > 0 && (
+                  <View style={{ marginTop: structured?.resumo ? 14 : 4 }}>
+                    <Text style={[styles.cardLabel, { marginBottom: 8 }]}>
+                      Possíveis gatilhos
+                    </Text>
+                    {gatilhos.map((g, i) => (
+                      <View key={i} style={styles.gatilhoRow}>
+                        <Zap size={13} color={Colors.orange} style={{ marginRight: 6 }} />
+                        <Text style={styles.gatilhoText}>{g}</Text>
+                        <TouchableOpacity
+                          onPress={() => updateActiveCrisis({
+                            triggers: crisis.triggers.filter((_, idx) => idx !== i),
+                          })}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <X size={14} color={Colors.muted} />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </Card>
+            </Animated.View>
+          );
+        })()}
 
         {/* ── Voice complement section ── */}
         <Animated.View entering={FadeInUp.delay(600)}>
@@ -615,6 +641,17 @@ const styles = StyleSheet.create({
     color: Colors.soft,
     lineHeight: 22,
     marginTop: 6,
+  },
+  gatilhoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  gatilhoText: {
+    fontSize: 14,
+    fontFamily: 'Epilogue_400Regular',
+    color: Colors.soft,
+    flex: 1,
   },
 
   // Voice entry
