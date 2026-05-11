@@ -6,6 +6,7 @@ import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
+import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { CrisisProvider } from '@/contexts/CrisisContext';
 import { useRouter, useSegments, useRootNavigationState } from 'expo-router';
@@ -24,7 +25,7 @@ export {
 } from 'expo-router';
 
 export const unstable_settings = {
-  initialRouteName: '(tabs)', // caso seja necessário testar o setup troque '(tabs)' para '(setup)'
+  initialRouteName: '(tabs)', 
 };
 
 SplashScreen.preventAutoHideAsync();
@@ -45,7 +46,6 @@ function RootLayoutNav() {
   const navigationState = useRootNavigationState();
 
   useEffect(() => {
-    // Aguarda o carregamento da sessão e a montagem completa da árvore de navegação
     if (loading || !navigationState?.key) return;
 
     const inAuthGroup = String(segments[0]) === '(auth)';
@@ -56,19 +56,15 @@ function RootLayoutNav() {
         router.replace('/login' as any);
       }
     } else {
-      // Usuário logado
       if (inAuthGroup) {
-        // Se estiver na tela de login/registro
         if (!isSetupCompleted) {
           router.replace('/(setup)/step1' as any);
         } else {
           router.replace('/(tabs)' as any);
         }
       } else if (!isSetupCompleted && !inSetupGroup) {
-        // Se logado, setup não completado, e não está no fluxo de setup
         router.replace('/(setup)/step1' as any);
       } else if (isSetupCompleted && inSetupGroup) {
-        // Se logado, setup completado, e ainda está no fluxo de setup (acabou de concluir)
         router.replace('/(tabs)' as any);
       }
     }
@@ -112,10 +108,12 @@ export default function RootLayout() {
   }
 
   return (
-    <AuthProvider>
-      <CrisisProvider>
-        <RootLayoutNav />
-      </CrisisProvider>
-    </AuthProvider>
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <AuthProvider>
+        <CrisisProvider>
+          <RootLayoutNav />
+        </CrisisProvider>
+      </AuthProvider>
+    </GestureHandlerRootView>
   );
 }

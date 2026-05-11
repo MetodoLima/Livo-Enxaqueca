@@ -10,29 +10,66 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useSetup } from '../../contexts/SetupContext';
 import { supabase } from '../../lib/supabase';
 
+// ─── Tipos ────────────────────────────────────────────────────────────────────
 
-
-type ImpactLevel = 1 | 2 | 3 | 4 | 5 | null;
+type ImpactLevel = 'none' | 'mild' | 'moderate' | 'high' | 'total' | 'unknown' | null;
 type ActivityStop = 'never' | 'sometimes' | 'often' | 'always' | null;
 
-
+// ─── Constantes ───────────────────────────────────────────────────────────────
 
 const TOTAL_STEPS = 9;
 const CURRENT_STEP = 9;
 
-const IMPACT_LEVELS: {
+const IMPACT_OPTIONS: {
     value: ImpactLevel;
-    emoji: string;
     label: string;
     sublabel: string;
+    emoji: string;
     color: string;
 }[] = [
-        { value: 1, emoji: '😊', label: 'Quase nenhum', sublabel: 'Consigo fazer tudo normalmente', color: '#00BFA5' },
-        { value: 2, emoji: '🙂', label: 'Leve', sublabel: 'Fico desconfortável mas funciono', color: '#4DD9C0' },
-        { value: 3, emoji: '😐', label: 'Moderado', sublabel: 'Preciso reduzir o ritmo', color: '#F5A623' },
-        { value: 4, emoji: '😣', label: 'Alto', sublabel: 'Consigo fazer muito pouco', color: '#F07040' },
-        { value: 5, emoji: '🤕', label: 'Incapacitante', sublabel: 'Preciso parar tudo e me isolar', color: '#E85D75' },
-    ];
+    {
+        value: 'none',
+        label: 'Não afeta minha rotina',
+        sublabel: 'Consigo trabalhar, estudar e fazer tudo normalmente',
+        emoji: '💪',
+        color: '#00BFA5',
+    },
+    {
+        value: 'mild',
+        label: 'Afeta levemente',
+        sublabel: 'Fico desconfortável mas consigo continuar',
+        emoji: '🙂',
+        color: '#4DD9C0',
+    },
+    {
+        value: 'moderate',
+        label: 'Preciso reduzir o ritmo',
+        sublabel: 'Consigo fazer o essencial mas com dificuldade',
+        emoji: '😐',
+        color: '#F5A623',
+    },
+    {
+        value: 'high',
+        label: 'Preciso parar a maioria das atividades',
+        sublabel: 'Trabalho, estudos e compromissos ficam prejudicados',
+        emoji: '😣',
+        color: '#F07040',
+    },
+    {
+        value: 'total',
+        label: 'Fico completamente incapacitado',
+        sublabel: 'Preciso me isolar, apagar as luzes e ficar na cama',
+        emoji: '🤕',
+        color: '#E85D75',
+    },
+    {
+        value: 'unknown',
+        label: 'Não sei avaliar',
+        sublabel: 'Varia muito de crise para crise',
+        emoji: '🤔',
+        color: '#4A6A82',
+    },
+];
 
 const ACTIVITY_STOP_OPTIONS: {
     value: ActivityStop;
@@ -41,14 +78,14 @@ const ACTIVITY_STOP_OPTIONS: {
     emoji: string;
     color: string;
 }[] = [
-        { value: 'never', label: 'Nunca preciso parar', sublabel: 'Consigo manter minha rotina', emoji: '💪', color: '#00BFA5' },
-        { value: 'sometimes', label: 'Às vezes paro', sublabel: 'Em crises mais fortes', emoji: '⚖️', color: '#F5A623' },
-        { value: 'often', label: 'Na maioria das crises', sublabel: 'Geralmente preciso descansar', emoji: '🛋️', color: '#F07040' },
-        { value: 'always', label: 'Sempre preciso parar tudo', sublabel: 'Toda crise me tira de ação', emoji: '🛑', color: '#E85D75' },
-    ];
+    { value: 'never', label: 'Nunca preciso parar', sublabel: 'Consigo manter minha rotina', emoji: '💪', color: '#00BFA5' },
+    { value: 'sometimes', label: 'Às vezes paro', sublabel: 'Em crises mais fortes', emoji: '⚖️', color: '#F5A623' },
+    { value: 'often', label: 'Na maioria das crises', sublabel: 'Geralmente preciso descansar', emoji: '🛋️', color: '#F07040' },
+    { value: 'always', label: 'Sempre preciso parar tudo', sublabel: 'Toda crise me tira de ação', emoji: '🛑', color: '#E85D75' },
+];
 
-// Mapeamento de cada campo do contexto para seu passo e tipo esperado no banco.
-// O `tipo` aqui é o valor da coluna `tipo` em `perguntas_setup`.
+// ─── Mapeamento banco ─────────────────────────────────────────────────────────
+
 const FIELD_META: Record<string, { passo: number; tipo: string }> = {
     frequency: { passo: 1, tipo: 'single_choice' },
     hasSigns: { passo: 2, tipo: 'boolean' },
@@ -61,7 +98,7 @@ const FIELD_META: Record<string, { passo: number; tipo: string }> = {
     medications: { passo: 7, tipo: 'text' },
     abortiveFrequency: { passo: 8, tipo: 'single_choice' },
     abortiveEffectiveness: { passo: 8, tipo: 'single_choice' },
-    impactLevel: { passo: 9, tipo: 'range' },
+    impactLevel: { passo: 9, tipo: 'single_choice' },
     activityStop: { passo: 9, tipo: 'single_choice' },
 };
 
@@ -74,9 +111,6 @@ type DBPergunta = {
     opcoes_pergunta: DBOpcao[];
 };
 
-/**
- * Busca o usuario_id (bigint) da tabela usuarios a partir do auth.user.id (uuid).
- */
 async function getUsuarioId(authUserId: string): Promise<number | null> {
     const { data, error } = await supabase
         .from('usuarios')
@@ -87,16 +121,6 @@ async function getUsuarioId(authUserId: string): Promise<number | null> {
     return data.id;
 }
 
-/**
- * Salva todas as respostas do setup no banco de dados.
- *
- * Usa o campo `tipo` da tabela `perguntas_setup` como fonte da verdade:
- * - 'range'         → valor_numero  (Number)
- * - 'boolean'       → valor_booleano (true/false)
- * - 'text'          → valor_texto   (String)
- * - 'single_choice' → opcao_id      (cruzamento por label)
- * - 'multi_choice'  → opcao_id      (cruzamento por label, uma linha por opção)
- */
 async function saveSetupAnswers(
     finalData: Record<string, any>,
     usuarioId: number,
@@ -113,13 +137,11 @@ async function saveSetupAnswers(
             continue;
         }
 
-        // Normaliza para array para tratar single e multi de forma uniforme
         const values: any[] = Array.isArray(value) ? value : [value];
 
         for (const val of values) {
             if (val === undefined || val === null) continue;
 
-            // ── range ───────────────────────────────────────────────────
             if (metadados.tipo === 'range') {
                 const pergunta = perguntas.find(
                     (p) => p.passo_setup === metadados.passo && p.tipo === 'range'
@@ -137,7 +159,6 @@ async function saveSetupAnswers(
                 continue;
             }
 
-            // ── boolean ─────────────────────────────────────────────────
             if (metadados.tipo === 'boolean') {
                 const pergunta = perguntas.find(
                     (p) => p.passo_setup === metadados.passo && p.tipo === 'boolean'
@@ -152,7 +173,6 @@ async function saveSetupAnswers(
                 continue;
             }
 
-            // ── text ─────────────────────────────────────────────────────
             if (metadados.tipo === 'text') {
                 const pergunta = perguntas.find(
                     (p) => p.passo_setup === metadados.passo && p.tipo === 'text'
@@ -167,7 +187,6 @@ async function saveSetupAnswers(
                 continue;
             }
 
-            // ── single_choice / multi_choice: cruzamento por label ───────
             const valNorm = String(val).toLowerCase().trim();
             let matched = false;
             for (const pergunta of perguntas) {
@@ -200,9 +219,7 @@ async function saveSetupAnswers(
     if (error) throw error;
 }
 
-
-
-
+// ─── Componente Principal ─────────────────────────────────────────────────────
 
 export default function Step9Impacto() {
     const { setupData, clearSetupData } = useSetup();
@@ -210,15 +227,16 @@ export default function Step9Impacto() {
 
     const [impactLevel, setImpactLevel] = useState<ImpactLevel>(null);
     const [activityStop, setActivityStop] = useState<ActivityStop>(null);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const selectedImpact = IMPACT_LEVELS.find((o) => o.value === impactLevel) ?? null;
-    const isValid = impactLevel !== null && activityStop !== null;
-
+    const selectedImpact = IMPACT_OPTIONS.find((o) => o.value === impactLevel) ?? null;
+    const isValid = impactLevel !== null && (impactLevel === 'unknown' || activityStop !== null);
 
     const needsPreventive =
-        (impactLevel ?? 0) >= 4 || activityStop === 'often' || activityStop === 'always';
-
-    const [isSubmitting, setIsSubmitting] = useState(false);
+        impactLevel === 'high' ||
+        impactLevel === 'total' ||
+        activityStop === 'often' ||
+        activityStop === 'always';
 
     async function handleNext() {
         if (!isValid || isSubmitting || !selectedImpact) return;
@@ -227,29 +245,25 @@ export default function Step9Impacto() {
 
         const finalData = {
             ...setupData,
-            impactLevel: selectedImpact.value,
+            impactLevel: selectedImpact.label,
             activityStop: selectedActivityStop?.label ?? activityStop,
         };
 
         setIsSubmitting(true);
         try {
-            // 1. Buscar o ID interno do usuário na tabela `usuarios`
             const { data: authData } = await supabase.auth.getUser();
             if (!authData?.user) throw new Error('Usuário não autenticado.');
 
             const usuarioId = await getUsuarioId(authData.user.id);
             if (!usuarioId) throw new Error('Perfil do usuário não encontrado na tabela usuarios.');
 
-            // 2. Buscar todas as perguntas com suas opções
             const { data: perguntas, error: pErr } = await supabase
                 .from('perguntas_setup')
                 .select('id, texto, tipo, passo_setup, opcoes_pergunta(id, texto)');
             if (pErr || !perguntas) throw pErr ?? new Error('Falha ao buscar perguntas.');
 
-            // 3. Salvar as respostas no banco
             await saveSetupAnswers(finalData, usuarioId, perguntas as DBPergunta[]);
 
-            // 4. Marcar setup como concluído no Supabase Auth
             const { error: updateErr } = await supabase.auth.updateUser({
                 data: { setupCompleted: true }
             });
@@ -290,130 +304,80 @@ export default function Step9Impacto() {
                         ))}
                     </View>
 
-                    {/* Rótulo */}
-                    <Text
-                        style={{
-                            fontSize: 12,
-                            fontWeight: '600',
-                            letterSpacing: 1.5,
-                            color: '#00BFA5',
-                            textTransform: 'uppercase',
-                            marginBottom: 8,
-                        }}
-                    >
+                    <Text style={{ fontSize: 12, fontWeight: '600', letterSpacing: 1.5, color: '#00BFA5', textTransform: 'uppercase', marginBottom: 8 }}>
                         Passo {CURRENT_STEP} de {TOTAL_STEPS} · Impacto
                     </Text>
 
-                    {/* Título */}
-                    <Text
-                        style={{
-                            fontSize: 26,
-                            fontWeight: '700',
-                            color: '#FFFFFF',
-                            lineHeight: 34,
-                            marginBottom: 8,
-                        }}
-                    >
+                    <Text style={{ fontSize: 26, fontWeight: '700', color: '#FFFFFF', lineHeight: 34, marginBottom: 8 }}>
                         O quanto a enxaqueca afeta sua vida?
                     </Text>
 
-                    {/* Subtítulo */}
                     <Text style={{ fontSize: 15, color: '#7A99B2', lineHeight: 22 }}>
                         Pense em como você fica durante uma crise típica. Isso define a necessidade de tratamento preventivo.
                     </Text>
                 </View>
 
-                {/* ── Escala de impacto — emojis ── */}
-                <View style={{ paddingHorizontal: 24, marginTop: 28 }}>
-                    <Text
-                        style={{
-                            fontSize: 15,
-                            fontWeight: '600',
-                            color: '#FFFFFF',
-                            marginBottom: 16,
-                        }}
-                    >
-                        Nível de impacto durante uma crise
-                    </Text>
-
-                    {/* Emojis em linha */}
-                    <View
-                        style={{
-                            backgroundColor: '#112236',
-                            borderRadius: 20,
-                            padding: 20,
-                            alignItems: 'center',
-                        }}
-                    >
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', width: '100%', marginBottom: 16 }}>
-                            {IMPACT_LEVELS.map((level) => {
-                                const isSelected = impactLevel === level.value;
-                                return (
-                                    <TouchableOpacity
-                                        key={level.value}
-                                        onPress={() => setImpactLevel(level.value)}
-                                        style={{ alignItems: 'center', gap: 6 }}
-                                    >
-                                        <View
-                                            style={{
-                                                width: 52,
-                                                height: 52,
-                                                borderRadius: 26,
-                                                backgroundColor: isSelected ? level.color + '30' : '#0D2137',
-                                                borderWidth: 2,
-                                                borderColor: isSelected ? level.color : '#1E3A52',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                            }}
-                                        >
-                                            <Text style={{ fontSize: 26 }}>{level.emoji}</Text>
-                                        </View>
-                                        <Text
-                                            style={{
-                                                fontSize: 10,
-                                                fontWeight: '700',
-                                                color: isSelected ? level.color : '#4A6A82',
-                                                textAlign: 'center',
-                                            }}
-                                        >
-                                            {level.value}
-                                        </Text>
-                                    </TouchableOpacity>
-                                );
-                            })}
-                        </View>
-
-                        {/* Linha de descrição do selecionado */}
-                        <View style={{ minHeight: 44, alignItems: 'center', justifyContent: 'center' }}>
-                            {selectedImpact ? (
-                                <View style={{ alignItems: 'center', gap: 2 }}>
-                                    <Text style={{ fontSize: 15, fontWeight: '700', color: selectedImpact.color }}>
-                                        {selectedImpact.label}
+                {/* ── Opções de impacto ── */}
+                <View style={{ paddingHorizontal: 24, marginTop: 28, gap: 10 }}>
+                    {IMPACT_OPTIONS.map((option) => {
+                        const isSelected = impactLevel === option.value;
+                        const isUnknown = option.value === 'unknown';
+                        return (
+                            <TouchableOpacity
+                                key={option.value}
+                                onPress={() => {
+                                    setImpactLevel(option.value);
+                                    if (isUnknown) setActivityStop(null);
+                                }}
+                                activeOpacity={0.8}
+                                style={{
+                                    backgroundColor: isSelected ? option.color + '18' : '#112236',
+                                    borderWidth: 1.5,
+                                    borderColor: isSelected ? option.color : '#1E3A52',
+                                    borderRadius: 16,
+                                    paddingVertical: 16,
+                                    paddingHorizontal: 18,
+                                    flexDirection: 'row',
+                                    alignItems: 'center',
+                                    gap: 14,
+                                    marginTop: isUnknown ? 8 : 0,
+                                    borderStyle: isUnknown ? 'dashed' : 'solid',
+                                }}
+                            >
+                                <Text style={{ fontSize: 24 }}>{option.emoji}</Text>
+                                <View style={{ flex: 1, gap: 2 }}>
+                                    <Text style={{ fontSize: 15, fontWeight: '600', color: isSelected ? option.color : '#FFFFFF' }}>
+                                        {option.label}
                                     </Text>
-                                    <Text style={{ fontSize: 13, color: '#7A99B2' }}>
-                                        {selectedImpact.sublabel}
+                                    <Text style={{ fontSize: 13, color: '#4A6A82' }}>
+                                        {option.sublabel}
                                     </Text>
                                 </View>
-                            ) : (
-                                <Text style={{ fontSize: 13, color: '#4A6A82' }}>
-                                    Toque em um número para selecionar
-                                </Text>
-                            )}
-                        </View>
-                    </View>
+                                <View
+                                    style={{
+                                        width: 22,
+                                        height: 22,
+                                        borderRadius: 11,
+                                        borderWidth: 2,
+                                        borderColor: isSelected ? option.color : '#1E3A52',
+                                        backgroundColor: isSelected ? option.color : 'transparent',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                    }}
+                                >
+                                    {isSelected && (
+                                        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#FFFFFF' }} />
+                                    )}
+                                </View>
+                            </TouchableOpacity>
+                        );
+                    })}
                 </View>
 
-                {/* ── Você precisa parar atividades? (aparece após selecionar nível) ── */}
-                {impactLevel && (
+                {/* ── Você precisa parar atividades? (só aparece se não selecionou "não sei") ── */}
+                {impactLevel && impactLevel !== 'unknown' && (
                     <View style={{ paddingHorizontal: 24, marginTop: 28 }}>
-                        <Text
-                            style={{
-                                fontSize: 15,
-                                fontWeight: '600',
-                                color: '#FFFFFF',
-                                marginBottom: 4,
-                            }}
-                        >
+                        <Text style={{ fontSize: 15, fontWeight: '600', color: '#FFFFFF', marginBottom: 4 }}>
                             Você precisa parar suas atividades durante a crise?
                         </Text>
                         <Text style={{ fontSize: 13, color: '#7A99B2', marginBottom: 16 }}>
@@ -442,13 +406,7 @@ export default function Step9Impacto() {
                                     >
                                         <Text style={{ fontSize: 22 }}>{option.emoji}</Text>
                                         <View style={{ flex: 1, gap: 2 }}>
-                                            <Text
-                                                style={{
-                                                    fontSize: 15,
-                                                    fontWeight: '600',
-                                                    color: isSelected ? option.color : '#FFFFFF',
-                                                }}
-                                            >
+                                            <Text style={{ fontSize: 15, fontWeight: '600', color: isSelected ? option.color : '#FFFFFF' }}>
                                                 {option.label}
                                             </Text>
                                             <Text style={{ fontSize: 13, color: '#4A6A82' }}>
@@ -479,7 +437,7 @@ export default function Step9Impacto() {
                 )}
 
                 {/* ── Aviso de preventivo ── */}
-                {needsPreventive && activityStop && (
+                {needsPreventive && (
                     <View style={{ paddingHorizontal: 24, marginTop: 20 }}>
                         <View
                             style={{
@@ -514,14 +472,7 @@ export default function Step9Impacto() {
                             justifyContent: 'center',
                         }}
                     >
-                        <Text
-                            style={{
-                                fontSize: 16,
-                                fontWeight: '700',
-                                color: isValid ? '#FFFFFF' : '#3A5A72',
-                                letterSpacing: 0.3,
-                            }}
-                        >
+                        <Text style={{ fontSize: 16, fontWeight: '700', color: isValid ? '#FFFFFF' : '#3A5A72', letterSpacing: 0.3 }}>
                             {isSubmitting ? 'Salvando...' : 'Continuar'}
                         </Text>
                     </TouchableOpacity>

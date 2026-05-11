@@ -11,38 +11,75 @@ import {
     View,
 } from 'react-native';
 
-
+// ─── Tipos ────────────────────────────────────────────────────────────────────
 
 interface Medication {
     id: string;
     name: string;
     activeIngredient: string;
-    category: 'triptan' | 'analgesic' | 'anti_inflammatory' | 'ergot' | 'other';
+    category: 'triptan' | 'analgesic' | 'anti_inflammatory' | 'ergot' | 'combination' | 'preventive' | 'other';
 }
 
-
+// ─── Constantes ───────────────────────────────────────────────────────────────
 
 const TOTAL_STEPS = 9;
 const CURRENT_STEP = 7;
 
-// Lista local de referência — substitui a API enquanto não estiver disponível
 const MEDICATION_DB: Medication[] = [
-    { id: 'sumatriptan', name: 'Sumatriptano', activeIngredient: 'Sumatriptana', category: 'triptan' },
-    { id: 'imigran', name: 'Imigran', activeIngredient: 'Sumatriptana', category: 'triptan' },
-    { id: 'rizatriptan', name: 'Rizatriptano', activeIngredient: 'Rizatriptana', category: 'triptan' },
-    { id: 'maxalt', name: 'Maxalt', activeIngredient: 'Rizatriptana', category: 'triptan' },
-    { id: 'zolmitriptan', name: 'Zolmitriptano', activeIngredient: 'Zolmitriptana', category: 'triptan' },
-    { id: 'naratriptan', name: 'Naratriptano', activeIngredient: 'Naratriptana', category: 'triptan' },
-    { id: 'dipyrone', name: 'Dipirona', activeIngredient: 'Metamizol', category: 'analgesic' },
-    { id: 'novalgina', name: 'Novalgina', activeIngredient: 'Metamizol', category: 'analgesic' },
-    { id: 'paracetamol', name: 'Paracetamol', activeIngredient: 'Paracetamol', category: 'analgesic' },
-    { id: 'tylenol', name: 'Tylenol', activeIngredient: 'Paracetamol', category: 'analgesic' },
-    { id: 'ibuprofen', name: 'Ibuprofeno', activeIngredient: 'Ibuprofeno', category: 'anti_inflammatory' },
-    { id: 'advil', name: 'Advil', activeIngredient: 'Ibuprofeno', category: 'anti_inflammatory' },
-    { id: 'naproxen', name: 'Naproxeno', activeIngredient: 'Naproxeno', category: 'anti_inflammatory' },
-    { id: 'nimesulide', name: 'Nimesulida', activeIngredient: 'Nimesulida', category: 'anti_inflammatory' },
-    { id: 'ergotamine', name: 'Ergotamina', activeIngredient: 'Ergotamina', category: 'ergot' },
-    { id: 'cafergot', name: 'Cafergot', activeIngredient: 'Ergotamina + Cafeína', category: 'ergot' },
+  // ── Triptanos ──
+  { id: 'sumatriptan', name: 'Sumatriptano', activeIngredient: 'Sumatriptana', category: 'triptan' },
+  { id: 'imigran', name: 'Imigran', activeIngredient: 'Sumatriptana', category: 'triptan' },
+  { id: 'sumax', name: 'Sumax', activeIngredient: 'Sumatriptana', category: 'triptan' },
+  { id: 'rizatriptan', name: 'Rizatriptano', activeIngredient: 'Rizatriptana', category: 'triptan' },
+  { id: 'maxalt', name: 'Maxalt', activeIngredient: 'Rizatriptana', category: 'triptan' },
+  { id: 'zolmitriptan', name: 'Zolmitriptano', activeIngredient: 'Zolmitriptana', category: 'triptan' },
+  { id: 'zomig', name: 'Zomig', activeIngredient: 'Zolmitriptana', category: 'triptan' },
+  { id: 'naratriptan', name: 'Naratriptano', activeIngredient: 'Naratriptana', category: 'triptan' },
+  { id: 'eletriptan', name: 'Eletriptano', activeIngredient: 'Eletriptana', category: 'triptan' },
+  { id: 'relpax', name: 'Relpax', activeIngredient: 'Eletriptana', category: 'triptan' },
+
+  // ── Analgésicos ──
+  { id: 'dipyrone', name: 'Dipirona', activeIngredient: 'Metamizol', category: 'analgesic' },
+  { id: 'novalgina', name: 'Novalgina', activeIngredient: 'Metamizol', category: 'analgesic' },
+  { id: 'anador', name: 'Anador', activeIngredient: 'Metamizol', category: 'analgesic' },
+  { id: 'paracetamol', name: 'Paracetamol', activeIngredient: 'Paracetamol', category: 'analgesic' },
+  { id: 'tylenol', name: 'Tylenol', activeIngredient: 'Paracetamol', category: 'analgesic' },
+  { id: 'aspirina', name: 'Aspirina', activeIngredient: 'Ácido Acetilsalicílico', category: 'analgesic' },
+  { id: 'aas', name: 'AAS', activeIngredient: 'Ácido Acetilsalicílico', category: 'analgesic' },
+
+  // ── Anti-inflamatórios ──
+  { id: 'ibuprofen', name: 'Ibuprofeno', activeIngredient: 'Ibuprofeno', category: 'anti_inflammatory' },
+  { id: 'advil', name: 'Advil', activeIngredient: 'Ibuprofeno', category: 'anti_inflammatory' },
+  { id: 'alivium', name: 'Alivium', activeIngredient: 'Ibuprofeno', category: 'anti_inflammatory' },
+  { id: 'naproxen', name: 'Naproxeno', activeIngredient: 'Naproxeno', category: 'anti_inflammatory' },
+  { id: 'flanax', name: 'Flanax', activeIngredient: 'Naproxeno', category: 'anti_inflammatory' },
+  { id: 'nimesulide', name: 'Nimesulida', activeIngredient: 'Nimesulida', category: 'anti_inflammatory' },
+  { id: 'nimesil', name: 'Nimesil', activeIngredient: 'Nimesulida', category: 'anti_inflammatory' },
+  { id: 'voltaren', name: 'Voltaren', activeIngredient: 'Diclofenaco', category: 'anti_inflammatory' },
+  { id: 'diclofenaco', name: 'Diclofenaco', activeIngredient: 'Diclofenaco', category: 'anti_inflammatory' },
+  { id: 'cataflan', name: 'Cataflan', activeIngredient: 'Diclofenaco Potássico', category: 'anti_inflammatory' },
+  { id: 'celebra', name: 'Celebra', activeIngredient: 'Celecoxibe', category: 'anti_inflammatory' },
+
+  // ── Ergotamínicos ──
+  { id: 'ergotamine', name: 'Ergotamina', activeIngredient: 'Ergotamina', category: 'ergot' },
+  { id: 'cafergot', name: 'Cafergot', activeIngredient: 'Ergotamina + Cafeína', category: 'ergot' },
+  { id: 'enxak', name: 'Enxak', activeIngredient: 'Di-hidroergotamina + Dipirona + Cafeína', category: 'ergot' },
+
+  // ── Combinações ──
+  { id: 'dorflex', name: 'Dorflex', activeIngredient: 'Dipirona + Orfenadrina + Cafeína', category: 'combination' },
+  { id: 'excedrin', name: 'Excedrin', activeIngredient: 'Paracetamol + Aspirina + Cafeína', category: 'combination' },
+  { id: 'neosaldina', name: 'Neosaldina', activeIngredient: 'Di-hidroergotamina + Dipirona + Cafeína', category: 'combination' },
+  { id: 'saldatona', name: 'Saldatona', activeIngredient: 'Di-hidroergotamina + Dipirona + Cafeína', category: 'combination' },
+
+  // ── Preventivos ──
+  { id: 'propranolol', name: 'Propranolol', activeIngredient: 'Propranolol', category: 'preventive' },
+  { id: 'amitriptyline', name: 'Amitriptilina', activeIngredient: 'Amitriptilina', category: 'preventive' },
+  { id: 'topamax', name: 'Topamax', activeIngredient: 'Topiramato', category: 'preventive' },
+  { id: 'topiramato', name: 'Topiramato', activeIngredient: 'Topiramato', category: 'preventive' },
+  { id: 'flunarizine', name: 'Flunarizina', activeIngredient: 'Flunarizina', category: 'preventive' },
+  { id: 'sibelium', name: 'Sibelium', activeIngredient: 'Flunarizina', category: 'preventive' },
+  { id: 'venlafaxine', name: 'Venlafaxina', activeIngredient: 'Venlafaxina', category: 'preventive' },
+  { id: 'valproate', name: 'Valproato', activeIngredient: 'Ácido Valpróico', category: 'preventive' },
 ];
 
 const CATEGORY_LABELS: Record<Medication['category'], { label: string; color: string }> = {
@@ -50,10 +87,12 @@ const CATEGORY_LABELS: Record<Medication['category'], { label: string; color: st
     analgesic: { label: 'Analgésico', color: '#7B68EE' },
     anti_inflammatory: { label: 'Anti-inflamatório', color: '#F5A623' },
     ergot: { label: 'Ergotamínico', color: '#E85D75' },
+    combination: { label: 'Combinado', color: '#4DD9C0' },
+    preventive: { label: 'Preventivo', color: '#A78BFA' },
     other: { label: 'Outro', color: '#4A6A82' },
 };
 
-
+// ─── Componente Principal ─────────────────────────────────────────────────────
 
 export default function Step7Medicamentos() {
     const { updateSetupData } = useSetup();
@@ -68,7 +107,6 @@ export default function Step7Medicamentos() {
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
     const isValid = noMedication || selected.length > 0;
-
 
     useEffect(() => {
         if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -131,16 +169,13 @@ export default function Step7Medicamentos() {
     function handleNext() {
         if (!isValid) return;
 
-        // Se o usuário marcou "Não uso medicamentos", descartamos (regra de negócio)
         if (!noMedication) {
             updateSetupData({
                 medications: selected.map((m) => m.name),
             });
         }
 
-        router.push({
-            pathname: '/(setup)/step8',
-        });
+        router.push({ pathname: '/(setup)/step8' });
     }
 
     return (
@@ -154,8 +189,6 @@ export default function Step7Medicamentos() {
             >
                 {/* ── Cabeçalho ── */}
                 <View style={{ paddingHorizontal: 24, paddingTop: 56, paddingBottom: 8 }}>
-
-                    {/* Barra de progresso */}
                     <View style={{ flexDirection: 'row', gap: 6, marginBottom: 32 }}>
                         {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
                             <View
@@ -170,34 +203,14 @@ export default function Step7Medicamentos() {
                         ))}
                     </View>
 
-                    {/* Rótulo */}
-                    <Text
-                        style={{
-                            fontSize: 12,
-                            fontWeight: '600',
-                            letterSpacing: 1.5,
-                            color: '#00BFA5',
-                            textTransform: 'uppercase',
-                            marginBottom: 8,
-                        }}
-                    >
+                    <Text style={{ fontSize: 12, fontWeight: '600', letterSpacing: 1.5, color: '#00BFA5', textTransform: 'uppercase', marginBottom: 8 }}>
                         Passo {CURRENT_STEP} de {TOTAL_STEPS} · Medicamentos
                     </Text>
 
-                    {/* Título */}
-                    <Text
-                        style={{
-                            fontSize: 26,
-                            fontWeight: '700',
-                            color: '#FFFFFF',
-                            lineHeight: 34,
-                            marginBottom: 8,
-                        }}
-                    >
+                    <Text style={{ fontSize: 26, fontWeight: '700', color: '#FFFFFF', lineHeight: 34, marginBottom: 8 }}>
                         Quais remédios você toma quando a dor começa?
                     </Text>
 
-                    {/* Subtítulo */}
                     <Text style={{ fontSize: 15, color: '#7A99B2', lineHeight: 22 }}>
                         Busque pelo nome comercial ou princípio ativo. Isso ajuda a monitorar o uso e evitar dependência.
                     </Text>
@@ -221,34 +234,22 @@ export default function Step7Medicamentos() {
                         <TextInput
                             value={search}
                             onChangeText={setSearch}
-                            placeholder="Ex: Sumatriptano, Novalgina..."
+                            placeholder="Ex: Dorflex, Sumatriptano, Dipirona..."
                             placeholderTextColor="#4A6A82"
-                            style={{
-                                flex: 1,
-                                fontSize: 15,
-                                color: '#FFFFFF',
-                                paddingVertical: 14,
-                            }}
+                            style={{ flex: 1, fontSize: 15, color: '#FFFFFF', paddingVertical: 14 }}
                         />
                         {loading && <ActivityIndicator size="small" color="#00BFA5" />}
                         {!loading && search.trim().length > 1 && results.length === 0 && (
                             <TouchableOpacity
                                 onPress={handleAddCustom}
-                                style={{
-                                    backgroundColor: '#00BFA520',
-                                    borderRadius: 8,
-                                    paddingHorizontal: 10,
-                                    paddingVertical: 6,
-                                }}
+                                style={{ backgroundColor: '#00BFA520', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6 }}
                             >
-                                <Text style={{ fontSize: 13, color: '#00BFA5', fontWeight: '700' }}>
-                                    + Adicionar
-                                </Text>
+                                <Text style={{ fontSize: 13, color: '#00BFA5', fontWeight: '700' }}>+ Adicionar</Text>
                             </TouchableOpacity>
                         )}
                     </View>
 
-                    {/* ── Dropdown de resultados ── */}
+                    {/* ── Dropdown ── */}
                     {showResults && results.length > 0 && (
                         <View
                             style={{
@@ -289,22 +290,8 @@ export default function Step7Medicamentos() {
                                                 </Text>
                                             )}
                                         </View>
-                                        <View
-                                            style={{
-                                                backgroundColor: cat.color + '20',
-                                                borderRadius: 6,
-                                                paddingHorizontal: 8,
-                                                paddingVertical: 3,
-                                            }}
-                                        >
-                                            <Text
-                                                style={{
-                                                    fontSize: 11,
-                                                    fontWeight: '700',
-                                                    color: cat.color,
-                                                    letterSpacing: 0.4,
-                                                }}
-                                            >
+                                        <View style={{ backgroundColor: cat.color + '20', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3 }}>
+                                            <Text style={{ fontSize: 11, fontWeight: '700', color: cat.color, letterSpacing: 0.4 }}>
                                                 {cat.label.toUpperCase()}
                                             </Text>
                                         </View>
@@ -315,19 +302,10 @@ export default function Step7Medicamentos() {
                     )}
                 </View>
 
-                {/* ── Tags selecionadas ── */}
+                {/* ── Selecionados ── */}
                 {selected.length > 0 && (
                     <View style={{ paddingHorizontal: 24, marginTop: 20 }}>
-                        <Text
-                            style={{
-                                fontSize: 12,
-                                fontWeight: '600',
-                                color: '#4A6A82',
-                                letterSpacing: 1,
-                                textTransform: 'uppercase',
-                                marginBottom: 12,
-                            }}
-                        >
+                        <Text style={{ fontSize: 12, fontWeight: '600', color: '#4A6A82', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>
                             Selecionados
                         </Text>
                         <View style={{ gap: 10 }}>
@@ -350,32 +328,13 @@ export default function Step7Medicamentos() {
                                     >
                                         <Text style={{ fontSize: 20 }}>💊</Text>
                                         <View style={{ flex: 1 }}>
-                                            <Text style={{ fontSize: 15, fontWeight: '600', color: '#FFFFFF' }}>
-                                                {med.name}
-                                            </Text>
+                                            <Text style={{ fontSize: 15, fontWeight: '600', color: '#FFFFFF' }}>{med.name}</Text>
                                             {med.activeIngredient ? (
-                                                <Text style={{ fontSize: 12, color: '#4A6A82', marginTop: 2 }}>
-                                                    {med.activeIngredient}
-                                                </Text>
+                                                <Text style={{ fontSize: 12, color: '#4A6A82', marginTop: 2 }}>{med.activeIngredient}</Text>
                                             ) : null}
                                         </View>
-                                        <View
-                                            style={{
-                                                backgroundColor: cat.color + '20',
-                                                borderRadius: 6,
-                                                paddingHorizontal: 8,
-                                                paddingVertical: 3,
-                                                marginRight: 8,
-                                            }}
-                                        >
-                                            <Text
-                                                style={{
-                                                    fontSize: 11,
-                                                    fontWeight: '700',
-                                                    color: cat.color,
-                                                    letterSpacing: 0.4,
-                                                }}
-                                            >
+                                        <View style={{ backgroundColor: cat.color + '20', borderRadius: 6, paddingHorizontal: 8, paddingVertical: 3, marginRight: 8 }}>
+                                            <Text style={{ fontSize: 11, fontWeight: '700', color: cat.color, letterSpacing: 0.4 }}>
                                                 {cat.label.toUpperCase()}
                                             </Text>
                                         </View>
@@ -389,7 +348,7 @@ export default function Step7Medicamentos() {
                     </View>
                 )}
 
-                {/* ── Opção nenhum medicamento ── */}
+                {/* ── Não uso medicamentos ── */}
                 <View style={{ paddingHorizontal: 24, marginTop: 20 }}>
                     <TouchableOpacity
                         onPress={handleNoMedication}
@@ -409,34 +368,20 @@ export default function Step7Medicamentos() {
                     >
                         <Text style={{ fontSize: 22 }}>✋</Text>
                         <View style={{ flex: 1 }}>
-                            <Text
-                                style={{
-                                    fontSize: 15,
-                                    fontWeight: '600',
-                                    color: noMedication ? '#7A99B2' : '#FFFFFF',
-                                }}
-                            >
+                            <Text style={{ fontSize: 15, fontWeight: '600', color: noMedication ? '#7A99B2' : '#FFFFFF' }}>
                                 Não uso medicamentos
                             </Text>
-                            <Text style={{ fontSize: 12, color: '#4A6A82' }}>
-                                Aguento a crise ou uso outros métodos
-                            </Text>
+                            <Text style={{ fontSize: 12, color: '#4A6A82' }}>Aguento a crise ou uso outros métodos</Text>
                         </View>
                         <View
                             style={{
-                                width: 22,
-                                height: 22,
-                                borderRadius: 6,
-                                borderWidth: 2,
+                                width: 22, height: 22, borderRadius: 6, borderWidth: 2,
                                 borderColor: noMedication ? '#4A6A82' : '#1E3A52',
                                 backgroundColor: noMedication ? '#4A6A82' : 'transparent',
-                                alignItems: 'center',
-                                justifyContent: 'center',
+                                alignItems: 'center', justifyContent: 'center',
                             }}
                         >
-                            {noMedication && (
-                                <Text style={{ fontSize: 13, color: '#FFFFFF', fontWeight: '700' }}>✓</Text>
-                            )}
+                            {noMedication && <Text style={{ fontSize: 13, color: '#FFFFFF', fontWeight: '700' }}>✓</Text>}
                         </View>
                     </TouchableOpacity>
                 </View>
@@ -477,14 +422,7 @@ export default function Step7Medicamentos() {
                             justifyContent: 'center',
                         }}
                     >
-                        <Text
-                            style={{
-                                fontSize: 16,
-                                fontWeight: '700',
-                                color: isValid ? '#FFFFFF' : '#3A5A72',
-                                letterSpacing: 0.3,
-                            }}
-                        >
+                        <Text style={{ fontSize: 16, fontWeight: '700', color: isValid ? '#FFFFFF' : '#3A5A72', letterSpacing: 0.3 }}>
                             Continuar
                         </Text>
                     </TouchableOpacity>

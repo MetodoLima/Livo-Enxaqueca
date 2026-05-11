@@ -12,12 +12,11 @@ import {
 } from 'react-native';
 import { useSetup } from '../../contexts/SetupContext';
 
-// Necessário para LayoutAnimation funcionar no Android
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
 }
 
-
+// ─── Tipos ────────────────────────────────────────────────────────────────────
 
 type HasSigns = 'yes' | 'no' | null;
 
@@ -28,7 +27,7 @@ interface Sign {
   emoji: string;
 }
 
-
+// ─── Constantes ───────────────────────────────────────────────────────────────
 
 const TOTAL_STEPS = 9;
 const CURRENT_STEP = 2;
@@ -58,24 +57,64 @@ const PREMONITORY_SIGNS: Sign[] = [
     description: 'Tensão ou dor na nuca e ombros',
     emoji: '😣',
   },
+  {
+    id: 'fatigue',
+    label: 'Cansaço excessivo',
+    description: 'Fadiga intensa mesmo sem esforço físico',
+    emoji: '😴',
+  },
+  {
+    id: 'concentration',
+    label: 'Dificuldade de concentração',
+    description: 'Mente embaralhada, dificuldade de focar',
+    emoji: '🧠',
+  },
+  {
+    id: 'fluid_retention',
+    label: 'Retenção de líquido',
+    description: 'Sensação de inchaço ou peso no corpo',
+    emoji: '💧',
+  },
+  {
+    id: 'muscle_pain',
+    label: 'Dor muscular',
+    description: 'Tensão ou dor nos músculos sem causa aparente',
+    emoji: '💪',
+  },
+  {
+    id: 'nausea',
+    label: 'Náusea leve',
+    description: 'Enjoo antes mesmo da dor começar',
+    emoji: '🤢',
+  },
+  {
+    id: 'light_sensitivity',
+    label: 'Sensibilidade à luz',
+    description: 'Incômodo com claridade antes da crise',
+    emoji: '🌟',
+  },
 ];
 
-
+// ─── Componente Principal ─────────────────────────────────────────────────────
 
 export default function Step2Premonitoria() {
   const { updateSetupData } = useSetup();
 
   const [hasSigns, setHasSigns] = useState<HasSigns>(null);
   const [selectedSigns, setSelectedSigns] = useState<string[]>([]);
+  const [showOther, setShowOther] = useState(false);
 
   const isValid =
     hasSigns === 'no' ||
-    (hasSigns === 'yes' && selectedSigns.length > 0);
+    (hasSigns === 'yes' && (selectedSigns.length > 0 || showOther));
 
   function handleHasSigns(value: HasSigns) {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setHasSigns(value);
-    if (value === 'no') setSelectedSigns([]);
+    if (value === 'no') {
+      setSelectedSigns([]);
+      setShowOther(false);
+    }
   }
 
   function toggleSign(id: string) {
@@ -84,20 +123,29 @@ export default function Step2Premonitoria() {
     );
   }
 
+  function handleToggleOther() {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setShowOther((prev) => !prev);
+  }
+
   function handleNext() {
     if (!isValid) return;
 
     const hasSignsLabel = hasSigns === 'yes' ? 'true' : 'false';
-    const premonitorySignsLabels = selectedSigns.map(id => PREMONITORY_SIGNS.find(s => s.id === id)?.label).filter(Boolean);
+    const premonitorySignsLabels = selectedSigns
+      .map((id) => PREMONITORY_SIGNS.find((s) => s.id === id)?.label)
+      .filter(Boolean) as string[];
+
+    if (showOther) {
+      premonitorySignsLabels.push('Outro');
+    }
 
     updateSetupData({
       hasSigns: hasSignsLabel,
       premonitorySigns: premonitorySignsLabels,
     });
 
-    router.push({
-      pathname: '/(setup)/step3',
-    });
+    router.push({ pathname: '/(setup)/step3' });
   }
 
   return (
@@ -106,6 +154,7 @@ export default function Step2Premonitoria() {
 
       <ScrollView
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
         {/* ── Cabeçalho ── */}
@@ -274,6 +323,56 @@ export default function Step2Premonitoria() {
                   </TouchableOpacity>
                 );
               })}
+
+              {/* ── Opção Outro ── */}
+              <TouchableOpacity
+                onPress={handleToggleOther}
+                activeOpacity={0.8}
+                style={{
+                  backgroundColor: showOther ? '#00BFA518' : '#112236',
+                  borderWidth: 1.5,
+                  borderColor: showOther ? '#00BFA5' : '#1E3A52',
+                  borderRadius: 16,
+                  paddingVertical: 16,
+                  paddingHorizontal: 18,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 14,
+                  borderStyle: 'dashed',
+                }}
+              >
+                <Text style={{ fontSize: 24 }}>✏️</Text>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text
+                    style={{
+                      fontSize: 15,
+                      fontWeight: '600',
+                      color: showOther ? '#00BFA5' : '#FFFFFF',
+                    }}
+                  >
+                    Outro
+                  </Text>
+                  <Text style={{ fontSize: 13, color: '#4A6A82' }}>
+                    Tenho outro sinal não listado aqui
+                  </Text>
+                </View>
+                <View
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: 6,
+                    borderWidth: 2,
+                    borderColor: showOther ? '#00BFA5' : '#1E3A52',
+                    backgroundColor: showOther ? '#00BFA5' : 'transparent',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {showOther && (
+                    <Text style={{ fontSize: 13, color: '#FFFFFF', fontWeight: '700' }}>✓</Text>
+                  )}
+                </View>
+              </TouchableOpacity>
             </View>
           </View>
         )}

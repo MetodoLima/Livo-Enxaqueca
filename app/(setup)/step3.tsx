@@ -16,7 +16,7 @@ if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
 }
 
-
+// ─── Tipos ────────────────────────────────────────────────────────────────────
 
 type HasAura = 'yes' | 'no' | null;
 
@@ -28,17 +28,31 @@ interface AuraSign {
   cortexType: string;
 }
 
-
+// ─── Constantes ───────────────────────────────────────────────────────────────
 
 const TOTAL_STEPS = 9;
 const CURRENT_STEP = 3;
 
 const AURA_SIGNS: AuraSign[] = [
   {
-    id: 'visual',
+    id: 'visual_flashes',
     label: 'Pontos ou faíscas luminosas',
     description: 'Manchas, ziguezagues ou flashes de luz',
     emoji: '✨',
+    cortexType: 'Visual',
+  },
+  {
+    id: 'visual_blind_spot',
+    label: 'Pontos cegos ou visão turva',
+    description: 'Área escura ou embaçada no campo de visão',
+    emoji: '👁️',
+    cortexType: 'Visual',
+  },
+  {
+    id: 'visual_loss',
+    label: 'Perda parcial da visão',
+    description: 'Visão apagada em parte do campo visual',
+    emoji: '🌫️',
     cortexType: 'Visual',
   },
   {
@@ -49,10 +63,24 @@ const AURA_SIGNS: AuraSign[] = [
     cortexType: 'Sensorial',
   },
   {
-    id: 'aphasia',
+    id: 'electric_shock',
+    label: 'Sensação de choque elétrico',
+    description: 'Descarga ou corrente elétrica pelo corpo',
+    emoji: '⚡',
+    cortexType: 'Sensorial',
+  },
+  {
+    id: 'aphasia_speak',
     label: 'Dificuldade de falar',
     description: 'Palavras embaralhadas ou travamento ao falar',
     emoji: '💬',
+    cortexType: 'Afasia',
+  },
+  {
+    id: 'aphasia_understand',
+    label: 'Dificuldade de entender',
+    description: 'Dificuldade para compreender o que os outros dizem',
+    emoji: '👂',
     cortexType: 'Afasia',
   },
   {
@@ -62,24 +90,42 @@ const AURA_SIGNS: AuraSign[] = [
     emoji: '💪',
     cortexType: 'Motor',
   },
+  {
+    id: 'ataxia',
+    label: 'Falta de equilíbrio ou coordenação',
+    description: 'Dificuldade de andar ou coordenar movimentos',
+    emoji: '🌀',
+    cortexType: 'Motor',
+  },
+  {
+    id: 'confusion',
+    label: 'Confusão mental',
+    description: 'Pensamentos embaralhados ou desorientação',
+    emoji: '😵',
+    cortexType: 'Cognitivo',
+  },
 ];
 
-
+// ─── Componente Principal ─────────────────────────────────────────────────────
 
 export default function Step3Aura() {
   const { updateSetupData } = useSetup();
 
   const [hasAura, setHasAura] = useState<HasAura>(null);
   const [selectedSigns, setSelectedSigns] = useState<string[]>([]);
+  const [showOther, setShowOther] = useState(false);
 
   const isValid =
     hasAura === 'no' ||
-    (hasAura === 'yes' && selectedSigns.length > 0);
+    (hasAura === 'yes' && (selectedSigns.length > 0 || showOther));
 
   function handleHasAura(value: HasAura) {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setHasAura(value);
-    if (value === 'no') setSelectedSigns([]);
+    if (value === 'no') {
+      setSelectedSigns([]);
+      setShowOther(false);
+    }
   }
 
   function toggleSign(id: string) {
@@ -88,21 +134,36 @@ export default function Step3Aura() {
     );
   }
 
+  function handleToggleOther() {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setShowOther((prev) => !prev);
+  }
+
   function handleNext() {
     if (!isValid) return;
 
     const hasAuraLabel = hasAura === 'yes' ? 'true' : 'false';
-    const auraSignsLabels = selectedSigns.map(id => AURA_SIGNS.find(s => s.id === id)?.label).filter(Boolean);
+    const auraSignsLabels = selectedSigns
+      .map((id) => AURA_SIGNS.find((s) => s.id === id)?.label)
+      .filter(Boolean) as string[];
+
+    if (showOther) {
+      auraSignsLabels.push('Outro');
+    }
 
     updateSetupData({
       hasAura: hasAuraLabel,
       auraSigns: auraSignsLabels,
     });
 
-    router.push({
-      pathname: '/(setup)/step4',
-    });
+    router.push({ pathname: '/(setup)/step4' });
   }
+
+  const showWarning =
+    selectedSigns.includes('aphasia_speak') ||
+    selectedSigns.includes('aphasia_understand') ||
+    selectedSigns.includes('motor') ||
+    selectedSigns.includes('ataxia');
 
   return (
     <View style={{ flex: 1, backgroundColor: '#0D2137' }}>
@@ -300,10 +361,60 @@ export default function Step3Aura() {
                   </TouchableOpacity>
                 );
               })}
+
+              {/* ── Opção Outro ── */}
+              <TouchableOpacity
+                onPress={handleToggleOther}
+                activeOpacity={0.8}
+                style={{
+                  backgroundColor: showOther ? '#00BFA518' : '#112236',
+                  borderWidth: 1.5,
+                  borderColor: showOther ? '#00BFA5' : '#1E3A52',
+                  borderRadius: 16,
+                  paddingVertical: 16,
+                  paddingHorizontal: 18,
+                  flexDirection: 'row',
+                  alignItems: 'center',
+                  gap: 14,
+                  borderStyle: 'dashed',
+                }}
+              >
+                <Text style={{ fontSize: 24 }}>✏️</Text>
+                <View style={{ flex: 1, gap: 2 }}>
+                  <Text
+                    style={{
+                      fontSize: 15,
+                      fontWeight: '600',
+                      color: showOther ? '#00BFA5' : '#FFFFFF',
+                    }}
+                  >
+                    Outro
+                  </Text>
+                  <Text style={{ fontSize: 13, color: '#4A6A82' }}>
+                    Tenho outro sintoma não listado aqui
+                  </Text>
+                </View>
+                <View
+                  style={{
+                    width: 22,
+                    height: 22,
+                    borderRadius: 6,
+                    borderWidth: 2,
+                    borderColor: showOther ? '#00BFA5' : '#1E3A52',
+                    backgroundColor: showOther ? '#00BFA5' : 'transparent',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                  }}
+                >
+                  {showOther && (
+                    <Text style={{ fontSize: 13, color: '#FFFFFF', fontWeight: '700' }}>✓</Text>
+                  )}
+                </View>
+              </TouchableOpacity>
             </View>
 
-            {/* Aviso se selecionou afasia ou motor */}
-            {(selectedSigns.includes('aphasia') || selectedSigns.includes('motor')) && (
+            {/* Aviso para sintomas graves */}
+            {showWarning && (
               <View
                 style={{
                   backgroundColor: '#E85D7518',
@@ -319,7 +430,7 @@ export default function Step3Aura() {
               >
                 <Text style={{ fontSize: 16 }}>⚠️</Text>
                 <Text style={{ fontSize: 13, color: '#E85D75', lineHeight: 19, flex: 1 }}>
-                  Sintomas como dificuldade de fala ou fraqueza devem ser avaliados por um neurologista para descartar outras condições.
+                  Sintomas como fraqueza, falta de equilíbrio ou dificuldade de fala devem ser avaliados por um neurologista para descartar outras condições.
                 </Text>
               </View>
             )}
@@ -347,6 +458,7 @@ export default function Step3Aura() {
           </View>
         )}
 
+        {/* ── Botão de avançar ── */}
         <View style={{ paddingHorizontal: 24, marginTop: 32 }}>
           <TouchableOpacity
             onPress={handleNext}
