@@ -1,4 +1,4 @@
-import { MigraineRecord } from '@/services/api';
+import { MigraineRecord, MigraineStructured, SintomasAssociados } from '@/services/api';
 
 // ── Location options ──────────────────────────────────────────────────
 export const LOCATIONS = [
@@ -97,4 +97,75 @@ export function createEmptyCrisis(): CrisisRecord {
   };
 }
 
-export const TOTAL_STEPS = 6;
+export const TOTAL_STEPS = 5;
+
+export function mergeAiResultIntoCrisis(
+  current: CrisisRecord,
+  structured: MigraineStructured,
+): Partial<CrisisRecord> {
+  const patch: Partial<CrisisRecord> = {};
+
+  if (structured.intensidade_dor !== null) {
+    patch.intensity = structured.intensidade_dor;
+  }
+
+  // Só sobrescreve localização se a IA retornou algo (preserva 'atras_olhos' se a IA não mudou)
+  if (structured.localizacao !== null) {
+    patch.location = structured.localizacao as LocationId;
+  }
+
+  if (structured.lado !== null) {
+    patch.side = structured.lado as SideId;
+  }
+
+  // União: mantém sintomas do questionário + adiciona os que a IA detectou no áudio
+  const s = structured.sintomas_associados;
+  const aiSymptoms: SymptomId[] = [];
+  if (s.nausea)    aiSymptoms.push('nausea');
+  if (s.vomito)    aiSymptoms.push('vomito');
+  if (s.fotofobia) aiSymptoms.push('fotofobia');
+  if (s.fonofobia) aiSymptoms.push('fonofobia');
+  if (s.aura)      aiSymptoms.push('aura');
+  if (s.tontura)   aiSymptoms.push('tontura');
+  patch.symptoms = Array.from(new Set([...current.symptoms, ...aiSymptoms]));
+
+  return patch;
+}
+
+export function crisisToMigraineStructured(crisis: CrisisRecord): MigraineStructured {
+  const sintomas: SintomasAssociados = {
+    nausea: crisis.symptoms.includes('nausea'),
+    vomito: crisis.symptoms.includes('vomito'),
+    fotofobia: crisis.symptoms.includes('fotofobia'),
+    fonofobia: crisis.symptoms.includes('fonofobia'),
+    aura: crisis.symptoms.includes('aura'),
+    tontura: crisis.symptoms.includes('tontura'),
+    outros: [],
+  };
+
+  // 'atras_olhos' não existe no schema do backend — mapeamos para null
+  const localizacao =
+    crisis.location === 'atras_olhos' || crisis.location === null
+      ? null
+      : (crisis.location as MigraineStructured['localizacao']);
+
+  let nivel_incapacidade: MigraineStructured['nivel_incapacidade'] = null;
+  if (crisis.intensity !== null) {
+    if (crisis.intensity <= 3) nivel_incapacidade = 'leve';
+    else if (crisis.intensity <= 6) nivel_incapacidade = 'moderado';
+    else nivel_incapacidade = 'severo';
+  }
+
+  return {
+    intensidade_dor: crisis.intensity,
+    localizacao,
+    lado: crisis.side ?? null,
+    qualidade_dor: [],
+    sintomas_associados: sintomas,
+    inicio_estimado: null,
+    medicamentos_tomados: [],
+    fatores_desencadeantes: [],
+    nivel_incapacidade,
+    resumo: null,
+  };
+}

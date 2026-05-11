@@ -19,8 +19,9 @@ import Animated, {
 } from 'react-native-reanimated';
 import { Colors } from '@/constants/Colors';
 import StepFooter from './StepFooter';
-import { processAudio, processText } from '@/services/api';
+import { complementCrisis } from '@/services/api';
 import type { CrisisRecord, AiComplement } from '@/types/crisis';
+import { crisisToMigraineStructured, mergeAiResultIntoCrisis } from '@/types/crisis';
 
 // Only import audio functions — they'll fail gracefully if unavailable
 let useAudioRecorder: any;
@@ -96,7 +97,7 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
     try {
       const { granted } = await requestRecordingPermissionsAsync();
       if (!granted) { setError('Permissão de microfone negada.'); return; }
-      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+      try { await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true }); } catch {}
       await recorder.prepareToRecordAsync();
       recorder.record();
       setRecordSecs(0);
@@ -115,9 +116,10 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
       const uri = recorder.uri;
       if (!uri) throw new Error('URI de áudio inválido.');
       setSubStep('processing');
-      const result = await processAudio(uri);
+      const preFilled = crisisToMigraineStructured(data);
+      const result = await complementCrisis(preFilled, uri, null);
       const complement: AiComplement = { audioUri: uri, textNote: null, aiResult: result };
-      onChange({ aiComplement: complement });
+      onChange({ ...mergeAiResultIntoCrisis(data, result.structured), aiComplement: complement });
       setSubStep('done');
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Erro ao processar o áudio.');
@@ -131,9 +133,10 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
     setError(null);
     setSubStep('processing');
     try {
-      const result = await processText(text.trim());
+      const preFilled = crisisToMigraineStructured(data);
+      const result = await complementCrisis(preFilled, null, text.trim());
       const complement: AiComplement = { audioUri: null, textNote: text.trim(), aiResult: result };
-      onChange({ aiComplement: complement });
+      onChange({ ...mergeAiResultIntoCrisis(data, result.structured), aiComplement: complement });
       setSubStep('done');
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Erro ao processar o texto.');

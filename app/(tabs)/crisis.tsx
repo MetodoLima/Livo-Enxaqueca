@@ -1,51 +1,50 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  SafeAreaView,
-  ScrollView,
-  TextInput,
-  ActivityIndicator,
-  StyleSheet,
-} from 'react-native';
-import {
-  Wind,
-  Zap,
-  Clock,
-  MapPin,
-  Thermometer,
-  Mic,
-  Send,
-  StopCircle,
-  ChevronRight,
-  X,
-} from 'lucide-react-native';
-import { Check } from 'lucide-react-native';
-import Animated, {
-  FadeInUp,
-  FadeIn,
-  ZoomIn,
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  Easing,
-  interpolate,
-} from 'react-native-reanimated';
-import { useRouter } from 'expo-router';
+import Card from '@/components/Card';
+import { IntensityEditor, LocationEditor, SymptomsEditor } from '@/components/crisis/EditModals';
 import { Colors } from '@/constants/Colors';
 import { useCrisis } from '@/contexts/CrisisContext';
-import Card from '@/components/Card';
+import { complementCrisis } from '@/services/api';
 import {
   INTENSITY_CONFIG,
   LOCATIONS,
+  MEDICATIONS,
   SIDES,
   SYMPTOMS,
-  MEDICATIONS,
+  crisisToMigraineStructured,
+  mergeAiResultIntoCrisis,
 } from '@/types/crisis';
-import { processAudio, processText } from '@/services/api';
-import { IntensityEditor, LocationEditor, SymptomsEditor } from '@/components/crisis/EditModals';
+import { useRouter } from 'expo-router';
+import {
+  Check,
+  ChevronRight,
+  Clock,
+  Mic,
+  Send,
+  StopCircle,
+  Wind,
+  X,
+  Zap
+} from 'lucide-react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import Animated, {
+  Easing,
+  FadeInUp,
+  ZoomIn,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming
+} from 'react-native-reanimated';
 
 // ── Audio imports (graceful) ──────────────────────────────────────────
 let useAudioRecorder: any;
@@ -132,7 +131,6 @@ export default function CrisisDetailScreen() {
   // ── Handle finalize ─────────────────────────────────────────────────
   const handleFinish = () => {
     setFinishing(true);
-    // TODO: persist to Supabase here
     setTimeout(() => {
       clearCrisis();
       setFinishing(false);
@@ -182,7 +180,7 @@ export default function CrisisDetailScreen() {
     try {
       const { granted } = await requestRecordingPermissionsAsync();
       if (!granted) { setError('Permissão de microfone negada.'); return; }
-      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+      try { await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true }); } catch {}
       await recorder.prepareToRecordAsync();
       recorder.record();
       setRecordSecs(0);
@@ -202,8 +200,10 @@ export default function CrisisDetailScreen() {
       const uri = recorder.uri;
       if (!uri) throw new Error('URI inválido.');
       setIsProcessing(true);
-      const result = await processAudio(uri);
+      const preFilled = crisisToMigraineStructured(crisis);
+      const result = await complementCrisis(preFilled, uri, null);
       updateActiveCrisis({
+        ...mergeAiResultIntoCrisis(crisis, result.structured),
         aiComplement: { audioUri: uri, textNote: null, aiResult: result },
       });
       setIsProcessing(false);
@@ -219,8 +219,10 @@ export default function CrisisDetailScreen() {
     setError(null);
     setIsProcessing(true);
     try {
-      const result = await processText(text.trim());
+      const preFilled = crisisToMigraineStructured(crisis);
+      const result = await complementCrisis(preFilled, null, text.trim());
       updateActiveCrisis({
+        ...mergeAiResultIntoCrisis(crisis, result.structured),
         aiComplement: { audioUri: null, textNote: text.trim(), aiResult: result },
       });
       setText('');
