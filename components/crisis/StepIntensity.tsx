@@ -10,6 +10,9 @@ const SLIDER_HEIGHT = SCREEN_HEIGHT * 0.52;
 const SLIDER_WIDTH = 48;
 const THUMB_SIZE = 48;
 
+// Só os valores pares aparecem como label
+const EVEN_VALUES = [0, 2, 4, 6, 8, 10];
+
 interface StepIntensityProps {
   data: CrisisRecord;
   onChange: (patch: Partial<CrisisRecord>) => void;
@@ -30,6 +33,9 @@ export default function StepIntensity({ data, onChange, onNext }: StepIntensityP
   const [value, setValue] = useState<number | null>(data.intensity);
   const thumbYRef = useRef(valueToPosition(data.intensity ?? 5));
   const [thumbY, setThumbY] = useState(valueToPosition(data.intensity ?? 5));
+
+  // Guarda o layout do track para calcular posição relativa
+  const trackTopRef = useRef(0);
   const startYRef = useRef(0);
   const startThumbRef = useRef(0);
 
@@ -43,6 +49,7 @@ export default function StepIntensity({ data, onChange, onNext }: StepIntensityP
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: (e) => {
+        // Usa pageY do grant para saber onde o dedo pousou
         startYRef.current = e.nativeEvent.pageY;
         startThumbRef.current = thumbYRef.current;
       },
@@ -68,51 +75,61 @@ export default function StepIntensity({ data, onChange, onNext }: StepIntensityP
       <Animated.View entering={FadeInUp.duration(400)} style={styles.content}>
         <Text style={styles.title}>Qual o nível da dor?</Text>
 
-        <View style={styles.sliderSection}>
-          <View style={styles.sliderWrapper}>
+        <View style={styles.sliderWrapper}>
 
-            {/* Track + thumb */}
-            <View style={[styles.track, { height: SLIDER_HEIGHT }]} {...panResponder.panHandlers}>
+          {/* Track + thumb */}
+          <View
+            style={[styles.track, { height: SLIDER_HEIGHT }]}
+            {...panResponder.panHandlers}
+            onLayout={(e) => {
+              // Captura o Y absoluto do track na tela para corrigir offset no emulador
+              e.target.measure((_x, _y, _w, _h, _px, py) => {
+                trackTopRef.current = py;
+              });
+            }}
+          >
+            <View style={[styles.trackBg, { height: SLIDER_HEIGHT }]} />
 
-              {/* Fundo */}
-              <View style={[styles.trackBg, { height: SLIDER_HEIGHT }]} />
-
-              {/* Preenchimento colorido */}
-              {value !== null && (
-                <View
-                  style={[
-                    styles.trackFill,
-                    {
-                      height: fillHeight,
-                      backgroundColor: currentColor,
-                    },
-                  ]}
-                />
-              )}
-
-              {/* Thumb */}
+            {value !== null && (
               <View
                 style={[
-                  styles.thumb,
-                  {
-                    top: thumbY,
-                    backgroundColor: value !== null ? currentColor : '#1E3A52',
-                    shadowColor: value !== null ? currentColor : 'transparent',
-                    borderWidth: value === null ? 2 : 0,
-                    borderColor: '#2A4A62',
-                  },
+                  styles.trackFill,
+                  { height: fillHeight, backgroundColor: currentColor },
                 ]}
-              >
-                <Text style={styles.thumbText}>
-                  {value !== null ? value : '?'}
-                </Text>
-              </View>
-            </View>
+              />
+            )}
 
-            {/* Labels ao lado */}
-            <View style={[styles.labelsColumn, { height: SLIDER_HEIGHT }]}>
-              {[...INTENSITY_CONFIG].reverse().map((item) => {
-                const isActive = value === item.value;
+            <View
+              style={[
+                styles.thumb,
+                {
+                  top: thumbY,
+                  backgroundColor: value !== null ? currentColor : '#1E3A52',
+                  shadowColor: value !== null ? currentColor : 'transparent',
+                  borderWidth: value === null ? 2 : 0,
+                  borderColor: '#2A4A62',
+                },
+              ]}
+            >
+              <Text style={styles.thumbText}>
+                {value !== null ? value : '?'}
+              </Text>
+            </View>
+          </View>
+
+          {/* Labels — apenas valores pares */}
+          <View style={[styles.labelsColumn, { height: SLIDER_HEIGHT }]}>
+            {[...INTENSITY_CONFIG]
+              .reverse()
+              .filter((item) => EVEN_VALUES.includes(item.value))
+              .map((item) => {
+                const isActive = value === item.value ||
+                  // Destaca o label par mais próximo do valor atual
+                  (value !== null &&
+                    EVEN_VALUES.reduce((prev, curr) =>
+                      Math.abs(curr - value) < Math.abs(prev - value) ? curr : prev
+                    ) === item.value);
+
                 return (
                   <View key={item.value} style={styles.labelRow}>
                     <Text style={[styles.labelEmoji, !isActive && { opacity: 0.4 }]}>
@@ -129,38 +146,6 @@ export default function StepIntensity({ data, onChange, onNext }: StepIntensityP
                   </View>
                 );
               })}
-            </View>
-          </View>
-
-          {/* Badge de feedback */}
-          <View
-            style={[
-              styles.badge,
-              {
-                borderColor: value !== null ? currentColor + '40' : '#1E3A52',
-                backgroundColor: value !== null ? currentColor + '15' : '#112236',
-              },
-            ]}
-          >
-            <Text style={styles.badgeEmoji}>
-              {value !== null ? currentConfig?.emoji : '👆'}
-            </Text>
-            <View style={{ flex: 1 }}>
-              {value !== null ? (
-                <>
-                  <Text style={[styles.badgeValue, { color: currentColor }]}>
-                    {value}/10
-                  </Text>
-                  <Text style={[styles.badgeLabel, { color: currentColor }]}>
-                    {currentConfig?.sublabel ?? ''}
-                  </Text>
-                </>
-              ) : (
-                <Text style={styles.badgePlaceholder}>
-                  Arraste para selecionar
-                </Text>
-              )}
-            </View>
           </View>
         </View>
       </Animated.View>
@@ -184,9 +169,6 @@ const styles = StyleSheet.create({
     color: 'white',
     marginBottom: 28,
     lineHeight: 30,
-  },
-  sliderSection: {
-    gap: 24,
   },
   sliderWrapper: {
     flexDirection: 'row',
@@ -236,7 +218,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    height: SLIDER_HEIGHT / 11,
+    // altura proporcional a 6 labels em vez de 11
+    height: SLIDER_HEIGHT / 6,
   },
   labelEmoji: {
     fontSize: 20,
@@ -254,32 +237,5 @@ const styles = StyleSheet.create({
     fontFamily: 'Epilogue_600SemiBold',
     color: Colors.muted,
     letterSpacing: 1,
-  },
-  badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    padding: 16,
-    borderRadius: 16,
-    borderWidth: 1.5,
-  },
-  badgeEmoji: {
-    fontSize: 32,
-  },
-  badgeValue: {
-    fontSize: 22,
-    fontFamily: 'Epilogue_700Bold',
-  },
-  badgeLabel: {
-    fontSize: 12,
-    fontFamily: 'Epilogue_600SemiBold',
-    letterSpacing: 1,
-    textTransform: 'uppercase',
-    marginTop: 2,
-  },
-  badgePlaceholder: {
-    fontSize: 14,
-    fontFamily: 'Epilogue_400Regular',
-    color: Colors.muted,
   },
 });
