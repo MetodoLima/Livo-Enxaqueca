@@ -1,55 +1,49 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  SafeAreaView,
-  ScrollView,
-  TextInput,
-  ActivityIndicator,
-  StyleSheet,
-} from 'react-native';
-import {
-  Wind,
-  Zap,
-  Clock,
-  MapPin,
-  Thermometer,
-  Mic,
-  Send,
-  StopCircle,
-  ChevronRight,
-  X,
-} from 'lucide-react-native';
-import { Check } from 'lucide-react-native';
-import Animated, {
-  FadeInUp,
-  FadeIn,
-  ZoomIn,
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  Easing,
-  interpolate,
-} from 'react-native-reanimated';
-import { useRouter } from 'expo-router';
+import Card from '@/components/Card';
+import { IntensityEditor, LocationEditor, SymptomsEditor } from '@/components/crisis/EditModals';
 import { Colors } from '@/constants/Colors';
 import { useCrisis } from '@/contexts/CrisisContext';
-import Card from '@/components/Card';
+import { complementCrisis } from '@/services/api';
 import {
   INTENSITY_CONFIG,
   LOCATIONS,
+  MEDICATIONS,
   SIDES,
   SYMPTOMS,
-<<<<<<< HEAD
-  MEDICATIONS,
-=======
-  crisisToMigraineStructured,
->>>>>>> eea5fbd (Feature: LMM feedback in crisis register)
+  crisisToMigraineStructured
 } from '@/types/crisis';
-import { complementCrisis } from '@/services/api';
-import { IntensityEditor, LocationEditor, SymptomsEditor } from '@/components/crisis/EditModals';
+import { useRouter } from 'expo-router';
+import {
+  Check,
+  ChevronRight,
+  Clock,
+  Mic,
+  Send,
+  StopCircle,
+  Wind,
+  X,
+  Zap
+} from 'lucide-react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import Animated, {
+  Easing,
+  FadeInUp,
+  ZoomIn,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming
+} from 'react-native-reanimated';
 
 // ── Audio imports (graceful) ──────────────────────────────────────────
 let useAudioRecorder: any;

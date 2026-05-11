@@ -97,9 +97,6 @@ export function createEmptyCrisis(): CrisisRecord {
   };
 }
 
-<<<<<<< HEAD
-export const TOTAL_STEPS = 6;
-=======
 export const TOTAL_STEPS = 5;
 
 export function crisisToMigraineStructured(crisis: CrisisRecord): MigraineStructured {
@@ -139,4 +136,3 @@ export function crisisToMigraineStructured(crisis: CrisisRecord): MigraineStruct
     resumo: null,
   };
 }
->>>>>>> eea5fbd (Feature: LMM feedback in crisis register)
