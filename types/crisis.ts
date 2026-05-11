@@ -1,4 +1,4 @@
-import { MigraineRecord } from '@/services/api';
+import { MigraineRecord, MigraineStructured, SintomasAssociados } from '@/services/api';
 
 // ── Location options ──────────────────────────────────────────────────
 export const LOCATIONS = [
@@ -97,4 +97,46 @@ export function createEmptyCrisis(): CrisisRecord {
   };
 }
 
+<<<<<<< HEAD
 export const TOTAL_STEPS = 6;
+=======
+export const TOTAL_STEPS = 5;
+
+export function crisisToMigraineStructured(crisis: CrisisRecord): MigraineStructured {
+  const sintomas: SintomasAssociados = {
+    nausea: crisis.symptoms.includes('nausea'),
+    vomito: crisis.symptoms.includes('vomito'),
+    fotofobia: crisis.symptoms.includes('fotofobia'),
+    fonofobia: crisis.symptoms.includes('fonofobia'),
+    aura: crisis.symptoms.includes('aura'),
+    tontura: crisis.symptoms.includes('tontura'),
+    outros: [],
+  };
+
+  // 'atras_olhos' não existe no schema do backend — mapeamos para null
+  const localizacao =
+    crisis.location === 'atras_olhos' || crisis.location === null
+      ? null
+      : (crisis.location as MigraineStructured['localizacao']);
+
+  let nivel_incapacidade: MigraineStructured['nivel_incapacidade'] = null;
+  if (crisis.intensity !== null) {
+    if (crisis.intensity <= 3) nivel_incapacidade = 'leve';
+    else if (crisis.intensity <= 6) nivel_incapacidade = 'moderado';
+    else nivel_incapacidade = 'severo';
+  }
+
+  return {
+    intensidade_dor: crisis.intensity,
+    localizacao,
+    lado: crisis.side ?? null,
+    qualidade_dor: [],
+    sintomas_associados: sintomas,
+    inicio_estimado: null,
+    medicamentos_tomados: [],
+    fatores_desencadeantes: [],
+    nivel_incapacidade,
+    resumo: null,
+  };
+}
+>>>>>>> eea5fbd (Feature: LMM feedback in crisis register)

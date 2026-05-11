@@ -3,7 +3,7 @@ import json
 import tempfile
 import httpx
 import re
-from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from datetime import datetime
@@ -102,7 +102,7 @@ async def transcribe(audio_bytes: bytes, filename: str) -> str:
 
 # LLM
 
-EXTRACTION_PROMPT = EXTRACTION_PROMPT = """Você é um extrator de dados médicos. Sua única tarefa é preencher um JSON com base no relato abaixo.
+EXTRACTION_PROMPT = """Você é um extrator de dados médicos. Sua única tarefa é preencher um JSON com base no relato abaixo.
 
 REGRAS ABSOLUTAS:
 - Retorne SOMENTE o JSON, sem texto antes ou depois
@@ -135,6 +135,51 @@ Preencha este JSON exato:
   "resumo": "<máximo 15 palavras descrevendo o relato>"
 }}"""
 
+COMPLEMENT_PROMPT = """Você é um assistente médico especializado em enxaqueca.
+
+O paciente já respondeu um questionário estruturado sobre sua crise. Este é o registro atual:
+
+REGISTRO ATUAL (questionário):
+{registro_atual}
+
+O paciente forneceu um relato verbal adicional para complementar o registro:
+
+RELATO ADICIONAL:
+"{relato}"
+
+Sua tarefa é retornar o registro unificado e completo.
+
+REGRAS ABSOLUTAS:
+- Retorne SOMENTE o JSON, sem texto antes ou depois
+- PRESERVE os valores já preenchidos no registro atual — não os apague
+- Para sintomas_associados: se um campo já for true, mantenha true; só mude de false para true se o relato mencionar explicitamente
+- PREENCHA os campos null usando informações do relato, quando disponível
+- Se o relato contradizer algo do registro, use o valor do relato (é mais detalhado)
+- NUNCA invente dados que não estão no registro nem no relato
+- Atualize o "resumo" integrando ambas as fontes (máximo 15 palavras)
+
+Retorne o JSON completo e atualizado:
+{{
+  "intensidade_dor": <número 0-10 ou null>,
+  "localizacao": <"frontal"|"temporal"|"occipital"|"difusa"|null>,
+  "lado": <"esquerdo"|"direito"|"bilateral"|null>,
+  "qualidade_dor": [],
+  "sintomas_associados": {{
+    "nausea": false,
+    "vomito": false,
+    "fotofobia": false,
+    "fonofobia": false,
+    "aura": false,
+    "tontura": false,
+    "outros": []
+  }},
+  "inicio_estimado": <"<1h"|"1-4h"|">4h"|null>,
+  "medicamentos_tomados": [],
+  "fatores_desencadeantes": [],
+  "nivel_incapacidade": <"leve"|"moderado"|"severo"|null>,
+  "resumo": "<máximo 15 palavras>"
+}}"""
+
 def fix_json_string(raw: str) -> str:
     raw = raw.strip()
 
@@ -148,6 +193,40 @@ def fix_json_string(raw: str) -> str:
     raw = raw.replace("'", '"')
 
     return raw
+
+
+async def merge_with_complement(pre_filled: dict, transcript: str) -> dict:
+    registro_atual = json.dumps(pre_filled, ensure_ascii=False, indent=2)
+    prompt = COMPLEMENT_PROMPT.format(registro_atual=registro_atual, relato=transcript)
+
+    async with httpx.AsyncClient(timeout=1200) as client:
+        r = await client.post(
+            f"{OLLAMA_URL}/api/generate",
+            json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False, "format": "json"},
+        )
+        r.raise_for_status()
+        raw = r.json().get("response", "")
+
+    print("\n=== RAW LLM COMPLEMENT RESPONSE ===")
+    print(raw)
+    print("===================================\n")
+
+    try:
+        return json.loads(raw)
+    except:
+        pass
+    try:
+        start = raw.find("{")
+        end = raw.rfind("}") + 1
+        return json.loads(raw[start:end])
+    except:
+        pass
+    try:
+        return json.loads(fix_json_string(raw))
+    except Exception as e:
+        print("Erro no complement fallback:", e)
+
+    return pre_filled
 
 
 async def extract_migraine_data(transcript: str) -> dict:
@@ -242,6 +321,40 @@ async def process_text(payload: dict):
 
     structured = await extract_migraine_data(transcript)
 
+    return {
+        "timestamp": datetime.now().isoformat(),
+        "transcript": transcript,
+        "structured": structured,
+    }
+
+
+@app.post("/api/complement-crisis")
+async def complement_crisis(
+    pre_filled: str = Form(...),
+    file: Optional[UploadFile] = File(None),
+    text: Optional[str] = Form(None),
+):
+    try:
+        pre_filled_data = json.loads(pre_filled)
+    except Exception:
+        raise HTTPException(400, "JSON pré-preenchido inválido")
+
+    transcript = ""
+    if file and file.filename:
+        audio_bytes = await file.read()
+        if audio_bytes:
+            transcript = await transcribe(audio_bytes, file.filename or "audio.webm")
+    elif text:
+        transcript = text.strip()
+
+    if not transcript:
+        return {
+            "timestamp": datetime.now().isoformat(),
+            "transcript": "",
+            "structured": pre_filled_data,
+        }
+
+    structured = await merge_with_complement(pre_filled_data, transcript)
     return {
         "timestamp": datetime.now().isoformat(),
         "transcript": transcript,

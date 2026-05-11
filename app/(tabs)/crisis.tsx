@@ -42,9 +42,13 @@ import {
   LOCATIONS,
   SIDES,
   SYMPTOMS,
+<<<<<<< HEAD
   MEDICATIONS,
+=======
+  crisisToMigraineStructured,
+>>>>>>> eea5fbd (Feature: LMM feedback in crisis register)
 } from '@/types/crisis';
-import { processAudio, processText } from '@/services/api';
+import { complementCrisis } from '@/services/api';
 import { IntensityEditor, LocationEditor, SymptomsEditor } from '@/components/crisis/EditModals';
 
 // ── Audio imports (graceful) ──────────────────────────────────────────
@@ -132,7 +136,6 @@ export default function CrisisDetailScreen() {
   // ── Handle finalize ─────────────────────────────────────────────────
   const handleFinish = () => {
     setFinishing(true);
-    // TODO: persist to Supabase here
     setTimeout(() => {
       clearCrisis();
       setFinishing(false);
@@ -182,7 +185,7 @@ export default function CrisisDetailScreen() {
     try {
       const { granted } = await requestRecordingPermissionsAsync();
       if (!granted) { setError('Permissão de microfone negada.'); return; }
-      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+      try { await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true }); } catch {}
       await recorder.prepareToRecordAsync();
       recorder.record();
       setRecordSecs(0);
@@ -202,7 +205,8 @@ export default function CrisisDetailScreen() {
       const uri = recorder.uri;
       if (!uri) throw new Error('URI inválido.');
       setIsProcessing(true);
-      const result = await processAudio(uri);
+      const preFilled = crisisToMigraineStructured(crisis);
+      const result = await complementCrisis(preFilled, uri, null);
       updateActiveCrisis({
         aiComplement: { audioUri: uri, textNote: null, aiResult: result },
       });
@@ -219,7 +223,8 @@ export default function CrisisDetailScreen() {
     setError(null);
     setIsProcessing(true);
     try {
-      const result = await processText(text.trim());
+      const preFilled = crisisToMigraineStructured(crisis);
+      const result = await complementCrisis(preFilled, null, text.trim());
       updateActiveCrisis({
         aiComplement: { audioUri: null, textNote: text.trim(), aiResult: result },
       });

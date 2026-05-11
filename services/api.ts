@@ -1,9 +1,12 @@
 import Constants from 'expo-constants';
+import { Platform } from 'react-native';
 
-// In Expo Go, hostUri points to the dev server host — use it to reach the backend on the same machine.
-// Falls back to 10.0.2.2 (Android emulator → host) or change to your machine's LAN IP for physical devices.
+// Web sempre usa localhost. No Expo Go, hostUri aponta para o IP do dev server.
+// Fallback: 10.0.2.2 (emulador Android → host).
 const devHost =
-  typeof Constants.expoConfig?.hostUri === 'string'
+  Platform.OS === 'web'
+    ? 'localhost'
+    : typeof Constants.expoConfig?.hostUri === 'string'
     ? Constants.expoConfig.hostUri.split(':')[0]
     : '10.0.2.2';
 
@@ -72,4 +75,57 @@ export async function processText(text: string): Promise<MigraineRecord> {
   }
 
   return response.json();
+}
+
+export async function complementCrisis(
+  preFilled: MigraineStructured,
+  audioUri?: string | null,
+  text?: string | null,
+): Promise<MigraineRecord> {
+  const formData = new FormData();
+  formData.append('pre_filled', JSON.stringify(preFilled));
+
+  if (audioUri) {
+    if (audioUri.startsWith('blob:')) {
+      // Web: blob URL precisa ser convertida para Blob real
+      const blobRes = await fetch(audioUri);
+      const blob = await blobRes.blob();
+      formData.append('file', blob, 'audio.webm');
+    } else {
+      // Native: extensão do FormData do React Native
+      formData.append('file', {
+        uri: audioUri,
+        name: 'audio.m4a',
+        type: 'audio/m4a',
+      } as unknown as Blob);
+    }
+  }
+  if (text) {
+    formData.append('text', text);
+  }
+
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 300_000); // 5 min
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/complement-crisis`, {
+      method: 'POST',
+      body: formData,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const msg = await response.text().catch(() => String(response.status));
+      throw new Error(`Erro ao complementar crise: ${msg}`);
+    }
+
+    return response.json();
+  } catch (e) {
+    clearTimeout(timeoutId);
+    if (e instanceof Error && e.name === 'AbortError') {
+      throw new Error('Tempo esgotado. Verifique se o backend está rodando em localhost:8000.');
+    }
+    throw e;
+  }
 }
