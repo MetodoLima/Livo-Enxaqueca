@@ -10,7 +10,6 @@ const SLIDER_HEIGHT = SCREEN_HEIGHT * 0.52;
 const SLIDER_WIDTH = 48;
 const THUMB_SIZE = 48;
 
-// Só os valores pares aparecem como label
 const EVEN_VALUES = [0, 2, 4, 6, 8, 10];
 
 interface StepIntensityProps {
@@ -33,9 +32,6 @@ export default function StepIntensity({ data, onChange, onNext }: StepIntensityP
   const [value, setValue] = useState<number | null>(data.intensity);
   const thumbYRef = useRef(valueToPosition(data.intensity ?? 5));
   const [thumbY, setThumbY] = useState(valueToPosition(data.intensity ?? 5));
-
-  // Guarda o layout do track para calcular posição relativa
-  const trackTopRef = useRef(0);
   const startYRef = useRef(0);
   const startThumbRef = useRef(0);
 
@@ -49,7 +45,8 @@ export default function StepIntensity({ data, onChange, onNext }: StepIntensityP
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: (e) => {
-        // Usa pageY do grant para saber onde o dedo pousou
+        // Apenas registra âncora — não reposiciona o thumb
+        // Isso evita o bug do locationY incorreto no emulador web
         startYRef.current = e.nativeEvent.pageY;
         startThumbRef.current = thumbYRef.current;
       },
@@ -81,12 +78,6 @@ export default function StepIntensity({ data, onChange, onNext }: StepIntensityP
           <View
             style={[styles.track, { height: SLIDER_HEIGHT }]}
             {...panResponder.panHandlers}
-            onLayout={(e) => {
-              // Captura o Y absoluto do track na tela para corrigir offset no emulador
-              e.target.measure((_x, _y, _w, _h, _px, py) => {
-                trackTopRef.current = py;
-              });
-            }}
           >
             <View style={[styles.trackBg, { height: SLIDER_HEIGHT }]} />
 
@@ -123,12 +114,10 @@ export default function StepIntensity({ data, onChange, onNext }: StepIntensityP
               .reverse()
               .filter((item) => EVEN_VALUES.includes(item.value))
               .map((item) => {
-                const isActive = value === item.value ||
-                  // Destaca o label par mais próximo do valor atual
-                  (value !== null &&
-                    EVEN_VALUES.reduce((prev, curr) =>
-                      Math.abs(curr - value) < Math.abs(prev - value) ? curr : prev
-                    ) === item.value);
+                const isActive = value !== null &&
+                  EVEN_VALUES.reduce((prev, curr) =>
+                    Math.abs(curr - value) < Math.abs(prev - value) ? curr : prev
+                  ) === item.value;
 
                 return (
                   <View key={item.value} style={styles.labelRow}>
@@ -218,7 +207,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    // altura proporcional a 6 labels em vez de 11
     height: SLIDER_HEIGHT / 6,
   },
   labelEmoji: {
