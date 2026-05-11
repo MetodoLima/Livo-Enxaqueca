@@ -9,7 +9,8 @@ import {
   MEDICATIONS,
   SIDES,
   SYMPTOMS,
-  crisisToMigraineStructured
+  crisisToMigraineStructured,
+  mergeAiResultIntoCrisis,
 } from '@/types/crisis';
 import { useRouter } from 'expo-router';
 import {
@@ -202,6 +203,7 @@ export default function CrisisDetailScreen() {
       const preFilled = crisisToMigraineStructured(crisis);
       const result = await complementCrisis(preFilled, uri, null);
       updateActiveCrisis({
+        ...mergeAiResultIntoCrisis(crisis, result.structured),
         aiComplement: { audioUri: uri, textNote: null, aiResult: result },
       });
       setIsProcessing(false);
@@ -220,6 +222,7 @@ export default function CrisisDetailScreen() {
       const preFilled = crisisToMigraineStructured(crisis);
       const result = await complementCrisis(preFilled, null, text.trim());
       updateActiveCrisis({
+        ...mergeAiResultIntoCrisis(crisis, result.structured),
         aiComplement: { audioUri: null, textNote: text.trim(), aiResult: result },
       });
       setText('');

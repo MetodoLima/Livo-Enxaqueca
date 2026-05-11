@@ -21,7 +21,7 @@ import { Colors } from '@/constants/Colors';
 import StepFooter from './StepFooter';
 import { complementCrisis } from '@/services/api';
 import type { CrisisRecord, AiComplement } from '@/types/crisis';
-import { crisisToMigraineStructured } from '@/types/crisis';
+import { crisisToMigraineStructured, mergeAiResultIntoCrisis } from '@/types/crisis';
 
 // Only import audio functions — they'll fail gracefully if unavailable
 let useAudioRecorder: any;
@@ -119,7 +119,7 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
       const preFilled = crisisToMigraineStructured(data);
       const result = await complementCrisis(preFilled, uri, null);
       const complement: AiComplement = { audioUri: uri, textNote: null, aiResult: result };
-      onChange({ aiComplement: complement });
+      onChange({ ...mergeAiResultIntoCrisis(data, result.structured), aiComplement: complement });
       setSubStep('done');
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Erro ao processar o áudio.');
@@ -136,7 +136,7 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
       const preFilled = crisisToMigraineStructured(data);
       const result = await complementCrisis(preFilled, null, text.trim());
       const complement: AiComplement = { audioUri: null, textNote: text.trim(), aiResult: result };
-      onChange({ aiComplement: complement });
+      onChange({ ...mergeAiResultIntoCrisis(data, result.structured), aiComplement: complement });
       setSubStep('done');
     } catch (e: unknown) {
       setError(e instanceof Error ? e.message : 'Erro ao processar o texto.');
