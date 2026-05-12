@@ -21,9 +21,8 @@ import StepIntensity from '@/components/crisis/StepIntensity';
 import StepLocation from '@/components/crisis/StepLocation';
 import StepSymptoms from '@/components/crisis/StepSymptoms';
 import StepMedication from '@/components/crisis/StepMedication';
-import StepAiComplement from '@/components/crisis/StepAiComplement';
 
-type Step = 1 | 2 | 3 | 4 | 5 | 6;
+type Step = 1 | 2 | 3 | 4 | 5;
 
 export default function RecordCrisisScreen() {
   const [currentStep, setCurrentStep] = useState<Step>(1);
@@ -39,7 +38,7 @@ export default function RecordCrisisScreen() {
 
   // ── Navigation ──────────────────────────────────────────────────────
   const goNext = useCallback(() => {
-    if (currentStep < 6) {
+    if (currentStep < 5) {
       setCurrentStep((s) => (s + 1) as Step);
     } else {
       handleConfirm();
@@ -81,8 +80,6 @@ export default function RecordCrisisScreen() {
         return <StepSymptoms data={crisis} onChange={updateCrisis} onNext={goNext} />;
       case 5:
         return <StepMedication data={crisis} onChange={updateCrisis} onNext={goNext} />;
-      case 6:
-        return <StepAiComplement data={crisis} onChange={updateCrisis} onNext={goNext} />;
       default:
         return null;
     }
