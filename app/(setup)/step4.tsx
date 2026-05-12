@@ -10,33 +10,42 @@ import {
     View,
 } from 'react-native';
 
-
-
 const TOTAL_STEPS = 9;
 const CURRENT_STEP = 4;
 
-const MIN_HOURS = 4;
+const MIN_HOURS = 3; // 3 representa "4h-"
 const MAX_HOURS = 13; // 13 representa "12h+"
 
-
-
 function formatHours(value: number): string {
+    if (value <= 3) return '4h-';
     if (value >= 13) return '12h+';
     return `${value}h`;
 }
 
 function getSleepFeedback(value: number): { label: string; color: string; description: string } {
+    if (value <= 3)
+        return {
+            label: 'Sono muito insuficiente',
+            color: '#E85D75',
+            description: 'Menos de 4h é um gatilho severo de crises.',
+        };
     if (value < 6)
         return {
             label: 'Sono insuficiente',
             color: '#E85D75',
             description: 'Menos de 6h é um gatilho frequente de crises.',
         };
-    if (value <= 7)
+    if (value <= 6)
         return {
             label: 'Sono adequado',
             color: '#F5A623',
             description: 'Próximo do ideal. Tente manter consistência.',
+        };
+    if (value === 7)
+        return {
+            label: 'Sono ideal',
+            color: '#00BFA5',
+            description: 'Ótima faixa para reduzir o risco de crises.',
         };
     if (value <= 9)
         return {
@@ -44,14 +53,18 @@ function getSleepFeedback(value: number): { label: string; color: string; descri
             color: '#00BFA5',
             description: 'Ótima faixa para reduzir o risco de crises.',
         };
+    if (value <= 11)
+        return {
+            label: 'Sono excessivo',
+            color: '#F5A623',
+            description: 'Dormir mais de 9h também pode desencadear crises.',
+        };
     return {
         label: 'Sono excessivo',
-        color: '#F5A623',
+        color: '#E85D75',
         description: 'Dormir mais de 9h também pode desencadear crises.',
     };
 }
-
-
 
 export default function Step4Sono() {
     const { updateSetupData } = useSetup();
@@ -60,19 +73,13 @@ export default function Step4Sono() {
     const [touched, setTouched] = useState(false);
 
     const feedback = getSleepFeedback(hours);
-    const isValid = touched;
 
     function handleNext() {
-        if (!isValid) return;
-
-        // Sono é uma resposta numérica (valor_numero), salva o número
         updateSetupData({
-            sleepBaseline: hours >= 13 ? 12.5 : hours,
+            sleepBaseline: hours >= 13 ? 12.5 : hours <= 3 ? 3.5 : hours,
         });
 
-        router.push({
-            pathname: '/(setup)/step5',
-        });
+        router.push({ pathname: '/(setup)/step5' });
     }
 
     return (
@@ -141,7 +148,7 @@ export default function Step4Sono() {
                             backgroundColor: '#112236',
                             borderRadius: 20,
                             borderWidth: 1.5,
-                            borderColor: touched ? feedback.color + '60' : '#1E3A52',
+                            borderColor: feedback.color + '60',
                             padding: 28,
                             alignItems: 'center',
                         }}
@@ -151,7 +158,7 @@ export default function Step4Sono() {
                             style={{
                                 fontSize: 72,
                                 fontWeight: '800',
-                                color: touched ? feedback.color : '#FFFFFF',
+                                color: feedback.color,
                                 includeFontPadding: false,
                             }}
                         >
@@ -173,9 +180,9 @@ export default function Step4Sono() {
                                 setHours(val);
                                 if (!touched) setTouched(true);
                             }}
-                            minimumTrackTintColor={touched ? feedback.color : '#00BFA5'}
+                            minimumTrackTintColor={feedback.color}
                             maximumTrackTintColor="#1E3A52"
-                            thumbTintColor={touched ? feedback.color : '#00BFA5'}
+                            thumbTintColor={feedback.color}
                         />
 
                         {/* Labels min/max */}
@@ -187,13 +194,13 @@ export default function Step4Sono() {
                                 marginTop: 4,
                             }}
                         >
-                            <Text style={{ fontSize: 12, color: '#4A6A82' }}>4h</Text>
+                            <Text style={{ fontSize: 12, color: '#4A6A82' }}>4h-</Text>
                             <Text style={{ fontSize: 12, color: '#4A6A82' }}>12h+</Text>
                         </View>
                     </View>
                 </View>
 
-                {/* ── Badge de feedback (aparece ao mover o slider) ── */}
+                {/* ── Badge de feedback ── */}
                 <View style={{ paddingHorizontal: 24, marginTop: 16, minHeight: 56 }}>
                     {touched && (
                         <View
@@ -285,9 +292,8 @@ export default function Step4Sono() {
                 <View style={{ paddingHorizontal: 24, marginTop: 32 }}>
                     <TouchableOpacity
                         onPress={handleNext}
-                        disabled={!isValid}
                         style={{
-                            backgroundColor: isValid ? '#00BFA5' : '#1E3A52',
+                            backgroundColor: '#00BFA5',
                             borderRadius: 16,
                             paddingVertical: 18,
                             alignItems: 'center',
@@ -298,26 +304,13 @@ export default function Step4Sono() {
                             style={{
                                 fontSize: 16,
                                 fontWeight: '700',
-                                color: isValid ? '#FFFFFF' : '#3A5A72',
+                                color: '#FFFFFF',
                                 letterSpacing: 0.3,
                             }}
                         >
                             Continuar
                         </Text>
                     </TouchableOpacity>
-
-                    {/* Pular */}
-                    {!touched && (
-                        <TouchableOpacity
-                            onPress={() => {
-                                setTouched(true);
-                                // router.push({ pathname: '/(setup)/step5', params: { ...params, sleepBaseline: 'unknown' } });
-                            }}
-                            style={{ alignItems: 'center', marginTop: 16 }}
-                        >
-                            <Text style={{ fontSize: 14, color: '#4A6A82' }}>Não sei, pular por agora</Text>
-                        </TouchableOpacity>
-                    )}
                 </View>
             </ScrollView>
         </View>

@@ -1,9 +1,16 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import React, { useRef, useState } from 'react';
+import { View, Text, StyleSheet, Dimensions, PanResponder } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { Colors } from '@/constants/Colors';
 import StepFooter from './StepFooter';
 import { INTENSITY_CONFIG, type CrisisRecord } from '@/types/crisis';
+
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+const SLIDER_HEIGHT = SCREEN_HEIGHT * 0.52;
+const SLIDER_WIDTH = 48;
+const THUMB_SIZE = 48;
+
+const EVEN_VALUES = [0, 2, 4, 6, 8, 10];
 
 interface StepIntensityProps {
   data: CrisisRecord;
@@ -11,77 +18,128 @@ interface StepIntensityProps {
   onNext: () => void;
 }
 
+function valueToPosition(value: number): number {
+  return ((10 - value) / 10) * (SLIDER_HEIGHT - THUMB_SIZE);
+}
+
+function positionToValue(y: number): number {
+  const clamped = Math.max(0, Math.min(y, SLIDER_HEIGHT - THUMB_SIZE));
+  const raw = 10 - (clamped / (SLIDER_HEIGHT - THUMB_SIZE)) * 10;
+  return Math.round(raw);
+}
+
 export default function StepIntensity({ data, onChange, onNext }: StepIntensityProps) {
-  const selected = data.intensity;
+  const [value, setValue] = useState<number | null>(data.intensity);
+  const thumbYRef = useRef(valueToPosition(data.intensity ?? 5));
+  const [thumbY, setThumbY] = useState(valueToPosition(data.intensity ?? 5));
+  const startYRef = useRef(0);
+  const startThumbRef = useRef(0);
+
+  const currentConfig = value !== null
+    ? INTENSITY_CONFIG.find((c) => c.value === value)
+    : null;
+  const currentColor = currentConfig?.color ?? '#1E3A52';
+
+  const panResponder = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => true,
+      onMoveShouldSetPanResponder: () => true,
+      onPanResponderGrant: (e) => {
+        // Apenas registra âncora — não reposiciona o thumb
+        // Isso evita o bug do locationY incorreto no emulador web
+        startYRef.current = e.nativeEvent.pageY;
+        startThumbRef.current = thumbYRef.current;
+      },
+      onPanResponderMove: (e) => {
+        const dy = e.nativeEvent.pageY - startYRef.current;
+        const newY = Math.max(0, Math.min(startThumbRef.current + dy, SLIDER_HEIGHT - THUMB_SIZE));
+        thumbYRef.current = newY;
+        setThumbY(newY);
+        setValue(positionToValue(newY));
+      },
+      onPanResponderRelease: () => {
+        const finalValue = positionToValue(thumbYRef.current);
+        setValue(finalValue);
+        onChange({ intensity: finalValue });
+      },
+    })
+  ).current;
+
+  const fillHeight = Math.max(0, SLIDER_HEIGHT - thumbY - THUMB_SIZE / 2);
 
   return (
     <View style={styles.container}>
       <Animated.View entering={FadeInUp.duration(400)} style={styles.content}>
         <Text style={styles.title}>Qual o nível da dor?</Text>
 
-        {/* Scale list — 10 to 0, top to bottom */}
-        <View style={styles.scaleContainer}>
-          {[...INTENSITY_CONFIG].reverse().map((item) => {
-            const isActive = selected === item.value;
-            return (
-              <TouchableOpacity
-                key={item.value}
-                onPress={() => onChange({ intensity: item.value })}
-                activeOpacity={0.7}
+        <View style={styles.sliderWrapper}>
+
+          {/* Track + thumb */}
+          <View
+            style={[styles.track, { height: SLIDER_HEIGHT }]}
+            {...panResponder.panHandlers}
+          >
+            <View style={[styles.trackBg, { height: SLIDER_HEIGHT }]} />
+
+            {value !== null && (
+              <View
                 style={[
-                  styles.scaleRow,
-                  isActive && styles.scaleRowActive,
+                  styles.trackFill,
+                  { height: fillHeight, backgroundColor: currentColor },
                 ]}
-              >
-                {/* Colored side bar */}
-                <View
-                  style={[
-                    styles.colorBar,
-                    {
-                      backgroundColor: item.color,
-                      opacity: isActive ? 1 : 0.6,
-                    },
-                  ]}
-                />
+              />
+            )}
 
-                {/* Number */}
-                <View style={[
-                  styles.numberBox,
-                  isActive && { backgroundColor: `${item.color}30` },
-                ]}>
-                  <Text
-                    style={[
-                      styles.numberText,
-                      isActive && { color: item.color },
-                    ]}
-                  >
-                    {item.value}
-                  </Text>
-                </View>
+            <View
+              style={[
+                styles.thumb,
+                {
+                  top: thumbY,
+                  backgroundColor: value !== null ? currentColor : '#1E3A52',
+                  shadowColor: value !== null ? currentColor : 'transparent',
+                  borderWidth: value === null ? 2 : 0,
+                  borderColor: '#2A4A62',
+                },
+              ]}
+            >
+              <Text style={styles.thumbText}>
+                {value !== null ? value : '?'}
+              </Text>
+            </View>
+          </View>
 
-                {/* Emoji */}
-                <Text style={styles.emoji}>{item.emoji}</Text>
+          {/* Labels — apenas valores pares */}
+          <View style={[styles.labelsColumn, { height: SLIDER_HEIGHT }]}>
+            {[...INTENSITY_CONFIG]
+              .reverse()
+              .filter((item) => EVEN_VALUES.includes(item.value))
+              .map((item) => {
+                const isActive = value !== null &&
+                  EVEN_VALUES.reduce((prev, curr) =>
+                    Math.abs(curr - value) < Math.abs(prev - value) ? curr : prev
+                  ) === item.value;
 
-                {/* Label */}
-                <View style={styles.labelContainer}>
-                  {item.label ? (
-                    <Text
-                      style={[
-                        styles.labelText,
-                        isActive && { color: 'white' },
-                      ]}
-                    >
-                      {item.label.toUpperCase()}
+                return (
+                  <View key={item.value} style={styles.labelRow}>
+                    <Text style={[styles.labelEmoji, !isActive && { opacity: 0.4 }]}>
+                      {item.emoji}
                     </Text>
-                  ) : null}
-                </View>
-              </TouchableOpacity>
-            );
-          })}
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.labelNumber, isActive && { color: currentColor }]}>
+                        {item.value}
+                      </Text>
+                      <Text style={[styles.labelText, isActive && { color: 'white' }]}>
+                        {item.sublabel.toUpperCase()}
+                      </Text>
+                    </View>
+                  </View>
+                );
+              })}
+          </View>
         </View>
       </Animated.View>
 
-      <StepFooter onNext={onNext} disabled={selected === null} />
+      <StepFooter onNext={onNext} disabled={value === null} />
     </View>
   );
 }
@@ -98,64 +156,74 @@ const styles = StyleSheet.create({
     fontSize: 22,
     fontFamily: 'Epilogue_700Bold',
     color: 'white',
-    marginBottom: 20,
+    marginBottom: 28,
     lineHeight: 30,
   },
-
-  // Scale
-  scaleContainer: {
-    borderRadius: 16,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(255,255,255,0.02)',
-  },
-  scaleRow: {
+  sliderWrapper: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 20,
+  },
+  track: {
+    width: SLIDER_WIDTH,
+    position: 'relative',
     alignItems: 'center',
-    height: 44,
   },
-  scaleRowActive: {
-    backgroundColor: 'rgba(255,255,255,0.06)',
+  trackBg: {
+    position: 'absolute',
+    width: SLIDER_WIDTH,
+    top: 0,
+    backgroundColor: '#1E3A52',
+    borderRadius: SLIDER_WIDTH / 2,
   },
-
-  // Color bar on the left
-  colorBar: {
-    width: 8,
-    height: '100%',
+  trackFill: {
+    position: 'absolute',
+    width: SLIDER_WIDTH,
+    bottom: 0,
+    borderRadius: SLIDER_WIDTH / 2,
   },
-
-  // Number
-  numberBox: {
-    width: 40,
-    height: 32,
-    borderRadius: 8,
+  thumb: {
+    position: 'absolute',
+    width: THUMB_SIZE,
+    height: THUMB_SIZE,
+    borderRadius: THUMB_SIZE / 2,
     alignItems: 'center',
     justifyContent: 'center',
-    marginLeft: 8,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.5,
+    shadowRadius: 8,
+    elevation: 8,
   },
-  numberText: {
+  thumbText: {
     fontSize: 16,
     fontFamily: 'Epilogue_700Bold',
-    color: Colors.muted,
+    color: '#FFFFFF',
   },
-
-  // Emoji
-  emoji: {
-    fontSize: 26,
-    marginLeft: 14,
-    marginRight: 14,
-    width: 32,
+  labelsColumn: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  labelRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    height: SLIDER_HEIGHT / 6,
+  },
+  labelEmoji: {
+    fontSize: 20,
+    width: 28,
     textAlign: 'center',
   },
-
-  // Label
-  labelContainer: {
-    flex: 1,
-    justifyContent: 'center',
-  },
-  labelText: {
-    fontSize: 11,
+  labelNumber: {
+    fontSize: 14,
     fontFamily: 'Epilogue_700Bold',
     color: Colors.muted,
-    letterSpacing: 1.5,
+    lineHeight: 16,
+  },
+  labelText: {
+    fontSize: 9,
+    fontFamily: 'Epilogue_600SemiBold',
+    color: Colors.muted,
+    letterSpacing: 1,
   },
 });

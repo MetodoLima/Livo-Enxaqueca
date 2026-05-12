@@ -46,17 +46,17 @@ export type MedicationId = (typeof MEDICATIONS)[number]['id'];
 
 // ── Intensity labels ──────────────────────────────────────────────────
 export const INTENSITY_CONFIG = [
-  { value: 0, label: 'Sem dor', emoji: '😌', color: '#10B981' },
-  { value: 1, label: 'Dói um pouco', emoji: '🙂', color: '#34D399' },
-  { value: 2, label: '', emoji: '🙂', color: '#6EE7B7' },
-  { value: 3, label: 'Ligeira', emoji: '😐', color: '#A3E635' },
-  { value: 4, label: '', emoji: '😐', color: '#FACC15' },
-  { value: 5, label: 'Moderada', emoji: '😟', color: '#F59E0B' },
-  { value: 6, label: '', emoji: '😟', color: '#F97316' },
-  { value: 7, label: 'Severa', emoji: '😣', color: '#EF4444' },
-  { value: 8, label: '', emoji: '😣', color: '#DC2626' },
-  { value: 9, label: 'Dói ainda mais', emoji: '😫', color: '#B91C1C' },
-  { value: 10, label: 'Insuportável', emoji: '🤯', color: '#991B1B' },
+  { value: 0,  label: 'Sem dor',        sublabel: 'Nenhuma dor',              emoji: '😌', color: '#10B981' },
+  { value: 1,  label: 'Dói um pouco',   sublabel: 'Quase imperceptível',      emoji: '🙂', color: '#34D399' },
+  { value: 2,  label: 'Leve',           sublabel: 'Consigo ignorar',          emoji: '🙂', color: '#6EE7B7' },
+  { value: 3,  label: 'Ligeira',        sublabel: 'Presente mas tolerável',   emoji: '😐', color: '#A3E635' },
+  { value: 4,  label: 'Incômoda',       sublabel: 'Dificulta concentração',   emoji: '😐', color: '#FACC15' },
+  { value: 5,  label: 'Moderada',       sublabel: 'Atrapalha as atividades',  emoji: '😟', color: '#F59E0B' },
+  { value: 6,  label: 'Forte',          sublabel: 'Difícil de ignorar',       emoji: '😟', color: '#F97316' },
+  { value: 7,  label: 'Severa',         sublabel: 'Preciso parar o que faço', emoji: '😣', color: '#EF4444' },
+  { value: 8,  label: 'Muito intensa',  sublabel: 'Quase incapacitante',      emoji: '😣', color: '#DC2626' },
+  { value: 9,  label: 'Excruciante',    sublabel: 'Impossível funcionar',     emoji: '😫', color: '#B91C1C' },
+  { value: 10, label: 'Insuportável',   sublabel: 'A pior dor possível',      emoji: '🤯', color: '#991B1B' },
 ] as const;
 
 // ── Quick time presets ────────────────────────────────────────────────
@@ -73,7 +73,7 @@ export interface AiComplement {
 // ── Full crisis record ────────────────────────────────────────────────
 export interface CrisisRecord {
   startTime: Date;
-  endTime: Date | null; // null = still ongoing
+  endTime: Date | null;
   intensity: number | null;
   location: LocationId | null;
   side: SideId | null;

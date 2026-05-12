@@ -30,9 +30,9 @@ const SUGGESTED_CONDITIONS: Condition[] = [
     { id: 'insomnia', label: 'Insônia', emoji: '🌙', note: 'Afeta diretamente o sono base' },
     { id: 'epilepsy', label: 'Epilepsia', emoji: '⚡', note: 'Compartilha medicações com enxaqueca' },
     { id: 'depression', label: 'Depressão', emoji: '💙', note: 'Comorbidade comum em crônicos' },
-    { id: 'hypothyroidism', label: 'Hipotireoidismo', emoji: '🦋' },
-    { id: 'fibromyalgia', label: 'Fibromialgia', emoji: '🔴' },
-    { id: 'diabetes', label: 'Diabetes', emoji: '🩸' },
+    { id: 'hypothyroidism', label: 'Hipotireoidismo', emoji: '🦋', note: 'Alterações hormonais podem intensificar crises' },
+    { id: 'fibromyalgia', label: 'Fibromialgia', emoji: '🔴', note: 'Dor crônica frequentemente associada à enxaqueca' },
+    { id: 'diabetes', label: 'Diabetes', emoji: '🩸', note: 'Variações de glicemia são gatilhos comuns' },
 ];
 
 
