@@ -1,4 +1,4 @@
-import { MigraineRecord } from '@/services/api';
+import { MigraineRecord, MigraineStructured, SintomasAssociados } from '@/services/api';
 
 // ── Location options ──────────────────────────────────────────────────
 export const LOCATIONS = [
@@ -80,6 +80,7 @@ export interface CrisisRecord {
   symptoms: SymptomId[];
   medications: MedicationId[];
   customMedications: string[];
+  triggers: string[];
   aiComplement: AiComplement | null;
 }
 
@@ -93,8 +94,114 @@ export function createEmptyCrisis(): CrisisRecord {
     symptoms: [],
     medications: [],
     customMedications: [],
+    triggers: [],
     aiComplement: null,
   };
 }
 
-export const TOTAL_STEPS = 6;
+export const TOTAL_STEPS = 5;
+
+export function mergeAiResultIntoCrisis(
+  current: CrisisRecord,
+  structured: MigraineStructured,
+): Partial<CrisisRecord> {
+  const patch: Partial<CrisisRecord> = {};
+
+  if (structured.intensidade_dor !== null) {
+    patch.intensity = structured.intensidade_dor;
+  }
+
+  // Só sobrescreve localização se a IA retornou algo (preserva 'atras_olhos' se a IA não mudou)
+  if (structured.localizacao !== null) {
+    patch.location = structured.localizacao as LocationId;
+  }
+
+  if (structured.lado !== null) {
+    patch.side = structured.lado as SideId;
+  }
+
+  // União: mantém sintomas do questionário + adiciona os que a IA detectou no áudio
+  const s = structured.sintomas_associados;
+  const aiSymptoms: SymptomId[] = [];
+  if (s.nausea)    aiSymptoms.push('nausea');
+  if (s.vomito)    aiSymptoms.push('vomito');
+  if (s.fotofobia) aiSymptoms.push('fotofobia');
+  if (s.fonofobia) aiSymptoms.push('fonofobia');
+  if (s.aura)      aiSymptoms.push('aura');
+  if (s.tontura)   aiSymptoms.push('tontura');
+  patch.symptoms = Array.from(new Set([...current.symptoms, ...aiSymptoms]));
+
+  // Medicamentos: separa conhecidos (MedicationId) de custom, faz união com os do questionário
+  if (structured.medicamentos_tomados.length > 0) {
+    const knownIds = MEDICATIONS.map((m) => m.id);
+    const aiKnown: MedicationId[] = [];
+    const aiCustom: string[] = [];
+
+    for (const med of structured.medicamentos_tomados) {
+      const normalized = med.toLowerCase().trim();
+      const match = knownIds.find((id) => id === normalized || normalized.includes(id));
+      if (match && match !== 'nenhum') {
+        aiKnown.push(match as MedicationId);
+      } else if (normalized !== 'nenhum') {
+        aiCustom.push(med.trim());
+      }
+    }
+
+    // Remove 'nenhum' se a IA detectou medicamentos reais
+    const baseKnown = current.medications.filter((m) => m !== 'nenhum');
+    patch.medications = Array.from(new Set([...baseKnown, ...aiKnown]));
+    patch.customMedications = Array.from(
+      new Set([...current.customMedications, ...aiCustom]),
+    );
+  }
+
+  // Fatores desencadeantes: união acumulada a cada complemento
+  if (structured.fatores_desencadeantes.length > 0) {
+    patch.triggers = Array.from(
+      new Set([...current.triggers, ...structured.fatores_desencadeantes]),
+    );
+  }
+
+  return patch;
+}
+
+export function crisisToMigraineStructured(crisis: CrisisRecord): MigraineStructured {
+  const sintomas: SintomasAssociados = {
+    nausea: crisis.symptoms.includes('nausea'),
+    vomito: crisis.symptoms.includes('vomito'),
+    fotofobia: crisis.symptoms.includes('fotofobia'),
+    fonofobia: crisis.symptoms.includes('fonofobia'),
+    aura: crisis.symptoms.includes('aura'),
+    tontura: crisis.symptoms.includes('tontura'),
+    outros: [],
+  };
+
+  // 'atras_olhos' não existe no schema do backend — mapeamos para null
+  const localizacao =
+    crisis.location === 'atras_olhos' || crisis.location === null
+      ? null
+      : (crisis.location as MigraineStructured['localizacao']);
+
+  let nivel_incapacidade: MigraineStructured['nivel_incapacidade'] = null;
+  if (crisis.intensity !== null) {
+    if (crisis.intensity <= 3) nivel_incapacidade = 'leve';
+    else if (crisis.intensity <= 6) nivel_incapacidade = 'moderado';
+    else nivel_incapacidade = 'severo';
+  }
+
+  return {
+    intensidade_dor: crisis.intensity,
+    localizacao,
+    lado: crisis.side ?? null,
+    qualidade_dor: [],
+    sintomas_associados: sintomas,
+    inicio_estimado: null,
+    medicamentos_tomados: [
+      ...crisis.medications.filter((m) => m !== 'nenhum'),
+      ...crisis.customMedications,
+    ],
+    fatores_desencadeantes: [...crisis.triggers],
+    nivel_incapacidade,
+    resumo: null,
+  };
+}

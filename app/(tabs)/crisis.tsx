@@ -1,51 +1,50 @@
-import React, { useState, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  SafeAreaView,
-  ScrollView,
-  TextInput,
-  ActivityIndicator,
-  StyleSheet,
-} from 'react-native';
-import {
-  Wind,
-  Zap,
-  Clock,
-  MapPin,
-  Thermometer,
-  Mic,
-  Send,
-  StopCircle,
-  ChevronRight,
-  X,
-} from 'lucide-react-native';
-import { Check } from 'lucide-react-native';
-import Animated, {
-  FadeInUp,
-  FadeIn,
-  ZoomIn,
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  Easing,
-  interpolate,
-} from 'react-native-reanimated';
-import { useRouter } from 'expo-router';
+import Card from '@/components/Card';
+import { IntensityEditor, LocationEditor, SymptomsEditor } from '@/components/crisis/EditModals';
 import { Colors } from '@/constants/Colors';
 import { useCrisis } from '@/contexts/CrisisContext';
-import Card from '@/components/Card';
+import { complementCrisis } from '@/services/api';
 import {
   INTENSITY_CONFIG,
   LOCATIONS,
+  MEDICATIONS,
   SIDES,
   SYMPTOMS,
-  MEDICATIONS,
+  crisisToMigraineStructured,
+  mergeAiResultIntoCrisis,
 } from '@/types/crisis';
-import { processAudio, processText } from '@/services/api';
-import { IntensityEditor, LocationEditor, SymptomsEditor } from '@/components/crisis/EditModals';
+import { useRouter } from 'expo-router';
+import {
+  Check,
+  ChevronRight,
+  Clock,
+  Mic,
+  Send,
+  StopCircle,
+  Wind,
+  X,
+  Zap
+} from 'lucide-react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import {
+  ActivityIndicator,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import Animated, {
+  Easing,
+  FadeInUp,
+  ZoomIn,
+  interpolate,
+  useAnimatedStyle,
+  useSharedValue,
+  withRepeat,
+  withTiming
+} from 'react-native-reanimated';
 
 // ── Audio imports (graceful) ──────────────────────────────────────────
 let useAudioRecorder: any;
@@ -132,7 +131,6 @@ export default function CrisisDetailScreen() {
   // ── Handle finalize ─────────────────────────────────────────────────
   const handleFinish = () => {
     setFinishing(true);
-    // TODO: persist to Supabase here
     setTimeout(() => {
       clearCrisis();
       setFinishing(false);
@@ -182,7 +180,7 @@ export default function CrisisDetailScreen() {
     try {
       const { granted } = await requestRecordingPermissionsAsync();
       if (!granted) { setError('Permissão de microfone negada.'); return; }
-      await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true });
+      try { await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true }); } catch {}
       await recorder.prepareToRecordAsync();
       recorder.record();
       setRecordSecs(0);
@@ -202,8 +200,10 @@ export default function CrisisDetailScreen() {
       const uri = recorder.uri;
       if (!uri) throw new Error('URI inválido.');
       setIsProcessing(true);
-      const result = await processAudio(uri);
+      const preFilled = crisisToMigraineStructured(crisis);
+      const result = await complementCrisis(preFilled, uri, null);
       updateActiveCrisis({
+        ...mergeAiResultIntoCrisis(crisis, result.structured),
         aiComplement: { audioUri: uri, textNote: null, aiResult: result },
       });
       setIsProcessing(false);
@@ -219,8 +219,10 @@ export default function CrisisDetailScreen() {
     setError(null);
     setIsProcessing(true);
     try {
-      const result = await processText(text.trim());
+      const preFilled = crisisToMigraineStructured(crisis);
+      const result = await complementCrisis(preFilled, null, text.trim());
       updateActiveCrisis({
+        ...mergeAiResultIntoCrisis(crisis, result.structured),
         aiComplement: { audioUri: null, textNote: text.trim(), aiResult: result },
       });
       setText('');
@@ -389,16 +391,42 @@ export default function CrisisDetailScreen() {
         </Animated.View>
 
         {/* ── AI summary ── */}
-        {crisis.aiComplement?.aiResult?.structured.resumo && (
-          <Animated.View entering={FadeInUp.delay(500)}>
-            <Card className="mb-4" variant="accent-border">
-              <Text style={styles.cardLabel}>Análise da IA</Text>
-              <Text style={styles.aiSummary}>
-                {crisis.aiComplement.aiResult.structured.resumo}
-              </Text>
-            </Card>
-          </Animated.View>
-        )}
+        {(() => {
+          const structured = crisis.aiComplement?.aiResult?.structured;
+          const gatilhos = crisis.triggers;
+          if (!structured?.resumo && gatilhos.length === 0) return null;
+          return (
+            <Animated.View entering={FadeInUp.delay(500)}>
+              <Card className="mb-4" variant="accent-border">
+                <Text style={styles.cardLabel}>Análise da IA</Text>
+                {structured?.resumo && (
+                  <Text style={styles.aiSummary}>{structured.resumo}</Text>
+                )}
+                {gatilhos.length > 0 && (
+                  <View style={{ marginTop: structured?.resumo ? 14 : 4 }}>
+                    <Text style={[styles.cardLabel, { marginBottom: 8 }]}>
+                      Possíveis gatilhos
+                    </Text>
+                    {gatilhos.map((g, i) => (
+                      <View key={i} style={styles.gatilhoRow}>
+                        <Zap size={13} color={Colors.orange} style={{ marginRight: 6 }} />
+                        <Text style={styles.gatilhoText}>{g}</Text>
+                        <TouchableOpacity
+                          onPress={() => updateActiveCrisis({
+                            triggers: crisis.triggers.filter((_, idx) => idx !== i),
+                          })}
+                          hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                        >
+                          <X size={14} color={Colors.muted} />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
+                )}
+              </Card>
+            </Animated.View>
+          );
+        })()}
 
         {/* ── Voice complement section ── */}
         <Animated.View entering={FadeInUp.delay(600)}>
@@ -613,6 +641,17 @@ const styles = StyleSheet.create({
     color: Colors.soft,
     lineHeight: 22,
     marginTop: 6,
+  },
+  gatilhoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  gatilhoText: {
+    fontSize: 14,
+    fontFamily: 'Epilogue_400Regular',
+    color: Colors.soft,
+    flex: 1,
   },
 
   // Voice entry
