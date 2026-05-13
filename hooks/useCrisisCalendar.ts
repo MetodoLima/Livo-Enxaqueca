@@ -10,6 +10,8 @@ export interface CrisisDay {
   resumo: string | null;
   inicioCrise: Date;
   fimCrise: Date | null;
+  sintomas: string[];
+  medicamentos: string[];
 }
 
 export interface CrisisByDay {
@@ -27,33 +29,95 @@ export function useCrisisCalendar(year: number, month: number) {
 
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0, 23, 59, 59);
+    const daysInMonth = lastDay.getDate();
+
+    const grouped: CrisisByDay = {};
+
+    const addToDay = (day: number, crisis: CrisisDay) => {
+      if (day < 1 || day > daysInMonth) return;
+      if (!grouped[day]) grouped[day] = [];
+      if (!grouped[day].some((c) => c.id === crisis.id)) {
+        grouped[day].push(crisis);
+      }
+    };
+
+    const spreadCrisis = (crisis: CrisisDay) => {
+      const start = new Date(crisis.inicioCrise);
+      start.setHours(0, 0, 0, 0);
+
+      if (!crisis.fimCrise) {
+        if (start.getMonth() === month && start.getFullYear() === year) {
+          addToDay(start.getDate(), crisis);
+        }
+        return;
+      }
+
+      const end = new Date(crisis.fimCrise);
+      end.setHours(0, 0, 0, 0);
+
+      const cursor = new Date(Math.max(start.getTime(), firstDay.getTime()));
+      cursor.setHours(0, 0, 0, 0);
+      const limit = new Date(Math.min(end.getTime(), lastDay.getTime()));
+      limit.setHours(0, 0, 0, 0);
+
+      while (cursor <= limit) {
+        addToDay(cursor.getDate(), crisis);
+        cursor.setDate(cursor.getDate() + 1);
+      }
+    };
+
+    // Supabase resolve os joins automaticamente com a sintaxe de nested select
+    const rowToCrisis = (row: any): CrisisDay => ({
+      id: row.id,
+      intensidadeDor: row.intensidade_dor ?? null,
+      regiaoDor: row.regiao_dor ?? null,
+      lado: row.lado ?? null,
+      nivelIncapacidade: row.nivel_incapacidade ?? null,
+      resumo: row.resumo ?? null,
+      inicioCrise: new Date(row.inicio_crise),
+      fimCrise: row.fim_crise ? new Date(row.fim_crise) : null,
+      sintomas: (row.sintoma_crise ?? [])
+        .map((s: any) => s.sintomas?.nome)
+        .filter(Boolean),
+      medicamentos: (row.medicamentos_crise ?? [])
+        .map((m: any) => m.medicamentos?.nome)
+        .filter(Boolean),
+    });
+
+    const SELECT = `
+      id,
+      intensidade_dor,
+      regiao_dor,
+      lado,
+      nivel_incapacidade,
+      resumo,
+      inicio_crise,
+      fim_crise,
+      sintoma_crise ( sintomas ( nome ) ),
+      medicamentos_crise ( medicamentos ( nome ) )
+    `;
 
     try {
+      // 1. Crises que começam neste mês
       const { data, error: supabaseError } = await supabase
         .from('crise_enxaqueca')
-        .select('id, intensidade_dor, regiao_dor, lado, nivel_incapacidade, resumo, inicio_crise, fim_crise')
+        .select(SELECT)
         .gte('inicio_crise', firstDay.toISOString())
         .lte('inicio_crise', lastDay.toISOString())
         .order('inicio_crise', { ascending: true });
 
       if (supabaseError) throw supabaseError;
+      for (const row of data ?? []) spreadCrisis(rowToCrisis(row));
 
-      const grouped: CrisisByDay = {};
-      for (const row of data ?? []) {
-        const date = new Date(row.inicio_crise);
-        const day = date.getDate();
-        if (!grouped[day]) grouped[day] = [];
-        grouped[day].push({
-          id: row.id,
-          intensidadeDor: row.intensidade_dor ?? null,
-          regiaoDor: row.regiao_dor ?? null,
-          lado: row.lado ?? null,
-          nivelIncapacidade: row.nivel_incapacidade ?? null,
-          resumo: row.resumo ?? null,
-          inicioCrise: date,
-          fimCrise: row.fim_crise ? new Date(row.fim_crise) : null,
-        });
-      }
+      // 2. Crises que começaram antes mas terminam neste mês
+      const { data: prevData } = await supabase
+        .from('crise_enxaqueca')
+        .select(SELECT)
+        .lt('inicio_crise', firstDay.toISOString())
+        .gte('fim_crise', firstDay.toISOString())
+        .order('inicio_crise', { ascending: true });
+
+      for (const row of prevData ?? []) spreadCrisis(rowToCrisis(row));
 
       setCrisisByDay(grouped);
     } catch (err: any) {

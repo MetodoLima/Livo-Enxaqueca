@@ -10,7 +10,7 @@ import {
   Platform,
   UIManager,
 } from 'react-native';
-import { ChevronLeft, ChevronRight, Zap, Clock, MapPin, AlertCircle } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, Zap, Clock, MapPin, AlertCircle, Pill, Activity } from 'lucide-react-native';
 import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
 import { Colors } from '@/constants/Colors';
 import Card from '@/components/Card';
@@ -136,6 +136,44 @@ function CrisisCard({ crisis, index }: { crisis: CrisisDay; index: number }) {
             <Text style={{ color, fontFamily: 'Epilogue_600SemiBold', fontSize: 11 }}>
               {incapacidade}
             </Text>
+          </View>
+        )}
+
+        {/* Sintomas */}
+        {crisis.sintomas.length > 0 && (
+          <View style={{ marginTop: 4, marginBottom: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+              <Activity size={13} color={Colors.muted} />
+              <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_600SemiBold', fontSize: 11, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                Sintomas
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+              {crisis.sintomas.map((s) => (
+                <View key={s} style={{ backgroundColor: '#1E3A52', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
+                  <Text style={{ color: 'white', fontFamily: 'Epilogue_400Regular', fontSize: 12 }}>{s}</Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        )}
+
+        {/* Medicamentos */}
+        {crisis.medicamentos.length > 0 && (
+          <View style={{ marginBottom: 8 }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+              <Pill size={13} color={Colors.accent} />
+              <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_600SemiBold', fontSize: 11, letterSpacing: 0.5, textTransform: 'uppercase' }}>
+                Medicamentos
+              </Text>
+            </View>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+              {crisis.medicamentos.map((m) => (
+                <View key={m} style={{ backgroundColor: `${Colors.accent}20`, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: `${Colors.accent}40` }}>
+                  <Text style={{ color: Colors.accent, fontFamily: 'Epilogue_600SemiBold', fontSize: 12 }}>{m}</Text>
+                </View>
+              ))}
+            </View>
           </View>
         )}
 
