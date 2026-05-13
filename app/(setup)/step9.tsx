@@ -27,49 +27,49 @@ const IMPACT_OPTIONS: {
     emoji: string;
     color: string;
 }[] = [
-    {
-        value: 'none',
-        label: 'Não afeta minha rotina',
-        sublabel: 'Consigo trabalhar, estudar e fazer tudo normalmente',
-        emoji: '💪',
-        color: '#00BFA5',
-    },
-    {
-        value: 'mild',
-        label: 'Afeta levemente',
-        sublabel: 'Fico desconfortável mas consigo continuar',
-        emoji: '🙂',
-        color: '#4DD9C0',
-    },
-    {
-        value: 'moderate',
-        label: 'Preciso reduzir o ritmo',
-        sublabel: 'Consigo fazer o essencial mas com dificuldade',
-        emoji: '😐',
-        color: '#F5A623',
-    },
-    {
-        value: 'high',
-        label: 'Preciso parar a maioria das atividades',
-        sublabel: 'Trabalho, estudos e compromissos ficam prejudicados',
-        emoji: '😣',
-        color: '#F07040',
-    },
-    {
-        value: 'total',
-        label: 'Fico completamente incapacitado',
-        sublabel: 'Preciso me isolar, apagar as luzes e ficar na cama',
-        emoji: '🤕',
-        color: '#E85D75',
-    },
-    {
-        value: 'unknown',
-        label: 'Não sei avaliar',
-        sublabel: 'Varia muito de crise para crise',
-        emoji: '🤔',
-        color: '#4A6A82',
-    },
-];
+        {
+            value: 'none',
+            label: 'Não afeta minha rotina',
+            sublabel: 'Consigo trabalhar, estudar e fazer tudo normalmente',
+            emoji: '💪',
+            color: '#00BFA5',
+        },
+        {
+            value: 'mild',
+            label: 'Afeta levemente',
+            sublabel: 'Fico desconfortável mas consigo continuar',
+            emoji: '🙂',
+            color: '#4DD9C0',
+        },
+        {
+            value: 'moderate',
+            label: 'Preciso reduzir o ritmo',
+            sublabel: 'Consigo fazer o essencial mas com dificuldade',
+            emoji: '😐',
+            color: '#F5A623',
+        },
+        {
+            value: 'high',
+            label: 'Preciso parar a maioria das atividades',
+            sublabel: 'Trabalho, estudos e compromissos ficam prejudicados',
+            emoji: '😣',
+            color: '#F07040',
+        },
+        {
+            value: 'total',
+            label: 'Fico completamente incapacitado',
+            sublabel: 'Preciso me isolar, apagar as luzes e ficar na cama',
+            emoji: '🤕',
+            color: '#E85D75',
+        },
+        {
+            value: 'unknown',
+            label: 'Não sei avaliar',
+            sublabel: 'Varia muito de crise para crise',
+            emoji: '🤔',
+            color: '#4A6A82',
+        },
+    ];
 
 const ACTIVITY_STOP_OPTIONS: {
     value: ActivityStop;
@@ -78,11 +78,11 @@ const ACTIVITY_STOP_OPTIONS: {
     emoji: string;
     color: string;
 }[] = [
-    { value: 'never', label: 'Nunca preciso parar', sublabel: 'Consigo manter minha rotina', emoji: '💪', color: '#00BFA5' },
-    { value: 'sometimes', label: 'Às vezes paro', sublabel: 'Em crises mais fortes', emoji: '⚖️', color: '#F5A623' },
-    { value: 'often', label: 'Na maioria das crises', sublabel: 'Geralmente preciso descansar', emoji: '🛋️', color: '#F07040' },
-    { value: 'always', label: 'Sempre preciso parar tudo', sublabel: 'Toda crise me tira de ação', emoji: '🛑', color: '#E85D75' },
-];
+        { value: 'never', label: 'Nunca preciso parar', sublabel: 'Consigo manter minha rotina', emoji: '💪', color: '#00BFA5' },
+        { value: 'sometimes', label: 'Às vezes paro', sublabel: 'Em crises mais fortes', emoji: '⚖️', color: '#F5A623' },
+        { value: 'often', label: 'Na maioria das crises', sublabel: 'Geralmente preciso descansar', emoji: '🛋️', color: '#F07040' },
+        { value: 'always', label: 'Sempre preciso parar tudo', sublabel: 'Toda crise me tira de ação', emoji: '🛑', color: '#E85D75' },
+    ];
 
 // ─── Mapeamento banco ─────────────────────────────────────────────────────────
 
@@ -149,11 +149,12 @@ async function saveSetupAnswers(
                 if (pergunta) {
                     const numVal = Number(val);
                     const acimaMax = metadados.passo === 4 && numVal > 12;
+                    const abaixoMin = metadados.passo === 4 && numVal < 4;
                     rows.push({
                         user_id: usuarioId,
                         pergunta_id: pergunta.id,
-                        valor_numero: acimaMax ? 12 : numVal,
-                        ...(metadados.passo === 4 ? { valor_acima_max: acimaMax } : {}),
+                        valor_numero: acimaMax ? 12 : abaixoMin ? 4 : numVal,
+                        ...(metadados.passo === 4 ? { valor_acima_max: acimaMax, valor_abaixo_min: abaixoMin } : {}),
                     });
                 }
                 continue;
