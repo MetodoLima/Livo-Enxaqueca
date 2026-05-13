@@ -36,6 +36,13 @@ export default function RecordCrisisScreen() {
     setCrisis((prev) => ({ ...prev, ...patch }));
   }, []);
 
+  // ── Confirm & save ──────────────────────────────────────────────────
+  const handleConfirm = useCallback(() => {
+    saveCrisis(crisis);
+    router.dismiss();
+    router.push('/(tabs)/crisis' as any);
+  }, [crisis, router, saveCrisis]);
+
   // ── Navigation ──────────────────────────────────────────────────────
   const goNext = useCallback(() => {
     if (currentStep < 5) {
@@ -43,7 +50,7 @@ export default function RecordCrisisScreen() {
     } else {
       handleConfirm();
     }
-  }, [currentStep]);
+  }, [currentStep, handleConfirm]);
 
   const goBack = useCallback(() => {
     if (currentStep > 1) {
@@ -59,13 +66,6 @@ export default function RecordCrisisScreen() {
     setShowExitModal(false);
     router.back();
   }, [router]);
-
-  // ── Confirm & save ──────────────────────────────────────────────────
-  const handleConfirm = useCallback(() => {
-    saveCrisis(crisis);
-    router.dismiss();
-    router.push('/(tabs)/crisis' as any);
-  }, [crisis, router, saveCrisis]);
 
   // ── Render current step ─────────────────────────────────────────────
   const renderStep = () => {
