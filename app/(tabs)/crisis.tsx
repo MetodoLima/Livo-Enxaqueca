@@ -3,6 +3,7 @@ import { IntensityEditor, LocationEditor, SymptomsEditor } from '@/components/cr
 import { Colors } from '@/constants/Colors';
 import { useCrisis } from '@/contexts/CrisisContext';
 import { complementCrisis } from '@/services/api';
+import { saveCrisisToSupabase } from '@/services/crisisService';
 import {
   INTENSITY_CONFIG,
   LOCATIONS,
@@ -27,6 +28,7 @@ import {
 import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -129,17 +131,21 @@ export default function CrisisDetailScreen() {
   useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); }, []);
 
   // ── Handle finalize ─────────────────────────────────────────────────
-  const handleFinish = () => {
+  const handleFinish = async () => {
     setFinishing(true);
-    setTimeout(() => {
+    try {
+      await saveCrisisToSupabase(activeCrisis!);
       clearCrisis();
-      setFinishing(false);
       router.replace('/(tabs)' as any);
-    }, 2000);
+    } catch (e) {
+      setFinishing(false);
+      const msg = e instanceof Error ? e.message : String(e);
+      Alert.alert('Erro ao salvar', msg);
+    }
   };
 
   // ── Success animation ───────────────────────────────────────────────
-  if (finishing && activeCrisis) {
+  if (finishing) {
     return (
       <View style={styles.successContainer}>
         <Animated.View entering={ZoomIn} style={styles.successIcon}>
@@ -147,7 +153,7 @@ export default function CrisisDetailScreen() {
         </Animated.View>
         <Text style={styles.successTitle}>Crise registrada!</Text>
         <Text style={styles.successSub}>
-          {activeCrisis.intensity !== null
+          {activeCrisis?.intensity != null
             ? `Intensidade ${activeCrisis.intensity}/10`
             : 'Registro salvo com sucesso.'}
         </Text>
@@ -373,12 +379,18 @@ export default function CrisisDetailScreen() {
         <Animated.View entering={FadeInUp.delay(450)}>
           <Card className="mb-4">
             <Text style={[styles.cardLabel, { marginBottom: 10 }]}>Medicamentos</Text>
-            {medicationNames.length > 0 ? (
+            {(medicationNames.length > 0 || crisis.customMedications.length > 0) ? (
               <View style={styles.tagRow}>
                 {medicationNames.map((m) => m && (
                   <View key={m.id} style={[styles.tag, { backgroundColor: `${Colors.accent}15` }]}>
                     <Text style={styles.tagEmoji}>{m.emoji}</Text>
                     <Text style={[styles.tagText, { color: Colors.accent }]}>{m.label}</Text>
+                  </View>
+                ))}
+                {crisis.customMedications.map((name) => (
+                  <View key={name} style={[styles.tag, { backgroundColor: `${Colors.accent}15` }]}>
+                    <Text style={styles.tagEmoji}>💊</Text>
+                    <Text style={[styles.tagText, { color: Colors.accent }]}>{name}</Text>
                   </View>
                 ))}
               </View>

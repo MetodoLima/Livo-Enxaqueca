@@ -156,22 +156,22 @@ REGRAS ABSOLUTAS:
 - PRESERVE os valores já preenchidos no registro atual — não os apague
 - Para sintomas_associados: se um campo já for true, mantenha true; só mude de false para true se o relato mencionar explicitamente
 - PREENCHA os campos null usando informações do relato, quando disponível
-- Para arrays (qualidade_dor, medicamentos_tomados, fatores_desencadeantes): ADICIONE ao array todos os itens novos mencionados no relato — nunca remova itens que já existem no array
+- Para arrays (sensacao_dor, medicamentos_tomados, fatores_desencadeantes): ADICIONE ao array todos os itens novos mencionados no relato — nunca remova itens que já existem no array
 - Se o relato contradizer algo do registro, use o valor do relato (é mais detalhado)
 - NUNCA invente dados que não estão no registro nem no relato
 - Atualize o "resumo" integrando ambas as fontes (máximo 15 palavras)
 
 EXEMPLO:
-Registro atual: {{"intensidade_dor": 6, "localizacao": "temporal", "lado": "direito", "qualidade_dor": [], "sintomas_associados": {{"nausea": false, "vomito": false, "fotofobia": true, "fonofobia": false, "aura": false, "tontura": false, "outros": []}}, "inicio_estimado": null, "medicamentos_tomados": [], "fatores_desencadeantes": [], "nivel_incapacidade": "moderado", "resumo": null}}
+Registro atual: {{"intensidade_dor": 6, "localizacao": "temporal", "lado": "direito", "sensacao_dor": [], "sintomas_associados": {{"nausea": false, "vomito": false, "fotofobia": true, "fonofobia": false, "aura": false, "tontura": false, "outros": []}}, "inicio_estimado": null, "medicamentos_tomados": [], "fatores_desencadeantes": [], "nivel_incapacidade": "moderado", "resumo": null}}
 Relato: "tomei ibuprofeno mas não ajudou, estava com estômago enjoado e a dor é pulsante"
-Saída: {{"intensidade_dor": 6, "localizacao": "temporal", "lado": "direito", "qualidade_dor": ["pulsante"], "sintomas_associados": {{"nausea": true, "vomito": false, "fotofobia": true, "fonofobia": false, "aura": false, "tontura": false, "outros": []}}, "inicio_estimado": null, "medicamentos_tomados": ["ibuprofeno"], "fatores_desencadeantes": [], "nivel_incapacidade": "moderado", "resumo": "dor pulsante temporal direita com náusea, ibuprofeno sem efeito"}}
+Saída: {{"intensidade_dor": 6, "localizacao": "temporal", "lado": "direito", "sensacao_dor": ["pulsante"], "sintomas_associados": {{"nausea": true, "vomito": false, "fotofobia": true, "fonofobia": false, "aura": false, "tontura": false, "outros": []}}, "inicio_estimado": null, "medicamentos_tomados": ["ibuprofeno"], "fatores_desencadeantes": [], "nivel_incapacidade": "moderado", "resumo": "dor pulsante temporal direita com náusea, ibuprofeno sem efeito"}}
 
 Retorne o JSON completo e atualizado:
 {{
   "intensidade_dor": <número 0-10 ou null>,
   "localizacao": <"frontal"|"temporal"|"occipital"|"difusa"|null>,
   "lado": <"esquerdo"|"direito"|"bilateral"|null>,
-  "qualidade_dor": [],
+  "sensacao_dor": [],
   "sintomas_associados": {{
     "nausea": false,
     "vomito": false,
