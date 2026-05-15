@@ -246,7 +246,7 @@ export default function Step9Impacto() {
 
         const finalData = {
             ...setupData,
-            impactLevel: selectedImpact.label,
+            impactLevel: selectedImpact.value === 'unknown' ? null : selectedImpact.label,
             activityStop: selectedActivityStop?.label ?? activityStop,
         };
 
