@@ -116,42 +116,105 @@ RELATO ADICIONAL:
 
 Sua tarefa é retornar o registro unificado e completo.
 
-REGRAS ABSOLUTAS:
-- Retorne SOMENTE o JSON, sem texto antes ou depois
-- PRESERVE os valores já preenchidos no registro atual — não os apague
-- Para sintomas_associados: se um campo já for true, mantenha true; só mude de false para true se o relato mencionar explicitamente
-- PREENCHA os campos null usando informações do relato, quando disponível
-- Para arrays (sensacao_dor, medicamentos_tomados, fatores_desencadeantes): ADICIONE ao array todos os itens novos mencionados no relato — nunca remova itens que já existem no array
-- Se o relato contradizer algo do registro, use o valor do relato (é mais detalhado)
-- NUNCA invente dados que não estão no registro nem no relato
-- Atualize o "resumo" integrando ambas as fontes (máximo 15 palavras)
+REGRAS (em ordem de prioridade — regras superiores vencem):
+1. CORREÇÕES EXPLÍCITAS têm prioridade máxima: se o relato contiver um comando direto de mudança ("mude para", "corrija para", "na verdade é", "quero mudar", "é X", "coloca X"), aplique imediatamente o novo valor — mesmo que o campo já esteja preenchido no registro atual
+2. CONTRADIÇÕES: se o relato mencionar um valor diferente do que está no registro para o mesmo campo, use o valor do relato (é mais recente e detalhado)
+3. PRESERVE os valores já preenchidos que não foram corrigidos nem contraditos
+4. Para sintomas_associados: se um campo já for true, mantenha true; só mude de false para true se o relato mencionar explicitamente
+5. PREENCHA os campos null usando informações do relato, quando disponível
+6. Para arrays (sensacao_dor, medicamentos_tomados, fatores_desencadeantes): ADICIONE itens novos mencionados no relato — nunca remova itens existentes
+7. NUNCA invente dados que não estão no registro nem no relato
+8. Atualize o "resumo" integrando ambas as fontes (máximo 15 palavras)
 
-EXEMPLO:
+EXEMPLO 1 (complemento):
 Registro atual: {{"intensidade_dor": 6, "localizacao": "temporal", "lado": "direito", "sensacao_dor": [], "sintomas_associados": {{"nausea": false, "vomito": false, "fotofobia": true, "fonofobia": false, "aura": false, "tontura": false, "outros": []}}, "inicio_estimado": null, "medicamentos_tomados": [], "fatores_desencadeantes": [], "nivel_incapacidade": "moderado", "resumo": null}}
 Relato: "tomei ibuprofeno mas não ajudou, estava com estômago enjoado e a dor é pulsante"
 Saída: {{"intensidade_dor": 6, "localizacao": "temporal", "lado": "direito", "sensacao_dor": ["pulsante"], "sintomas_associados": {{"nausea": true, "vomito": false, "fotofobia": true, "fonofobia": false, "aura": false, "tontura": false, "outros": []}}, "inicio_estimado": null, "medicamentos_tomados": ["ibuprofeno"], "fatores_desencadeantes": [], "nivel_incapacidade": "moderado", "resumo": "dor pulsante temporal direita com náusea, ibuprofeno sem efeito"}}
 
-Retorne o JSON completo e atualizado:
-{{
-  "intensidade_dor": <número 0-10 ou null>,
-  "localizacao": <"frontal"|"temporal"|"occipital"|"difusa"|null>,
-  "lado": <"esquerdo"|"direito"|"bilateral"|null>,
-  "sensacao_dor": [],
-  "sintomas_associados": {{
-    "nausea": false,
-    "vomito": false,
-    "fotofobia": false,
-    "fonofobia": false,
-    "aura": false,
-    "tontura": false,
-    "outros": []
-  }},
-  "inicio_estimado": <"<1h"|"1-4h"|">4h"|null>,
-  "medicamentos_tomados": [],
-  "fatores_desencadeantes": [],
-  "nivel_incapacidade": <"leve"|"moderado"|"severo"|null>,
-  "resumo": "<máximo 15 palavras>"
-}}"""
+EXEMPLO 2 (correção explícita de campo já preenchido):
+Registro atual: {{"intensidade_dor": 5, "localizacao": "frontal", "lado": "bilateral", "sensacao_dor": [], "sintomas_associados": {{"nausea": true, "vomito": false, "fotofobia": false, "fonofobia": false, "aura": false, "tontura": false, "outros": []}}, "inicio_estimado": "1-4h", "medicamentos_tomados": [], "fatores_desencadeantes": [], "nivel_incapacidade": "leve", "resumo": "dor frontal bilateral com náusea"}}
+Relato: "mude a intensidade para 7"
+Saída: {{"intensidade_dor": 7, "localizacao": "frontal", "lado": "bilateral", "sensacao_dor": [], "sintomas_associados": {{"nausea": true, "vomito": false, "fotofobia": false, "fonofobia": false, "aura": false, "tontura": false, "outros": []}}, "inicio_estimado": "1-4h", "medicamentos_tomados": [], "fatores_desencadeantes": [], "nivel_incapacidade": "leve", "resumo": "dor frontal bilateral com náusea, intensidade 7/10"}}
+
+Retorne o JSON completo e atualizado."""
+
+OUTPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "intensidade_dor": {
+            "anyOf": [{"type": "number", "minimum": 0, "maximum": 10}, {"type": "null"}]
+        },
+        "localizacao": {
+            "anyOf": [{"type": "string", "enum": ["frontal", "temporal", "occipital", "difusa"]}, {"type": "null"}]
+        },
+        "lado": {
+            "anyOf": [{"type": "string", "enum": ["esquerdo", "direito", "bilateral"]}, {"type": "null"}]
+        },
+        "sensacao_dor": {"type": "array", "items": {"type": "string"}},
+        "sintomas_associados": {
+            "type": "object",
+            "properties": {
+                "nausea":    {"type": "boolean"},
+                "vomito":    {"type": "boolean"},
+                "fotofobia": {"type": "boolean"},
+                "fonofobia": {"type": "boolean"},
+                "aura":      {"type": "boolean"},
+                "tontura":   {"type": "boolean"},
+                "outros":    {"type": "array", "items": {"type": "string"}},
+            },
+            "required": ["nausea", "vomito", "fotofobia", "fonofobia", "aura", "tontura", "outros"],
+        },
+        "inicio_estimado": {
+            "anyOf": [{"type": "string", "enum": ["<1h", "1-4h", ">4h"]}, {"type": "null"}]
+        },
+        "medicamentos_tomados":    {"type": "array", "items": {"type": "string"}},
+        "fatores_desencadeantes":  {"type": "array", "items": {"type": "string"}},
+        "nivel_incapacidade": {
+            "anyOf": [{"type": "string", "enum": ["leve", "moderado", "severo"]}, {"type": "null"}]
+        },
+        "resumo": {"anyOf": [{"type": "string"}, {"type": "null"}]},
+    },
+    "required": [
+        "intensidade_dor", "localizacao", "lado", "sensacao_dor",
+        "sintomas_associados", "inicio_estimado", "medicamentos_tomados",
+        "fatores_desencadeantes", "nivel_incapacidade", "resumo",
+    ],
+}
+
+_VALID_LOCALIZACAO = {"frontal", "temporal", "occipital", "difusa"}
+_VALID_LADO        = {"esquerdo", "direito", "bilateral"}
+_VALID_INICIO      = {"<1h", "1-4h", ">4h"}
+_VALID_NIVEL       = {"leve", "moderado", "severo"}
+_SINTOMA_BOOLS     = {"nausea", "vomito", "fotofobia", "fonofobia", "aura", "tontura"}
+
+
+def validate_structured(data: dict) -> dict:
+    if data.get("localizacao") not in _VALID_LOCALIZACAO:
+        data["localizacao"] = None
+    if data.get("lado") not in _VALID_LADO:
+        data["lado"] = None
+    if data.get("inicio_estimado") not in _VALID_INICIO:
+        data["inicio_estimado"] = None
+    if data.get("nivel_incapacidade") not in _VALID_NIVEL:
+        data["nivel_incapacidade"] = None
+
+    intensidade = data.get("intensidade_dor")
+    if intensidade is not None and not (isinstance(intensidade, (int, float)) and 0 <= intensidade <= 10):
+        data["intensidade_dor"] = None
+
+    for field in ("sensacao_dor", "medicamentos_tomados", "fatores_desencadeantes"):
+        if not isinstance(data.get(field), list):
+            data[field] = []
+
+    sintomas = data.get("sintomas_associados") or {}
+    for key in _SINTOMA_BOOLS:
+        if not isinstance(sintomas.get(key), bool):
+            sintomas[key] = False
+    if not isinstance(sintomas.get("outros"), list):
+        sintomas["outros"] = []
+    data["sintomas_associados"] = sintomas
+
+    return data
 
 def fix_json_string(raw: str) -> str:
     raw = raw.strip()
@@ -175,8 +238,13 @@ async def merge_with_complement(pre_filled: dict, transcript: str) -> dict:
     async with httpx.AsyncClient(timeout=1200) as client:
         r = await client.post(
             f"{OLLAMA_URL}/api/generate",
-            json={"model": OLLAMA_MODEL, "prompt": prompt, "stream": False, "format": "json",
-                  "options": {"temperature": 0}},
+            json={
+                "model": OLLAMA_MODEL,
+                "prompt": prompt,
+                "stream": False,
+                "format": OUTPUT_SCHEMA,
+                "options": {"temperature": 0},
+            },
         )
         r.raise_for_status()
         raw = r.json().get("response", "")
@@ -185,22 +253,28 @@ async def merge_with_complement(pre_filled: dict, transcript: str) -> dict:
     print(raw)
     print("===================================\n")
 
+    parsed = None
     try:
-        return json.loads(raw)
+        parsed = json.loads(raw)
     except Exception:
         pass
-    try:
-        start = raw.find("{")
-        end = raw.rfind("}") + 1
-        return json.loads(raw[start:end])
-    except Exception:
-        pass
-    try:
-        return json.loads(fix_json_string(raw))
-    except Exception as e:
-        print("Erro no complement fallback:", e)
+    if parsed is None:
+        try:
+            start = raw.find("{")
+            end = raw.rfind("}") + 1
+            parsed = json.loads(raw[start:end])
+        except Exception:
+            pass
+    if parsed is None:
+        try:
+            parsed = json.loads(fix_json_string(raw))
+        except Exception as e:
+            print("Erro no complement fallback:", e)
 
-    return pre_filled
+    if parsed is None:
+        return pre_filled
+
+    return validate_structured(parsed)
 
 
 #Endpoints
