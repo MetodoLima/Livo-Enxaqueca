@@ -45,8 +45,6 @@ export default function StepIntensity({ data, onChange, onNext }: StepIntensityP
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
       onPanResponderGrant: (e) => {
-        // Apenas registra âncora — não reposiciona o thumb
-        // Isso evita o bug do locationY incorreto no emulador web
         startYRef.current = e.nativeEvent.pageY;
         startThumbRef.current = thumbYRef.current;
       },

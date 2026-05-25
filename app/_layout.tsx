@@ -78,6 +78,7 @@ function RootLayoutNav() {
         <Stack.Screen name="(setup)" options={{ headerShown: false }} />
         <Stack.Screen name="emergency" options={{ presentation: 'modal', headerShown: false }} />
         <Stack.Screen name="record-crisis" options={{ presentation: 'modal', headerShown: false }} />
+        <Stack.Screen name="crisis/[id]" options={{ headerShown: false }} />
       </Stack>
     </ThemeProvider>
   );
