@@ -13,6 +13,8 @@ import {
   crisisToMigraineStructured,
   mergeAiResultIntoCrisis,
 } from '@/types/crisis';
+import PulsingMic from '@/components/PulsingMic';
+import { audioAvailable, useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { useRouter } from 'expo-router';
 import {
   Check,
@@ -20,12 +22,11 @@ import {
   Clock,
   Mic,
   Send,
-  StopCircle,
   Wind,
   X,
   Zap
 } from 'lucide-react-native';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -37,52 +38,8 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import Animated, {
-  Easing,
-  FadeInUp,
-  ZoomIn,
-  interpolate,
-  useAnimatedStyle,
-  useSharedValue,
-  withRepeat,
-  withTiming
-} from 'react-native-reanimated';
+import Animated, { FadeInUp, ZoomIn } from 'react-native-reanimated';
 
-// ── Audio imports (graceful) ──────────────────────────────────────────
-let useAudioRecorder: any;
-let RecordingPresets: any;
-let requestRecordingPermissionsAsync: any;
-let setAudioModeAsync: any;
-try {
-  const m = require('expo-audio');
-  useAudioRecorder = m.useAudioRecorder;
-  RecordingPresets = m.RecordingPresets;
-  requestRecordingPermissionsAsync = m.requestRecordingPermissionsAsync;
-  setAudioModeAsync = m.setAudioModeAsync;
-} catch {}
-
-// ── Pulsing mic ───────────────────────────────────────────────────────
-function PulsingMic({ onStop }: { onStop: () => void }) {
-  const pulse = useSharedValue(1);
-  useEffect(() => {
-    pulse.value = withRepeat(
-      withTiming(1.5, { duration: 900, easing: Easing.inOut(Easing.ease) }),
-      -1, true,
-    );
-  }, []);
-  const ring = useAnimatedStyle(() => ({
-    transform: [{ scale: pulse.value }],
-    opacity: interpolate(pulse.value, [1, 1.5], [0.35, 0]),
-  }));
-  return (
-    <View style={styles.micWrapper}>
-      <Animated.View style={[styles.pulseRing, ring]} />
-      <TouchableOpacity onPress={onStop} style={styles.micBtnRecording}>
-        <StopCircle size={28} color="white" />
-      </TouchableOpacity>
-    </View>
-  );
-}
 
 // ── Empty state ───────────────────────────────────────────────────────
 function EmptyState() {
@@ -118,17 +75,11 @@ export default function CrisisDetailScreen() {
 
   // Voice / text complement state
   const [showVoice, setShowVoice] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [text, setText] = useState('');
-  const [recordSecs, setRecordSecs] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const audioAvailable = !!useAudioRecorder;
-  const recorder = audioAvailable ? useAudioRecorder(RecordingPresets.HIGH_QUALITY) : null;
-
-  useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); }, []);
+  const { isRecording, recordSecs, error: micError, startRecording, stopRecording } = useAudioRecorder();
 
   // ── Handle finalize ─────────────────────────────────────────────────
   const handleFinish = async () => {
@@ -180,30 +131,10 @@ export default function CrisisDetailScreen() {
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
   // ── Voice handlers ──────────────────────────────────────────────────
-  const startRecording = async () => {
-    if (!recorder) return;
+  const stopAndProcess = async () => {
     setError(null);
     try {
-      const { granted } = await requestRecordingPermissionsAsync();
-      if (!granted) { setError('Permissão de microfone negada.'); return; }
-      try { await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true }); } catch {}
-      await recorder.prepareToRecordAsync();
-      recorder.record();
-      setRecordSecs(0);
-      setIsRecording(true);
-      timerRef.current = setInterval(() => setRecordSecs((s: number) => s + 1), 1000);
-    } catch {
-      setError('Não foi possível iniciar a gravação.');
-    }
-  };
-
-  const stopAndProcess = async () => {
-    if (!recorder) return;
-    if (timerRef.current) clearInterval(timerRef.current);
-    setIsRecording(false);
-    try {
-      await recorder.stop();
-      const uri = recorder.uri;
+      const uri = await stopRecording();
       if (!uri) throw new Error('URI inválido.');
       setIsProcessing(true);
       const preFilled = crisisToMigraineStructured(crisis);
@@ -459,7 +390,7 @@ export default function CrisisDetailScreen() {
               {/* Close voice panel */}
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
                 <Text style={[styles.cardLabel, { marginBottom: 0 }]}>Complementar registro</Text>
-                <TouchableOpacity onPress={() => { setShowVoice(false); setIsRecording(false); }}>
+                <TouchableOpacity onPress={() => { setShowVoice(false); if (isRecording) stopRecording(); }}>
                   <X size={20} color={Colors.muted} />
                 </TouchableOpacity>
               </View>
@@ -476,7 +407,7 @@ export default function CrisisDetailScreen() {
                     <View style={{ alignItems: 'center', marginBottom: 20 }}>
                       {isRecording ? (
                         <>
-                          <PulsingMic onStop={stopAndProcess} />
+                          <PulsingMic onStop={stopAndProcess} size={72} iconSize={28} />
                           <Text style={styles.recTime}>{fmtSecs(recordSecs)}</Text>
                         </>
                       ) : (
@@ -498,7 +429,7 @@ export default function CrisisDetailScreen() {
                     editable={!isRecording}
                   />
 
-                  {error && <Text style={styles.errorText}>{error}</Text>}
+                  {(error || micError) && <Text style={styles.errorText}>{error || micError}</Text>}
 
                   {text.trim().length > 0 && !isRecording && (
                     <TouchableOpacity onPress={submitText} style={styles.sendBtn}>
@@ -690,19 +621,6 @@ const styles = StyleSheet.create({
   },
 
   // Voice panel
-  micWrapper: {
-    width: 72,
-    height: 72,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pulseRing: {
-    position: 'absolute',
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#EF4444',
-  },
   micBtn: {
     width: 72,
     height: 72,
@@ -715,14 +633,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 12,
     elevation: 8,
-  },
-  micBtnRecording: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: '#EF4444',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   recTime: {
     fontSize: 14,

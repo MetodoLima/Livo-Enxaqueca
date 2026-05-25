@@ -120,16 +120,27 @@ export function mergeAiResultIntoCrisis(
     patch.side = structured.lado as SideId;
   }
 
-  // União: mantém sintomas do questionário + adiciona os que a IA detectou no áudio
+  // Merge: adiciona sintomas positivos, remove os que a IA explicitamente negou
   const s = structured.sintomas_associados;
-  const aiSymptoms: SymptomId[] = [];
-  if (s.nausea)    aiSymptoms.push('nausea');
-  if (s.vomito)    aiSymptoms.push('vomito');
-  if (s.fotofobia) aiSymptoms.push('fotofobia');
-  if (s.fonofobia) aiSymptoms.push('fonofobia');
-  if (s.aura)      aiSymptoms.push('aura');
-  if (s.tontura)   aiSymptoms.push('tontura');
-  patch.symptoms = Array.from(new Set([...current.symptoms, ...aiSymptoms]));
+  type BoolSymptomKey = Exclude<keyof SintomasAssociados, 'outros'>;
+  const symptomMap: [BoolSymptomKey, SymptomId][] = [
+    ['nausea', 'nausea'],
+    ['vomito', 'vomito'],
+    ['fotofobia', 'fotofobia'],
+    ['fonofobia', 'fonofobia'],
+    ['aura', 'aura'],
+    ['tontura', 'tontura'],
+  ];
+  let mergedSymptoms = [...current.symptoms];
+  for (const [field, id] of symptomMap) {
+    const val = s[field];
+    if (val === true && !mergedSymptoms.includes(id)) {
+      mergedSymptoms.push(id);
+    } else if (val === false) {
+      mergedSymptoms = mergedSymptoms.filter((sym) => sym !== id);
+    }
+  }
+  patch.symptoms = Array.from(new Set(mergedSymptoms));
 
   // Medicamentos: separa conhecidos (MedicationId) de custom, faz união com os do questionário
   if (structured.medicamentos_tomados.length > 0) {
