@@ -5,7 +5,6 @@ import httpx
 import re
 from fastapi import FastAPI, UploadFile, File, Form, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.staticfiles import StaticFiles
 from datetime import datetime
 from typing import Optional
 import subprocess
@@ -104,38 +103,6 @@ async def transcribe(audio_bytes: bytes, filename: str) -> str:
 
 # LLM
 
-EXTRACTION_PROMPT = """Você é um extrator de dados médicos. Sua única tarefa é preencher um JSON com base no relato abaixo.
-
-REGRAS ABSOLUTAS:
-- Retorne SOMENTE o JSON, sem texto antes ou depois
-- Use null para qualquer campo não mencionado explicitamente no relato
-- NUNCA invente ou infira dados que não estão no relato
-- Se o relato for vago, preencha apenas o que for certo
-
-Relato do paciente:
-"{relato}"
-
-Preencha este JSON exato:
-{{
-  "intensidade_dor": <número 0-10 ou null>,
-  "localizacao": <"frontal"|"temporal"|"occipital"|"difusa"|null>,
-  "lado": <"esquerdo"|"direito"|"bilateral"|null>,
-  "qualidade_dor": [],
-  "sintomas_associados": {{
-    "nausea": false,
-    "vomito": false,
-    "fotofobia": false,
-    "fonofobia": false,
-    "aura": false,
-    "tontura": false,
-    "outros": []
-  }},
-  "inicio_estimado": <"<1h"|"1-4h"|">4h"|null>,
-  "medicamentos_tomados": [],
-  "fatores_desencadeantes": [],
-  "nivel_incapacidade": <"leve"|"moderado"|"severo"|null>,
-  "resumo": "<máximo 15 palavras descrevendo o relato>"
-}}"""
 
 COMPLEMENT_PROMPT = """Você é um assistente médico especializado em enxaqueca.
 
@@ -238,104 +205,7 @@ async def merge_with_complement(pre_filled: dict, transcript: str) -> dict:
     return pre_filled
 
 
-async def extract_migraine_data(transcript: str) -> dict:
-    prompt = EXTRACTION_PROMPT.format(relato=transcript)
-
-    async with httpx.AsyncClient(timeout=1200) as client:
-        r = await client.post(
-            f"{OLLAMA_URL}/api/generate",
-            json={
-                "model": OLLAMA_MODEL,
-                "prompt": prompt,
-                "stream": False,
-                "format": "json"
-            },
-        )
-        r.raise_for_status()
-        raw = r.json().get("response", "")
-
-    print("\n=== RAW LLM RESPONSE ===")
-    print(raw)
-    print("=======================\n")
-
-    # tentativa 1
-    try:
-        return json.loads(raw)
-    except:
-        pass
-
-    # tentativa 2
-    try:
-        start = raw.find("{")
-        end = raw.rfind("}") + 1
-        return json.loads(raw[start:end])
-    except:
-        pass
-
-    # tentativa 3
-    try:
-        fixed = fix_json_string(raw)
-        return json.loads(fixed)
-    except Exception as e:
-        print("Erro final:", e)
-
-    # fallback
-    return {
-        "intensidade_dor": None,
-        "localizacao": None,
-        "lado": None,
-        "qualidade_dor": [],
-        "sintomas_associados": {
-            "nausea": False,
-            "vomito": False,
-            "fotofobia": False,
-            "fonofobia": False,
-            "aura": False,
-            "tontura": False,
-            "outros": []
-        },
-        "inicio_estimado": None,
-        "medicamentos_tomados": [],
-        "fatores_desencadeantes": [],
-        "nivel_incapacidade": None,
-        "resumo": transcript[:100]
-    }
-
 #Endpoints
-
-@app.post("/api/process-audio")
-async def process_audio(file: UploadFile = File(...)):
-    audio_bytes = await file.read()
-    if not audio_bytes:
-        raise HTTPException(400, "Arquivo vazio")
-
-    transcript = await transcribe(audio_bytes, file.filename or "audio.webm")
-    if not transcript:
-        raise HTTPException(422, "Transcrição vazia")
-
-    structured = await extract_migraine_data(transcript)
-
-    return {
-        "timestamp": datetime.now().isoformat(),
-        "transcript": transcript,
-        "structured": structured,
-    }
-
-
-@app.post("/api/process-text")
-async def process_text(payload: dict):
-    transcript = payload.get("text", "").strip()
-    if not transcript:
-        raise HTTPException(400, "Campo 'text' obrigatório")
-
-    structured = await extract_migraine_data(transcript)
-
-    return {
-        "timestamp": datetime.now().isoformat(),
-        "transcript": transcript,
-        "structured": structured,
-    }
-
 
 @app.post("/api/complement-crisis")
 async def complement_crisis(
@@ -392,8 +262,3 @@ async def health():
 
     return status
 
-
-#frontend
-frontend_path = os.path.join(os.path.dirname(__file__), "..", "frontend")
-if os.path.exists(frontend_path):
-    app.mount("/", StaticFiles(directory=frontend_path, html=True), name="static")
