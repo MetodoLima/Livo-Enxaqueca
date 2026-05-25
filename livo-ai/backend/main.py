@@ -1,17 +1,15 @@
 import os
 import json
-import tempfile
-import httpx
 import re
-from fastapi import FastAPI, UploadFile, File, Form, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from datetime import datetime
-from typing import Optional
-import subprocess
 import shutil
 import subprocess
 import tempfile
-import os
+from datetime import datetime
+from typing import Optional
+
+import httpx
+from fastapi import FastAPI, File, Form, HTTPException, UploadFile
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="Migraine Voice Logger")
 
@@ -189,13 +187,13 @@ async def merge_with_complement(pre_filled: dict, transcript: str) -> dict:
 
     try:
         return json.loads(raw)
-    except:
+    except Exception:
         pass
     try:
         start = raw.find("{")
         end = raw.rfind("}") + 1
         return json.loads(raw[start:end])
-    except:
+    except Exception:
         pass
     try:
         return json.loads(fix_json_string(raw))
@@ -248,14 +246,14 @@ async def health():
         try:
             await client.get(f"{OLLAMA_URL}/api/tags")
             status["ollama"] = True
-        except:
+        except Exception:
             pass
 
         if WHISPER_MODE == "server":
             try:
                 await client.get(f"{WHISPER_URL}/")
                 status["whisper"] = True
-            except:
+            except Exception:
                 pass
         elif WHISPER_MODE == "cli":
             status["whisper"] = shutil.which(WHISPER_CLI) is not None
