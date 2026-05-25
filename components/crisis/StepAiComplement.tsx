@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,37 +7,15 @@ import {
   ActivityIndicator,
   StyleSheet,
 } from 'react-native';
-import { Mic, Send, StopCircle } from 'lucide-react-native';
-import Animated, {
-  FadeInUp,
-  useSharedValue,
-  useAnimatedStyle,
-  withRepeat,
-  withTiming,
-  Easing,
-  interpolate,
-} from 'react-native-reanimated';
+import { Mic, Send } from 'lucide-react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import { Colors } from '@/constants/Colors';
 import StepFooter from './StepFooter';
 import { complementCrisis } from '@/services/api';
 import type { CrisisRecord, AiComplement } from '@/types/crisis';
 import { crisisToMigraineStructured, mergeAiResultIntoCrisis } from '@/types/crisis';
-
-// Only import audio functions — they'll fail gracefully if unavailable
-let useAudioRecorder: any;
-let RecordingPresets: any;
-let requestRecordingPermissionsAsync: any;
-let setAudioModeAsync: any;
-
-try {
-  const audioModule = require('expo-audio');
-  useAudioRecorder = audioModule.useAudioRecorder;
-  RecordingPresets = audioModule.RecordingPresets;
-  requestRecordingPermissionsAsync = audioModule.requestRecordingPermissionsAsync;
-  setAudioModeAsync = audioModule.setAudioModeAsync;
-} catch {
-  // expo-audio not available — will show text-only mode
-}
+import PulsingMic from '@/components/PulsingMic';
+import { audioAvailable, useAudioRecorder } from '@/hooks/useAudioRecorder';
 
 interface StepAiComplementProps {
   data: CrisisRecord;
@@ -45,75 +23,23 @@ interface StepAiComplementProps {
   onNext: () => void; // called after confirm or skip
 }
 
-// ── Pulsing mic animation ─────────────────────────────────────────────
-function PulsingMic({ onStop }: { onStop: () => void }) {
-  const pulse = useSharedValue(1);
-
-  useEffect(() => {
-    pulse.value = withRepeat(
-      withTiming(1.5, { duration: 900, easing: Easing.inOut(Easing.ease) }),
-      -1,
-      true,
-    );
-  }, []);
-
-  const ringStyle = useAnimatedStyle(() => ({
-    transform: [{ scale: pulse.value }],
-    opacity: interpolate(pulse.value, [1, 1.5], [0.35, 0]),
-  }));
-
-  return (
-    <View style={styles.micWrapper}>
-      <Animated.View style={[styles.pulseRing, ringStyle]} />
-      <TouchableOpacity onPress={onStop} style={styles.micBtnRecording}>
-        <StopCircle size={32} color="white" />
-      </TouchableOpacity>
-    </View>
-  );
-}
-
 // ── Main component ────────────────────────────────────────────────────
-type SubStep = 'idle' | 'recording' | 'processing' | 'done';
+type SubStep = 'idle' | 'processing' | 'done';
 
 export default function StepAiComplement({ data, onChange, onNext }: StepAiComplementProps) {
   const [subStep, setSubStep] = useState<SubStep>('idle');
   const [text, setText] = useState('');
-  const [recordSecs, setRecordSecs] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const audioAvailable = !!useAudioRecorder;
-  const recorder = audioAvailable ? useAudioRecorder(RecordingPresets.HIGH_QUALITY) : null;
-
-  useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); }, []);
+  const { isRecording, recordSecs, error: micError, startRecording, stopRecording } = useAudioRecorder();
 
   const fmtSecs = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
   // ── Audio ───────────────────────────────────────────────────────────
-  const startRecording = async () => {
-    if (!recorder) return;
-    setError(null);
-    try {
-      const { granted } = await requestRecordingPermissionsAsync();
-      if (!granted) { setError('Permissão de microfone negada.'); return; }
-      try { await setAudioModeAsync({ allowsRecording: true, playsInSilentMode: true }); } catch {}
-      await recorder.prepareToRecordAsync();
-      recorder.record();
-      setRecordSecs(0);
-      setSubStep('recording');
-      timerRef.current = setInterval(() => setRecordSecs((s: number) => s + 1), 1000);
-    } catch {
-      setError('Não foi possível iniciar a gravação.');
-    }
-  };
-
   const stopAndProcess = async () => {
-    if (!recorder) return;
-    if (timerRef.current) clearInterval(timerRef.current);
     try {
-      await recorder.stop();
-      const uri = recorder.uri;
+      const uri = await stopRecording();
       if (!uri) throw new Error('URI de áudio inválido.');
       setSubStep('processing');
       const preFilled = crisisToMigraineStructured(data);
@@ -185,7 +111,7 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
     <View style={styles.container}>
       <Animated.View entering={FadeInUp.duration(400)} style={styles.content}>
         <Text style={styles.title}>Mais detalhes?</Text>
-        {subStep === 'recording' && (
+        {isRecording && (
           <Text style={styles.subtitle}>
             {`Gravando  ${fmtSecs(recordSecs)}`}
           </Text>
@@ -194,7 +120,7 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
         {/* Mic area */}
         {audioAvailable && (
           <View style={styles.micArea}>
-            {subStep === 'recording' ? (
+            {isRecording ? (
               <PulsingMic onStop={stopAndProcess} />
             ) : (
               <TouchableOpacity onPress={startRecording} style={styles.micBtn}>
@@ -202,7 +128,7 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
               </TouchableOpacity>
             )}
             <Text style={styles.micHint}>
-              {subStep === 'recording' ? 'Toque para parar' : 'Toque para gravar'}
+              {isRecording ? 'Toque para parar' : 'Toque para gravar'}
             </Text>
           </View>
         )}
@@ -224,13 +150,13 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
           placeholderTextColor={Colors.muted}
           multiline
           style={styles.textArea}
-          editable={subStep !== 'recording'}
+          editable={!isRecording}
         />
 
-        {error && <Text style={styles.errorText}>{error}</Text>}
+        {(error || micError) && <Text style={styles.errorText}>{error || micError}</Text>}
 
         {/* Send text button */}
-        {text.trim().length > 0 && subStep !== 'recording' && (
+        {text.trim().length > 0 && !isRecording && (
           <TouchableOpacity onPress={submitText} style={styles.sendBtn}>
             <Send size={18} color="white" style={{ marginRight: 8 }} />
             <Text style={styles.sendBtnText}>Analisar texto</Text>
@@ -241,7 +167,7 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
       <StepFooter
         onNext={onNext}
         nextLabel="Finalizar registro"
-        showSkip={subStep === 'idle'}
+        showSkip={subStep === 'idle' && !isRecording}
         onSkip={onNext}
         skipLabel="Pular"
       />
@@ -280,19 +206,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 28,
   },
-  micWrapper: {
-    width: 80,
-    height: 80,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  pulseRing: {
-    position: 'absolute',
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#EF4444',
-  },
   micBtn: {
     width: 80,
     height: 80,
@@ -305,14 +218,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.4,
     shadowRadius: 12,
     elevation: 8,
-  },
-  micBtnRecording: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#EF4444',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
   micHint: {
     color: Colors.muted,
