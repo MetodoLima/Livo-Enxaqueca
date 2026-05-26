@@ -10,8 +10,9 @@ import {
   Platform,
   UIManager,
 } from 'react-native';
-import { ChevronLeft, ChevronRight, Zap, Clock, MapPin, AlertCircle, Pill, Activity } from 'lucide-react-native';
+import { ChevronLeft, ChevronRight, AlertCircle, ChevronRight as ArrowRight } from 'lucide-react-native';
 import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
+import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/Colors';
 import Card from '@/components/Card';
 import { useCrisisCalendar, CrisisDay } from '@/hooks/useCrisisCalendar';
@@ -35,7 +36,7 @@ function getIntensityColor(intensity: number | null): string {
 }
 
 function getIntensityLabel(intensity: number | null): string {
-  if (intensity === null) return 'Intensidade não registrada';
+  if (intensity === null) return 'Não registrada';
   return INTENSITY_CONFIG.find((c) => c.value === intensity)?.label ?? `${intensity}/10`;
 }
 
@@ -53,144 +54,75 @@ function formatDuration(start: Date, end: Date | null): string {
   return `${hours}h ${minutes}min`;
 }
 
-function formatRegiao(regiao: string | null, lado: string | null): string | null {
-  const partes = [regiao, lado].filter(Boolean);
-  return partes.length > 0 ? partes.join(' · ') : null;
-}
+// ── CrisisListItem — botão compacto ───────────────────────────────────
 
-function formatNivelIncapacidade(nivel: string | null): string | null {
-  const map: Record<string, string> = {
-    leve: 'Leve',
-    moderado: 'Moderado',
-    severo: 'Severo',
-  };
-  return nivel ? (map[nivel] ?? nivel) : null;
-}
-
-// ── CrisisCard ────────────────────────────────────────────────────────
-
-function CrisisCard({ crisis, index }: { crisis: CrisisDay; index: number }) {
+function CrisisListItem({ crisis, index }: { crisis: CrisisDay; index: number }) {
+  const router = useRouter();
   const color = getIntensityColor(crisis.intensidadeDor);
   const label = getIntensityLabel(crisis.intensidadeDor);
-  const localizacao = formatRegiao(crisis.regiaoDor, crisis.lado);
-  const incapacidade = formatNivelIncapacidade(crisis.nivelIncapacidade);
+  const duration = formatDuration(crisis.inicioCrise, crisis.fimCrise);
+
+  const handlePress = () => {
+    // Serializa a crise como JSON na URL para evitar fetch duplicado na tela de detalhe
+    router.push({
+      pathname: '/crisis/[id]',
+      params: {
+        id: String(crisis.id),
+        data: JSON.stringify({
+          ...crisis,
+          inicioCrise: crisis.inicioCrise.toISOString(),
+          fimCrise: crisis.fimCrise ? crisis.fimCrise.toISOString() : null,
+        }),
+      },
+    });
+  };
 
   return (
-    <Animated.View entering={FadeInDown.delay(index * 80).duration(300)}>
-      <Card style={{ marginBottom: 12, borderLeftWidth: 3, borderLeftColor: color }}>
-
-        {/* Header */}
-        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-            <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: color }} />
-            <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 15 }}>
-              Crise #{index + 1}
-            </Text>
-          </View>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#1E3A52', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 20 }}>
-            <Clock size={11} color={Colors.muted} />
-            <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 11 }}>
-              {formatTime(crisis.inicioCrise)}
-            </Text>
-          </View>
+    <Animated.View entering={FadeInDown.delay(index * 60).duration(250)}>
+      <TouchableOpacity
+        onPress={handlePress}
+        activeOpacity={0.7}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'center',
+          backgroundColor: '#112236',
+          borderRadius: 16,
+          marginBottom: 10,
+          padding: 16,
+          borderLeftWidth: 3,
+          borderLeftColor: color,
+        }}
+      >
+        {/* Horário */}
+        <View style={{ marginRight: 14 }}>
+          <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 11 }}>
+            INÍCIO
+          </Text>
+          <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 15, marginTop: 2 }}>
+            {formatTime(crisis.inicioCrise)}
+          </Text>
         </View>
 
-        {/* Intensidade */}
-        {crisis.intensidadeDor !== null && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <Zap size={14} color={color} />
-            <Text style={{ color, fontFamily: 'Epilogue_600SemiBold', fontSize: 13 }}>
-              {crisis.intensidadeDor}/10 — {label}
-            </Text>
-          </View>
-        )}
+        {/* Divisor */}
+        <View style={{ width: 1, height: 36, backgroundColor: '#1E3A52', marginRight: 14 }} />
 
-        {/* Localização */}
-        {localizacao && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-            <MapPin size={13} color={Colors.muted} />
+        {/* Info central */}
+        <View style={{ flex: 1 }}>
+          <Text style={{ color, fontFamily: 'Epilogue_700Bold', fontSize: 14 }}>
+            {crisis.intensidadeDor !== null ? `${crisis.intensidadeDor}/10` : '—'}{' '}
             <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 12 }}>
-              {localizacao}
+              {label}
             </Text>
-          </View>
-        )}
-
-        {/* Duração */}
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 8 }}>
-          <Clock size={13} color={Colors.muted} />
-          <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 12 }}>
-            Duração: {formatDuration(crisis.inicioCrise, crisis.fimCrise)}
+          </Text>
+          <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 12, marginTop: 3 }}>
+            {duration}
+            {crisis.sintomas.length > 0 && ` · ${crisis.sintomas.length} sintoma${crisis.sintomas.length > 1 ? 's' : ''}`}
           </Text>
         </View>
 
-        {/* Nível de incapacidade */}
-        {incapacidade && (
-          <View style={{
-            alignSelf: 'flex-start',
-            backgroundColor: `${color}20`,
-            paddingHorizontal: 10,
-            paddingVertical: 4,
-            borderRadius: 12,
-            marginBottom: 8,
-          }}>
-            <Text style={{ color, fontFamily: 'Epilogue_600SemiBold', fontSize: 11 }}>
-              {incapacidade}
-            </Text>
-          </View>
-        )}
-
-        {/* Sintomas */}
-        {crisis.sintomas.length > 0 && (
-          <View style={{ marginTop: 4, marginBottom: 8 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-              <Activity size={13} color={Colors.muted} />
-              <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_600SemiBold', fontSize: 11, letterSpacing: 0.5, textTransform: 'uppercase' }}>
-                Sintomas
-              </Text>
-            </View>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-              {crisis.sintomas.map((s) => (
-                <View key={s} style={{ backgroundColor: '#1E3A52', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12 }}>
-                  <Text style={{ color: 'white', fontFamily: 'Epilogue_400Regular', fontSize: 12 }}>{s}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* Medicamentos */}
-        {crisis.medicamentos.length > 0 && (
-          <View style={{ marginBottom: 8 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-              <Pill size={13} color={Colors.accent} />
-              <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_600SemiBold', fontSize: 11, letterSpacing: 0.5, textTransform: 'uppercase' }}>
-                Medicamentos
-              </Text>
-            </View>
-            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-              {crisis.medicamentos.map((m) => (
-                <View key={m} style={{ backgroundColor: `${Colors.accent}20`, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 12, borderWidth: 1, borderColor: `${Colors.accent}40` }}>
-                  <Text style={{ color: Colors.accent, fontFamily: 'Epilogue_600SemiBold', fontSize: 12 }}>{m}</Text>
-                </View>
-              ))}
-            </View>
-          </View>
-        )}
-
-        {/* Resumo da IA */}
-        {crisis.resumo && (
-          <Text style={{
-            color: Colors.muted,
-            fontFamily: 'Epilogue_400Regular',
-            fontSize: 12,
-            lineHeight: 18,
-            marginTop: 4,
-            fontStyle: 'italic',
-          }}>
-            "{crisis.resumo}"
-          </Text>
-        )}
-      </Card>
+        {/* Seta */}
+        <ArrowRight size={16} color={Colors.muted} />
+      </TouchableOpacity>
     </Animated.View>
   );
 }
@@ -228,8 +160,6 @@ export default function CalendarScreen() {
   }, []);
 
   const selectedCrises = selectedDay ? (crisisByDay[selectedDay] ?? []) : [];
-
-  // Estatísticas do mês
   const totalCrises = Object.values(crisisByDay).reduce((acc, arr) => acc + arr.length, 0);
   const criseDays = Object.keys(crisisByDay).length;
   const avgIntensity = (() => {
@@ -257,8 +187,6 @@ export default function CalendarScreen() {
 
           {/* Calendário */}
           <Card style={{ marginBottom: 24 }}>
-
-            {/* Navegação mês/ano */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <TouchableOpacity
                 onPress={goToPrevMonth}
@@ -286,15 +214,13 @@ export default function CalendarScreen() {
               ))}
             </View>
 
-            {/* Grid de dias */}
+            {/* Grid */}
             {loading ? (
               <View style={{ height: 180, alignItems: 'center', justifyContent: 'center' }}>
                 <ActivityIndicator color={Colors.accent} />
               </View>
             ) : (
               <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-
-                {/* Células vazias para alinhar o primeiro dia */}
                 {Array.from({ length: firstWeekday }).map((_, i) => (
                   <View key={`empty-${i}`} style={{ width: 40, height: 40, marginBottom: 4 }} />
                 ))}
@@ -304,7 +230,6 @@ export default function CalendarScreen() {
                   const crisisCount = crisisByDay[day]?.length ?? 0;
                   const isSelected = selectedDay === day;
                   const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
-
                   const maxIntensity = hasCrisis
                     ? Math.max(...(crisisByDay[day] ?? []).map((c) => c.intensidadeDor ?? 0))
                     : null;
@@ -338,18 +263,12 @@ export default function CalendarScreen() {
                         {day}
                       </Text>
 
-                      {/* Badge para múltiplas crises */}
                       {hasCrisis && !isSelected && crisisCount > 1 && (
                         <View style={{
-                          position: 'absolute',
-                          top: 3,
-                          right: 3,
-                          width: 14,
-                          height: 14,
-                          borderRadius: 7,
+                          position: 'absolute', top: 3, right: 3,
+                          width: 14, height: 14, borderRadius: 7,
                           backgroundColor: crisisColor ?? Colors.accent,
-                          alignItems: 'center',
-                          justifyContent: 'center',
+                          alignItems: 'center', justifyContent: 'center',
                         }}>
                           <Text style={{ color: 'white', fontSize: 8, fontFamily: 'Epilogue_700Bold' }}>
                             {crisisCount}
@@ -357,14 +276,10 @@ export default function CalendarScreen() {
                         </View>
                       )}
 
-                      {/* Ponto para 1 crise */}
                       {hasCrisis && !isSelected && crisisCount === 1 && (
                         <View style={{
-                          position: 'absolute',
-                          bottom: 3,
-                          width: 4,
-                          height: 4,
-                          borderRadius: 2,
+                          position: 'absolute', bottom: 3,
+                          width: 4, height: 4, borderRadius: 2,
                           backgroundColor: crisisColor ?? Colors.accent,
                         }} />
                       )}
@@ -407,9 +322,7 @@ export default function CalendarScreen() {
                   <Text style={{ color: getIntensityColor(Math.round(parseFloat(avgIntensity))), fontFamily: 'Epilogue_700Bold', fontSize: 22 }}>
                     {avgIntensity}
                   </Text>
-                  <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 11, marginTop: 2 }}>
-                    intensidade média
-                  </Text>
+                  <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 11, marginTop: 2 }}>intensidade média</Text>
                 </View>
               )}
             </Animated.View>
@@ -425,7 +338,7 @@ export default function CalendarScreen() {
             </View>
           )}
 
-          {/* Detalhes do dia selecionado */}
+          {/* Lista de crises do dia selecionado */}
           {selectedDay !== null && (
             <Animated.View entering={FadeInUp.duration(250)}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -441,12 +354,8 @@ export default function CalendarScreen() {
 
               {selectedCrises.length === 0 ? (
                 <View style={{
-                  padding: 32,
-                  borderWidth: 1.5,
-                  borderStyle: 'dashed',
-                  borderColor: '#1E3A52',
-                  borderRadius: 20,
-                  alignItems: 'center',
+                  padding: 32, borderWidth: 1.5, borderStyle: 'dashed',
+                  borderColor: '#1E3A52', borderRadius: 20, alignItems: 'center',
                 }}>
                   <Text style={{ fontSize: 28, marginBottom: 8 }}>✨</Text>
                   <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 14, textAlign: 'center' }}>
@@ -455,7 +364,7 @@ export default function CalendarScreen() {
                 </View>
               ) : (
                 selectedCrises.map((crisis, i) => (
-                  <CrisisCard key={crisis.id} crisis={crisis} index={i} />
+                  <CrisisListItem key={crisis.id} crisis={crisis} index={i} />
                 ))
               )}
             </Animated.View>
@@ -464,12 +373,8 @@ export default function CalendarScreen() {
           {/* Estado vazio do mês */}
           {!loading && !error && totalCrises === 0 && selectedDay === null && (
             <Animated.View entering={FadeInUp.duration(300)} style={{
-              padding: 40,
-              borderWidth: 1.5,
-              borderStyle: 'dashed',
-              borderColor: '#1E3A52',
-              borderRadius: 24,
-              alignItems: 'center',
+              padding: 40, borderWidth: 1.5, borderStyle: 'dashed',
+              borderColor: '#1E3A52', borderRadius: 24, alignItems: 'center',
             }}>
               <Text style={{ fontSize: 36, marginBottom: 12 }}>🌿</Text>
               <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 16, marginBottom: 4 }}>

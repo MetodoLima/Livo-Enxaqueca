@@ -18,6 +18,38 @@ export interface CrisisByDay {
   [day: number]: CrisisDay[];
 }
 
+const SELECT = `
+  id,
+  intensidade_dor,
+  regiao_dor,
+  lado,
+  nivel_incapacidade,
+  resumo,
+  inicio_crise,
+  fim_crise,
+  sintoma_crise ( sintomas ( nome ) ),
+  medicamentos_crise ( medicamentos ( nome ) )
+`;
+
+function rowToCrisis(row: any): CrisisDay {
+  return {
+    id: row.id,
+    intensidadeDor: row.intensidade_dor ?? null,
+    regiaoDor: row.regiao_dor ?? null,
+    lado: row.lado ?? null,
+    nivelIncapacidade: row.nivel_incapacidade ?? null,
+    resumo: row.resumo ?? null,
+    inicioCrise: new Date(row.inicio_crise),
+    fimCrise: row.fim_crise ? new Date(row.fim_crise) : null,
+    sintomas: (row.sintoma_crise ?? [])
+      .map((s: any) => s.sintomas?.nome)
+      .filter(Boolean),
+    medicamentos: (row.medicamentos_crise ?? [])
+      .map((m: any) => m.medicamentos?.nome)
+      .filter(Boolean),
+  };
+}
+
 export function useCrisisCalendar(year: number, month: number) {
   const [crisisByDay, setCrisisByDay] = useState<CrisisByDay>({});
   const [loading, setLoading] = useState(false);
@@ -30,7 +62,6 @@ export function useCrisisCalendar(year: number, month: number) {
     const firstDay = new Date(year, month, 1);
     const lastDay = new Date(year, month + 1, 0, 23, 59, 59);
     const daysInMonth = lastDay.getDate();
-
     const grouped: CrisisByDay = {};
 
     const addToDay = (day: number, crisis: CrisisDay) => {
@@ -66,50 +97,19 @@ export function useCrisisCalendar(year: number, month: number) {
       }
     };
 
-    // Supabase resolve os joins automaticamente com a sintaxe de nested select
-    const rowToCrisis = (row: any): CrisisDay => ({
-      id: row.id,
-      intensidadeDor: row.intensidade_dor ?? null,
-      regiaoDor: row.regiao_dor ?? null,
-      lado: row.lado ?? null,
-      nivelIncapacidade: row.nivel_incapacidade ?? null,
-      resumo: row.resumo ?? null,
-      inicioCrise: new Date(row.inicio_crise),
-      fimCrise: row.fim_crise ? new Date(row.fim_crise) : null,
-      sintomas: (row.sintoma_crise ?? [])
-        .map((s: any) => s.sintomas?.nome)
-        .filter(Boolean),
-      medicamentos: (row.medicamentos_crise ?? [])
-        .map((m: any) => m.medicamentos?.nome)
-        .filter(Boolean),
-    });
-
-    const SELECT = `
-      id,
-      intensidade_dor,
-      regiao_dor,
-      lado,
-      nivel_incapacidade,
-      resumo,
-      inicio_crise,
-      fim_crise,
-      sintoma_crise ( sintomas ( nome ) ),
-      medicamentos_crise ( medicamentos ( nome ) )
-    `;
-
     try {
-      // 1. Crises que começam neste mês
-      const { data, error: supabaseError } = await supabase
+      // Crises que começam neste mês
+      const { data, error: err1 } = await supabase
         .from('crise_enxaqueca')
         .select(SELECT)
         .gte('inicio_crise', firstDay.toISOString())
         .lte('inicio_crise', lastDay.toISOString())
         .order('inicio_crise', { ascending: true });
 
-      if (supabaseError) throw supabaseError;
+      if (err1) throw err1;
       for (const row of data ?? []) spreadCrisis(rowToCrisis(row));
 
-      // 2. Crises que começaram antes mas terminam neste mês
+      // Crises que começaram antes mas terminam neste mês
       const { data: prevData } = await supabase
         .from('crise_enxaqueca')
         .select(SELECT)
