@@ -1,12 +1,13 @@
 import { Moon, Droplets, Plus, Mic } from 'lucide-react-native';
 import { Colors } from './Colors';
+import { ImageSourcePropType } from 'react-native';
 
 export const MOODS = [
-  { emoji: '😊', label: 'Ótimo', id: 'great' },
-  { emoji: '🙂', label: 'Bem', id: 'okay' },
-  { emoji: '😐', label: 'Regular', id: 'so-so' },
-  { emoji: '😣', label: 'Ruim', id: 'bad' },
-  { emoji: '🤕', label: 'Péssimo', id: 'terrible' },
+  { image: require('../assets/images/LivoPessimo.png') as ImageSourcePropType, label: 'Péssimo', id: 'terrible' },
+  { image: require('../assets/images/LivoRuim.png') as ImageSourcePropType, label: 'Ruim', id: 'bad' },
+  { image: require('../assets/images/LivoRegular.png') as ImageSourcePropType, label: 'Regular', id: 'so-so' },
+  { image: require('../assets/images/LivoBem.png') as ImageSourcePropType, label: 'Bem', id: 'okay' },
+  { image: require('../assets/images/LivoOtimo.png') as ImageSourcePropType, label: 'Ótimo', id: 'great' },
 ] as const;
 
 export type MoodId = (typeof MOODS)[number]['id'];

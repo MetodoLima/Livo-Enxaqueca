@@ -1,12 +1,15 @@
-import React from 'react';
-import { ActivityIndicator, SafeAreaView, ScrollView, Text, View } from 'react-native';
-import { Activity, Clock, Zap } from 'lucide-react-native';
 import Card from '@/components/Card';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import ScreenBackground from '@/components/ScreenBackground';
 import { Colors } from '@/constants/Colors';
-import { useInsights, InsightItem } from '@/hooks/useInsights';
+import { InsightItem, useInsights } from '@/hooks/useInsights';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Zap } from 'lucide-react-native';
+import React from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 
-function BarList({ items, color }: { items: InsightItem[]; color: string }) {
+function BarList({ items, gradientColors }: { items: InsightItem[]; gradientColors: readonly [string, string, ...string[]] }) {
   if (items.length === 0) {
     return (
       <Text className="text-muted text-sm font-epilogue text-center py-2">
@@ -19,15 +22,17 @@ function BarList({ items, color }: { items: InsightItem[]; color: string }) {
       {items.map((item) => (
         <View key={item.nome}>
           <View className="flex-row justify-between mb-1">
-            <Text className="text-white font-epilogue-medium text-sm flex-1 mr-2" numberOfLines={1}>
+            <Text className="text-white font-epilogue-medium text-[15px] flex-1 mr-2" numberOfLines={1}>
               {item.nome}
             </Text>
-            <Text className="text-muted text-xs font-epilogue">{item.pct}%</Text>
+            <Text className="text-white text-[14px] font-epilogue-bold">{item.pct}%</Text>
           </View>
-          <View className="h-2 bg-slate-700 rounded-full overflow-hidden">
-            <View
-              className="h-full rounded-full"
-              style={{ width: `${item.pct}%`, backgroundColor: color }}
+          <View className="h-2 bg-black/30 rounded-full overflow-hidden">
+            <LinearGradient
+              colors={gradientColors}
+              start={{ x: 0, y: 0 }}
+              end={{ x: 1, y: 0 }}
+              style={{ width: `${item.pct}%`, height: '100%', borderRadius: 9999 }}
             />
           </View>
         </View>
@@ -39,16 +44,24 @@ function BarList({ items, color }: { items: InsightItem[]; color: string }) {
 export default function InsightsScreen() {
   const { data, loading, error } = useInsights();
 
+  const crisesVal = data?.crisesPerMonth ?? 0;
+  const intVal = data?.avgIntensity != null ? data.avgIntensity : '—';
+  const durVal = data?.avgDurationHours != null ? `${data.avgDurationHours}h` : '—';
+  const topTrigger = data?.topTriggers?.[0]?.nome ?? '—';
+
+  const trendDir = data?.trend?.direction ?? 'stable';
+  const trendPct = data?.trend?.pct ?? 0;
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bgDark }}>
+    <ScreenBackground>
       <ScrollView
         style={{ flex: 1 }}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 160, paddingHorizontal: 24, paddingTop: 40 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 160, paddingHorizontal: 20, paddingTop: 60 }}
         showsVerticalScrollIndicator={false}
       >
-        <Animated.View entering={FadeInUp} className="flex-row items-center justify-between mb-8">
-          <Text className="text-[28px] text-white font-epilogue-light">
-            Seus <Text className="font-epilogue-bold">Insights</Text>
+        <Animated.View entering={FadeInUp} className="mb-10 ml-2">
+          <Text className="text-[28px] text-white/60 font-epilogue-light text-left">
+            Seus <Text className="font-epilogue-bold text-white">Insights</Text>
           </Text>
         </Animated.View>
 
@@ -63,7 +76,7 @@ export default function InsightsScreen() {
           </View>
         ) : data?.totalCrises === 0 ? (
           <View className="flex-1 items-center justify-center py-20">
-            <Text className="text-2xl mb-4">📊</Text>
+            <Text className="text-3xl mb-4">📊</Text>
             <Text className="text-white font-epilogue-semi text-center mb-2">
               Nenhuma crise registrada
             </Text>
@@ -73,135 +86,245 @@ export default function InsightsScreen() {
           </View>
         ) : (
           <>
-            {/* Stats */}
-            <Animated.View entering={FadeInUp.delay(100)} className="flex-row gap-2 mb-8">
-              {[
-                {
-                  icon: Zap,
-                  val: String(data?.crisesPerMonth ?? '—'),
-                  label: 'Crises/mês',
-                  color: Colors.accent,
-                },
-                {
-                  icon: Activity,
-                  val: data?.avgIntensity != null ? String(data.avgIntensity) : '—',
-                  label: 'Int. média',
-                  color: Colors.orange,
-                },
-                {
-                  icon: Clock,
-                  val: data?.avgDurationHours != null ? `${data.avgDurationHours}h` : '—',
-                  label: 'Duração',
-                  color: Colors.muted,
-                },
-              ].map((s, i) => (
-                <View key={i} className="flex-1 bg-slate-800 rounded-3xl p-4 items-center">
-                  <View className="mb-2">
-                    <s.icon size={20} color={s.color} />
+            {/* BIG RECTANGLE WIDGET: Crises */}
+            <Animated.View entering={FadeInUp.delay(100)} style={{ marginTop: 20, marginBottom: 20 }}>
+              <View style={[styles.bigWidget, { overflow: 'hidden' }]}>
+                <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFillObject, { borderRadius: 32 }]} />
+                <LinearGradient
+                  colors={['rgba(37, 183, 187, 0.75)', 'rgba(20, 60, 81, 0.4)']}
+                  start={{ x: 0, y: 0 }}
+                  end={{ x: 1, y: 1 }}
+                  style={StyleSheet.absoluteFillObject}
+                />
+                <View style={{ flex: 1, padding: 24, justifyContent: 'space-between' }}>
+                  <View className="flex-row justify-between">
+                    <Text style={styles.widgetTitle}>Total de Crises (mês)</Text>
+                    <Zap size={20} color="rgba(255,255,255,0.7)" />
                   </View>
-                  <Text className="text-xl font-epilogue-bold" style={{ color: s.color }}>
-                    {s.val}
-                  </Text>
-                  <Text className="text-[9px] text-muted font-epilogue-bold uppercase mt-1 text-center">
-                    {s.label}
-                  </Text>
+                  <View className="flex-row items-end mt-2">
+                    <Text style={styles.bigNumber}>{crisesVal}</Text>
+                    <Text style={styles.unitText}>crises</Text>
+                  </View>
                 </View>
-              ))}
+              </View>
             </Animated.View>
 
-            {/* Triggers */}
-            <Animated.View entering={FadeInUp.delay(200)} className="mb-6">
-              <Text className="text-xs text-muted font-epilogue-bold uppercase tracking-widest mb-4">
-                Principais gatilhos
-              </Text>
-              <Card>
-                <BarList items={data?.topTriggers ?? []} color={Colors.orange} />
-              </Card>
-            </Animated.View>
-
-            {/* Symptoms */}
-            <Animated.View entering={FadeInUp.delay(300)} className="mb-6">
-              <Text className="text-xs text-muted font-epilogue-bold uppercase tracking-widest mb-4">
-                Sintomas mais comuns
-              </Text>
-              <Card>
-                <BarList items={data?.topSintomas ?? []} color={Colors.purple} />
-              </Card>
-            </Animated.View>
-
-            {/* Medications */}
-            <Animated.View entering={FadeInUp.delay(350)} className="mb-6">
-              <Text className="text-xs text-muted font-epilogue-bold uppercase tracking-widest mb-4">
-                Medicamentos mais usados
-              </Text>
-              <Card>
-                <BarList items={data?.topMedicamentos ?? []} color={Colors.accent} />
-              </Card>
-            </Animated.View>
-
-            {/* Pain regions */}
-            {(data?.topRegions?.length ?? 0) > 0 && (
-              <Animated.View entering={FadeInUp.delay(400)} className="mb-8">
-                <Text className="text-xs text-muted font-epilogue-bold uppercase tracking-widest mb-4">
-                  Regiões de dor
-                </Text>
-                <Card>
-                  <BarList items={data?.topRegions ?? []} color="#E85A5A" />
-                </Card>
+            {/* SQUARE WIDGETS GRID */}
+            <View style={styles.grid}>
+              {/* INTENSIDADE */}
+              <Animated.View entering={FadeInUp.delay(200)} style={styles.gridItem}>
+                <View style={[styles.squareWidget, { overflow: 'hidden' }]}>
+                  <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFillObject, { borderRadius: 32 }]} />
+                  <LinearGradient
+                    colors={['rgba(139, 163, 167, 0.75)', 'rgba(20, 60, 81, 0.4)']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={StyleSheet.absoluteFillObject}
+                  />
+                  <View style={{ flex: 1, padding: 20, justifyContent: 'space-between' }}>
+                    <Text style={styles.widgetTitle}>Intensidade Média</Text>
+                    <View className="flex-row items-end mt-auto">
+                      <Text style={styles.midNumber}>{intVal}</Text>
+                      <Text style={styles.unitText}>/ 10</Text>
+                    </View>
+                  </View>
+                </View>
               </Animated.View>
-            )}
 
-            {/* Trend */}
-            {data?.trend && (
-              <Animated.View entering={FadeInUp.delay(450)}>
-                <Card variant="accent-border">
-                  <View className="flex-row gap-4 items-center">
-                    <Text className="text-2xl">
-                      {data.trend.direction === 'down'
-                        ? '📉'
-                        : data.trend.direction === 'up'
-                        ? '📈'
-                        : '📊'}
-                    </Text>
-                    <View className="flex-1">
-                      <Text className="text-[10px] text-muted uppercase tracking-widest font-epilogue-bold mb-1">
-                        Tendência (últimos 30 dias)
-                      </Text>
-                      <Text className="text-sm text-soft font-epilogue" style={{ lineHeight: 20 }}>
-                        {data.trend.direction === 'down' && (
-                          <>
-                            {'Frequência de crises em '}
-                            <Text className="text-accent font-epilogue-bold">
-                              queda de {data.trend.pct}%
-                            </Text>
-                            {' em relação ao período anterior.'}
-                          </>
-                        )}
-                        {data.trend.direction === 'up' && (
-                          <>
-                            {'Frequência de crises em '}
-                            <Text style={{ color: '#E85A5A' }} className="font-epilogue-bold">
-                              alta de {data.trend.pct}%
-                            </Text>
-                            {' em relação ao período anterior.'}
-                          </>
-                        )}
-                        {data.trend.direction === 'stable' && (
-                          <>
-                            {'Frequência de crises '}
-                            <Text className="text-accent font-epilogue-bold">estável</Text>
-                            {' em relação ao período anterior.'}
-                          </>
-                        )}
+              {/* DURAÇÃO */}
+              <Animated.View entering={FadeInUp.delay(300)} style={styles.gridItem}>
+                <View style={[styles.squareWidget, { overflow: 'hidden' }]}>
+                  <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFillObject, { borderRadius: 32 }]} />
+                  <LinearGradient
+                    colors={['rgba(20, 60, 81, 0.85)', 'rgba(37, 183, 187, 0.3)']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={StyleSheet.absoluteFillObject}
+                  />
+                  <View style={{ flex: 1, padding: 20, justifyContent: 'space-between' }}>
+                    <Text style={styles.widgetTitle}>Duração Média</Text>
+                    <View className="flex-row items-end mt-auto">
+                      <Text style={styles.midNumber}>{durVal}</Text>
+                    </View>
+                  </View>
+                </View>
+              </Animated.View>
+
+              {/* TENDÊNCIA */}
+              <Animated.View entering={FadeInUp.delay(400)} style={styles.gridItem}>
+                <View style={[styles.squareWidget, { overflow: 'hidden' }]}>
+                  <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFillObject, { borderRadius: 32 }]} />
+                  <LinearGradient
+                    colors={trendDir === 'down' ? ['rgba(37, 183, 187, 0.75)', 'rgba(139, 163, 167, 0.25)'] : trendDir === 'up' ? ['rgba(20, 60, 81, 0.8)', 'rgba(20, 60, 81, 0.4)'] : ['rgba(139, 163, 167, 0.5)', 'rgba(20, 60, 81, 0.25)']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={StyleSheet.absoluteFillObject}
+                  />
+                  <View style={{ flex: 1, padding: 20, justifyContent: 'space-between' }}>
+                    <Text style={styles.widgetTitle}>Tendência</Text>
+                    <View className="flex-row items-end mt-auto">
+                      <Text style={styles.midNumber}>{trendDir === 'stable' ? '-' : `${trendPct}%`}</Text>
+                      <Text style={[styles.unitText, { marginLeft: 4 }]}>
+                        {trendDir === 'down' ? 'Queda' : trendDir === 'up' ? 'Alta' : ''}
                       </Text>
                     </View>
                   </View>
-                </Card>
+                </View>
               </Animated.View>
-            )}
+
+              {/* GATILHO */}
+              <Animated.View entering={FadeInUp.delay(500)} style={styles.gridItem}>
+                <View style={[styles.squareWidget, { overflow: 'hidden' }]}>
+                  <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFillObject, { borderRadius: 32 }]} />
+                  <LinearGradient
+                    colors={['rgba(231, 234, 232, 0.15)', 'rgba(139, 163, 167, 0.3)']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={StyleSheet.absoluteFillObject}
+                  />
+                  <View style={{ flex: 1, padding: 20, justifyContent: 'space-between' }}>
+                    <Text style={styles.widgetTitle}>Gatilho #1</Text>
+                    <Text style={[styles.midNumber, { fontSize: 24, marginTop: 'auto' }]} numberOfLines={2}>
+                      {topTrigger}
+                    </Text>
+                  </View>
+                </View>
+              </Animated.View>
+            </View>
+
+            {/* AI / INFO EXPLANATION CARD */}
+            <Animated.View entering={FadeInUp.delay(550)} className="mt-2 mb-6">
+              <Card style={{ backgroundColor: 'rgba(37, 183, 187, 0.08)', borderWidth: 1, borderColor: 'rgba(37, 183, 187, 0.2)', padding: 20 }}>
+                <View className="flex-row gap-3">
+                  <View style={{ marginTop: 2 }}>
+                    <Text style={{ fontSize: 18 }}>💡</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text className="text-white font-epilogue-bold text-sm mb-1">Entendendo a Tendência</Text>
+                    <Text className="text-muted text-xs font-epilogue" style={{ lineHeight: 18 }}>
+                      Comparamos suas crises dos <Text className="text-white font-epilogue-medium">últimos 30 dias</Text> com o mês anterior. Se estiver em <Text className="text-[#25B7BB] font-epilogue-medium">queda</Text>, seu tratamento está no caminho certo!
+                    </Text>
+                  </View>
+                </View>
+              </Card>
+            </Animated.View>
+
+            {/* BAR LISTS IN FROSTED GLASS CARDS */}
+            <View className="mt-8 gap-4">
+              {/* Gatilhos Completos */}
+              {(data?.topTriggers?.length ?? 0) > 0 && (
+                <Animated.View entering={FadeInUp.delay(600)}>
+                  <View style={[styles.listWidget, { overflow: 'hidden' }]}>
+                    <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFillObject, { borderRadius: 32 }]} />
+                    <LinearGradient
+                      colors={['rgba(232, 144, 79, 0.4)', 'rgba(168, 98, 47, 0.1)']}
+                      start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                      style={StyleSheet.absoluteFillObject}
+                    />
+                    <View style={{ padding: 24 }}>
+                      <Text className="text-white font-epilogue-bold text-lg mb-6">Todos os Gatilhos</Text>
+                      <BarList items={data?.topTriggers ?? []} gradientColors={['#E8904F', '#C26A28']} />
+                    </View>
+                  </View>
+                </Animated.View>
+              )}
+
+              {/* Sintomas */}
+              {(data?.topSintomas?.length ?? 0) > 0 && (
+                <Animated.View entering={FadeInUp.delay(650)}>
+                  <View style={[styles.listWidget, { overflow: 'hidden' }]}>
+                    <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFillObject, { borderRadius: 32 }]} />
+                    <LinearGradient
+                      colors={['rgba(139, 111, 192, 0.4)', 'rgba(98, 76, 143, 0.1)']}
+                      start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                      style={StyleSheet.absoluteFillObject}
+                    />
+                    <View style={{ padding: 24 }}>
+                      <Text className="text-white font-epilogue-bold text-lg mb-6">Sintomas Comuns</Text>
+                      <BarList items={data?.topSintomas ?? []} gradientColors={['#8B6FC0', '#624C8F']} />
+                    </View>
+                  </View>
+                </Animated.View>
+              )}
+
+              {/* Medicamentos */}
+              {(data?.topMedicamentos?.length ?? 0) > 0 && (
+                <Animated.View entering={FadeInUp.delay(700)}>
+                  <View style={[styles.listWidget, { overflow: 'hidden' }]}>
+                    <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFillObject, { borderRadius: 32 }]} />
+                    <LinearGradient
+                      colors={['rgba(37, 183, 187, 0.4)', 'rgba(19, 121, 124, 0.1)']}
+                      start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                      style={StyleSheet.absoluteFillObject}
+                    />
+                    <View style={{ padding: 24 }}>
+                      <Text className="text-white font-epilogue-bold text-lg mb-6">Medicamentos</Text>
+                      <BarList items={data?.topMedicamentos ?? []} gradientColors={['#25B7BB', '#13797C']} />
+                    </View>
+                  </View>
+                </Animated.View>
+              )}
+            </View>
+
           </>
         )}
       </ScrollView>
-    </SafeAreaView>
+    </ScreenBackground>
   );
 }
+
+const styles = StyleSheet.create({
+  bigWidget: {
+    borderRadius: 32,
+    height: 180,
+    justifyContent: 'space-between',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  grid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  gridItem: {
+    width: '47%',
+    aspectRatio: 1,
+    marginBottom: 20,
+  },
+  squareWidget: {
+    flex: 1,
+    borderRadius: 32,
+    justifyContent: 'space-between',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  listWidget: {
+    borderRadius: 32,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  widgetTitle: {
+    color: 'rgba(255,255,255,0.85)',
+    fontFamily: 'Epilogue_400Regular',
+    fontSize: 14,
+  },
+  bigNumber: {
+    color: 'white',
+    fontFamily: 'Epilogue_700Bold',
+    fontSize: 56,
+    lineHeight: 64,
+  },
+  midNumber: {
+    color: 'white',
+    fontFamily: 'Epilogue_700Bold',
+    fontSize: 38,
+    lineHeight: 44,
+  },
+  unitText: {
+    color: 'rgba(255,255,255,0.7)',
+    fontFamily: 'Epilogue_400Regular',
+    fontSize: 16,
+    marginLeft: 8,
+    marginBottom: 6,
+  },
+});

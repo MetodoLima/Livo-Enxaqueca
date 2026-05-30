@@ -18,6 +18,7 @@ import { audioAvailable, useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { useRouter } from 'expo-router';
 import {
   Check,
+  ChevronDown,
   ChevronRight,
   Clock,
   Mic,
@@ -30,6 +31,7 @@ import React, { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Image,
   SafeAreaView,
   ScrollView,
   StyleSheet,
@@ -38,29 +40,58 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import ScreenBackground from '@/components/ScreenBackground';
 import Animated, { FadeInUp, ZoomIn } from 'react-native-reanimated';
 
 
 // ── Empty state ───────────────────────────────────────────────────────
 function EmptyState() {
   const router = useRouter();
+
+  // Calculate days since last crisis (placeholder: 3 days)
+  const daysSinceLastCrisis = 3;
+
   return (
-    <View style={styles.emptyContainer}>
-      <View style={styles.emptyIcon}>
-        <Wind size={36} color={Colors.accent} />
+    <ScreenBackground>
+      <View style={styles.emptyContainer}>
+        <Animated.View entering={FadeInUp.delay(100)} style={styles.emptyMascotWrapper}>
+          <Image
+            source={require('../../assets/images/LivoMeditar.png')}
+            style={styles.emptyMascotImage}
+            resizeMode="contain"
+          />
+        </Animated.View>
+
+        <Animated.View entering={FadeInUp.delay(250)}>
+          <Text style={styles.emptyTitle}>Tudo tranquilo!</Text>
+          <Text style={styles.emptyHighlight}>
+            Você está há{' '}
+            <Text style={{ color: Colors.accent }}>{daysSinceLastCrisis} dias</Text>
+            {' '}sem crises
+          </Text>
+          <Text style={styles.emptySub}>
+            Continue assim! Caso tenha uma crise, registre aqui para acompanhar seu progresso.
+          </Text>
+        </Animated.View>
+
+        <Animated.View entering={FadeInUp.delay(400)}>
+          <TouchableOpacity
+            onPress={() => router.push('/record-crisis')}
+            style={styles.emptyBtn}
+          >
+            <Zap size={18} color="white" fill="white" />
+            <Text style={styles.emptyBtnText}>Registrar Crise</Text>
+          </TouchableOpacity>
+        </Animated.View>
+
+        <Animated.View entering={FadeInUp.delay(550)} style={{ marginTop: 32 }}>
+          <Text style={styles.emptyArrowHint}>Ou toque no botão abaixo</Text>
+          <View style={{ alignItems: 'center', marginTop: 8 }}>
+            <ChevronDown size={24} color={Colors.muted} />
+          </View>
+        </Animated.View>
       </View>
-      <Text style={styles.emptyTitle}>Nenhuma crise ativa</Text>
-      <Text style={styles.emptySub}>
-        Quando registrar uma crise, ela aparecerá aqui para você editar e complementar.
-      </Text>
-      <TouchableOpacity
-        onPress={() => router.push('/record-crisis')}
-        style={styles.emptyBtn}
-      >
-        <Wind size={18} color="white" />
-        <Text style={styles.emptyBtnText}>Registrar crise</Text>
-      </TouchableOpacity>
-    </View>
+    </ScreenBackground>
   );
 }
 
@@ -181,7 +212,7 @@ export default function CrisisDetailScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bgDark }}>
+    <ScreenBackground>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 120, paddingHorizontal: 24 }}
@@ -464,7 +495,7 @@ export default function CrisisDetailScreen() {
         symptoms={crisis.symptoms}
         onChange={(symptoms) => updateActiveCrisis({ symptoms })}
       />
-    </SafeAreaView>
+    </ScreenBackground>
   );
 }
 
@@ -677,25 +708,32 @@ const styles = StyleSheet.create({
   // Empty
   emptyContainer: {
     flex: 1,
-    backgroundColor: Colors.bgDark,
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: 32,
   },
-  emptyIcon: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: `${Colors.accent}15`,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
+  emptyMascotWrapper: {
+    width: 180,
+    height: 180,
+    marginBottom: 24,
+  },
+  emptyMascotImage: {
+    width: '100%',
+    height: '100%',
   },
   emptyTitle: {
-    fontSize: 20,
+    fontSize: 24,
     fontFamily: 'Epilogue_700Bold',
     color: 'white',
+    textAlign: 'center',
     marginBottom: 8,
+  },
+  emptyHighlight: {
+    fontSize: 18,
+    fontFamily: 'Epilogue_600SemiBold',
+    color: 'white',
+    textAlign: 'center',
+    marginBottom: 12,
   },
   emptySub: {
     fontSize: 14,
@@ -703,7 +741,7 @@ const styles = StyleSheet.create({
     color: Colors.muted,
     textAlign: 'center',
     lineHeight: 22,
-    marginBottom: 24,
+    marginBottom: 28,
   },
   emptyBtn: {
     flexDirection: 'row',
@@ -711,13 +749,19 @@ const styles = StyleSheet.create({
     gap: 8,
     backgroundColor: Colors.accent,
     paddingVertical: 16,
-    paddingHorizontal: 28,
+    paddingHorizontal: 32,
     borderRadius: 16,
   },
   emptyBtnText: {
     fontSize: 16,
     fontFamily: 'Epilogue_700Bold',
     color: 'white',
+  },
+  emptyArrowHint: {
+    fontSize: 13,
+    fontFamily: 'Epilogue_400Regular',
+    color: Colors.muted,
+    textAlign: 'center',
   },
 
   // Success

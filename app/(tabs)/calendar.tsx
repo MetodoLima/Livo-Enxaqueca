@@ -15,6 +15,7 @@ import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/Colors';
 import Card from '@/components/Card';
+import ScreenBackground from '@/components/ScreenBackground';
 import { useCrisisCalendar, CrisisDay } from '@/hooks/useCrisisCalendar';
 import { INTENSITY_CONFIG } from '@/types/crisis';
 
@@ -172,7 +173,7 @@ export default function CalendarScreen() {
   })();
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bgDark }}>
+    <ScreenBackground>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ paddingBottom: 140 }}
@@ -388,6 +389,6 @@ export default function CalendarScreen() {
 
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </ScreenBackground>
   );
 }

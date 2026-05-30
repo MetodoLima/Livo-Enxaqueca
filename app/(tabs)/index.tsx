@@ -17,15 +17,17 @@ import {
   ChevronRight,
   Activity,
   Sparkles,
-  Search,
+  Bell,
 } from 'lucide-react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { Link } from 'expo-router';
 import { Colors } from '@/constants/Colors';
 import { HABITS, MoodId } from '@/constants/data';
 import MoodSelector from '@/components/MoodSelector';
-import Card from '@/components/Card';
 import { useAuth } from '@/contexts/AuthContext';
+import ScreenBackground from '@/components/ScreenBackground';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -36,188 +38,249 @@ export default function HomeScreen() {
     now.getHours() < 12 ? 'Bom dia' : now.getHours() < 18 ? 'Boa tarde' : 'Boa noite';
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bgDark }}>
-      <StatusBar barStyle="light-content" />
+    <ScreenBackground>
+
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 160 }}
         showsVerticalScrollIndicator={false}
       >
-        <View style={{ paddingHorizontal: 24, paddingTop: 40 }}>
+        <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
 
           {/* ── Header ── */}
-          <View className="flex-row justify-between items-center mb-8">
+          <View className="flex-row justify-between items-center" style={{ marginBottom: 28 }}>
             <View>
-              <Text className="text-[32px] text-white font-epilogue-light">
+              <Text className="text-[28px] text-white/60 font-epilogue-light">
                 {greeting},
               </Text>
-              <Text className="text-[32px] text-white font-epilogue-bold">
+              <Text className="text-[30px] text-white font-epilogue-bold" style={{ marginTop: -2 }}>
                 {user?.user_metadata?.name ? `${user.user_metadata.name}!` : 'Visitante!'}
               </Text>
             </View>
-            <TouchableOpacity className="w-12 h-12 rounded-full bg-white/5 items-center justify-center">
-              <Search size={24} color={Colors.muted} />
+            <TouchableOpacity style={styles.headerBtn}>
+              <Bell size={20} color={Colors.muted} />
             </TouchableOpacity>
           </View>
 
           {/* ── Mood Selector ── */}
-          <Animated.View entering={FadeInUp.delay(100)} className="mb-8">
-            <Text className="text-[20px] text-white font-epilogue-semi mb-6 text-center">
+          <Animated.View entering={FadeInUp.delay(100)} style={{ marginBottom: 28 }}>
+            <Text style={styles.sectionLabel}>
               Como você está hoje?
             </Text>
             <MoodSelector selected={selectedMood} onSelect={setSelectedMood} />
           </Animated.View>
 
-          {/* ── AI Assistant Card (Mascote) ── */}
           <Animated.View entering={FadeInUp.delay(200)} style={styles.mascotContainer}>
+            <Image
+              source={require('../../assets/images/IA-Livo.webp')}
+              style={styles.mascotImageAbsolute}
+              resizeMode="cover"
+            />
             <View style={styles.mascotContent}>
-              <Image
-                source={require('../../assets/images/IA-Livo.webp')}
-                style={styles.mascotImageAbsolute}
-                resizeMode="cover"
-              />
               
-              {/* Top Text */}
               <Text className="text-white text-lg font-epilogue-bold text-center shadow-lg">
                 Como posso ajudar?
               </Text>
 
-              {/* Center Mic Button */}
               <TouchableOpacity style={styles.micButton}>
                 <Mic size={28} color="white" />
               </TouchableOpacity>
 
-              {/* Bottom Input */}
               <View style={styles.inputContainer}>
                 <TextInput
                   placeholder="Pergunte ao Livo..."
                   placeholderTextColor={Colors.muted}
                   style={{ flex: 1, color: 'white', fontFamily: 'Epilogue_400Regular', fontSize: 14 }}
                 />
-                <TouchableOpacity className="w-8 h-8 rounded-full bg-accent items-center justify-center">
+                <TouchableOpacity style={styles.inputMicBtn}>
                   <Mic size={14} color="white" />
                 </TouchableOpacity>
               </View>
             </View>
           </Animated.View>
 
-          {/* ── Migraine Status ── */}
-          <Card className="mb-8">
-            <Animated.View entering={FadeInUp.delay(300)}>
-              <View className="flex-row items-center">
-                <View
-                  className="w-14 h-14 rounded-full items-center justify-center mr-4"
-                  style={{ borderWidth: 4, borderColor: Colors.accent }}
-                >
-                  <Text className="text-lg text-white font-epilogue-bold">3</Text>
+          {/* ── Widget: Migraine Status ── */}
+          <Animated.View entering={FadeInUp.delay(300)}>
+            <View style={styles.widget}>
+              <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFillObject, { borderRadius: 28 }]} />
+              <LinearGradient
+                colors={['rgba(37, 183, 187, 0.75)', 'rgba(20, 60, 81, 0.4)']}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFillObject}
+              />
+              <View style={styles.widgetContent}>
+                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={styles.streakCircle}>
+                    <Text style={styles.streakNumber}>3</Text>
+                  </View>
+                  <View style={{ marginLeft: 16, flex: 1 }}>
+                    <Text style={styles.widgetHeading}>Sem enxaqueca</Text>
+                    <Text style={styles.widgetSubtext}>3 dias consecutivos sem crises</Text>
+                  </View>
                 </View>
-                <View>
-                  <Text className="text-lg text-white font-epilogue-bold">Sem enxaqueca</Text>
-                  <Text className="text-muted text-sm font-epilogue">3 dias consecutivos sem crises</Text>
-                </View>
+                <Link href="/record-crisis" asChild>
+                  <TouchableOpacity style={styles.accentButton}>
+                    <Zap size={18} color="white" fill="white" />
+                    <Text style={styles.accentButtonText}>Registrar Crise</Text>
+                  </TouchableOpacity>
+                </Link>
               </View>
-              <Link href="/record-crisis" asChild>
-                <TouchableOpacity className="mt-6 bg-accent py-4 rounded-2xl flex-row items-center justify-center">
-                  <Zap size={18} color="white" fill="white" />
-                  <Text className="text-white ml-2 font-epilogue-bold">Registrar Crise</Text>
-                </TouchableOpacity>
-              </Link>
-            </Animated.View>
-          </Card>
+            </View>
+          </Animated.View>
 
-          {/* ── Stats Grid ── */}
+          {/* ── Widget: Stats Grid ── */}
           <View style={styles.statsGridContainer}>
-            <Animated.View 
-              entering={FadeInUp.delay(400)} 
-              style={[styles.statCard, styles.statCardLeft, { backgroundColor: 'rgba(139, 111, 192, 0.08)' }]}
-            >
-              <View style={[styles.statIconContainer, { backgroundColor: 'rgba(139, 111, 192, 0.15)' }]}>
-                <Activity size={24} color={Colors.purple} />
+            <Animated.View entering={FadeInUp.delay(400)} style={[styles.statWidget, styles.statCardLeft]}>
+              <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFillObject, { borderRadius: 24 }]} />
+              <LinearGradient
+                colors={['rgba(139, 163, 167, 0.75)', 'rgba(20, 60, 81, 0.4)']}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFillObject}
+              />
+              <View style={styles.statWidgetContent}>
+                <View style={[styles.statIconContainer, { backgroundColor: 'rgba(255, 255, 255, 0.15)' }]}>
+                  <Activity size={22} color="white" />
+                </View>
+                <Text style={[styles.statNumber, { color: 'white' }]}>2</Text>
+                <Text style={[styles.statLabel, { color: 'white' }]}>
+                  Crises Mês
+                </Text>
               </View>
-              <Text style={[styles.statNumber, { color: Colors.purple }]}>2</Text>
-              <Text style={[styles.statLabel, { color: Colors.purple }]}>
-                Crises Mês
-              </Text>
             </Animated.View>
             
-            <Animated.View 
-              entering={FadeInUp.delay(500)} 
-              style={[styles.statCard, { backgroundColor: 'rgba(232, 144, 79, 0.08)' }]}
-            >
-              <View style={[styles.statIconContainer, { backgroundColor: 'rgba(232, 144, 79, 0.15)' }]}>
-                <Sparkles size={24} color={Colors.orange} />
+            <Animated.View entering={FadeInUp.delay(500)} style={styles.statWidget}>
+              <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFillObject, { borderRadius: 24 }]} />
+              <LinearGradient
+                colors={['rgba(20, 60, 81, 0.85)', 'rgba(37, 183, 187, 0.3)']}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFillObject}
+              />
+              <View style={styles.statWidgetContent}>
+                <View style={[styles.statIconContainer, { backgroundColor: 'rgba(255, 255, 255, 0.15)' }]}>
+                  <Sparkles size={22} color="white" />
+                </View>
+                <Text style={[styles.statNumber, { color: 'white' }]}>5</Text>
+                <Text style={[styles.statLabel, { color: 'white' }]}>
+                  Doses Tomadas
+                </Text>
               </View>
-              <Text style={[styles.statNumber, { color: Colors.orange }]}>5</Text>
-              <Text style={[styles.statLabel, { color: Colors.orange }]}>
-                Doses Tomadas
-              </Text>
             </Animated.View>
           </View>
 
           {/* ── Daily Habits ── */}
-          <View className="mb-8">
-            <Animated.View entering={FadeInUp.delay(600)}>
-              <Text className="text-lg text-center mb-4 text-white font-epilogue-bold">
-                Rotina diária
-              </Text>
-              <View className="flex-row flex-wrap justify-between">
-                {HABITS.map((habit) => (
-                  <TouchableOpacity
-                    key={habit.label}
-                    className="w-[48%] p-4 rounded-[24px] items-center mb-4 border border-slate-700/40"
-                    style={{ backgroundColor: 'rgba(255, 255, 255, 0.02)' }}
-                  >
-                    <View
-                      className="w-10 h-10 rounded-full items-center justify-center mb-2"
-                      style={{ backgroundColor: `${habit.color}20` }}
-                    >
-                      <habit.icon size={20} color={habit.color} />
-                    </View>
-                    <Text className="text-sm text-white font-epilogue-semi">{habit.label}</Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </Animated.View>
-          </View>
+          <Animated.View entering={FadeInUp.delay(600)} style={{ marginBottom: 20 }}>
+            <Text style={styles.sectionLabel}>
+              Rotina diária
+            </Text>
+            <View style={styles.habitsGrid}>
+              {HABITS.map((habit) => (
+                <TouchableOpacity
+                  key={habit.label}
+                  style={[styles.habitItem, { backgroundColor: `${habit.color}25` }]}
+                  activeOpacity={0.7}
+                >
+                  <View style={[styles.habitIcon, { backgroundColor: `${habit.color}30` }]}>
+                    <habit.icon size={22} color={habit.color} />
+                  </View>
+                  <Text style={styles.habitLabel}>{habit.label}</Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </Animated.View>
 
-          {/* ── Insight ── */}
+          {/* ── Widget: Insight ── */}
           <Animated.View entering={FadeInUp.delay(700)}>
-            <Card>
-              <TouchableOpacity className="flex-row items-center">
-                <View className="w-14 h-14 bg-accent/10 rounded-2xl items-center justify-center mr-4">
-                  <Text className="text-2xl">💡</Text>
-                </View>
-                <View className="flex-1">
-                  <Text className="text-white font-epilogue-semi">Padrão detectado</Text>
-                  <Text className="text-muted text-sm font-epilogue">
-                    Dormir antes das 23h evitou crises matinais.
-                  </Text>
-                </View>
-                <ChevronRight size={20} color={Colors.muted} />
-              </TouchableOpacity>
-            </Card>
+            <View style={styles.widget}>
+              <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFillObject, { borderRadius: 28 }]} />
+              <LinearGradient
+                colors={['rgba(37, 183, 187, 0.75)', 'rgba(139, 163, 167, 0.25)']}
+                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                style={StyleSheet.absoluteFillObject}
+              />
+              <View style={styles.widgetContent}>
+                <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }}>
+                  <View style={styles.insightIcon}>
+                    <Text style={{ fontSize: 22 }}>💡</Text>
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.widgetHeading}>Padrão detectado</Text>
+                    <Text style={styles.widgetSubtext}>
+                      Dormir antes das 23h evitou crises matinais.
+                    </Text>
+                  </View>
+                  <ChevronRight size={18} color={Colors.muted} />
+                </TouchableOpacity>
+              </View>
+            </View>
           </Animated.View>
 
         </View>
       </ScrollView>
-    </SafeAreaView>
+    </ScreenBackground>
   );
 }
 
 const styles = StyleSheet.create({
+  /* ── iOS Widget Base ── */
+  widget: {
+    borderRadius: 28,
+    overflow: 'hidden',
+    marginBottom: 20,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+  },
+  widgetContent: {
+    padding: 24,
+  },
+  widgetTitle: {
+    fontSize: 18,
+    color: 'rgba(255, 255, 255, 0.95)',
+    fontFamily: 'Epilogue_600SemiBold',
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  widgetHeading: {
+    fontSize: 17,
+    color: '#FFFFFF',
+    fontFamily: 'Epilogue_700Bold',
+  },
+  widgetSubtext: {
+    fontSize: 13,
+    color: Colors.muted,
+    fontFamily: 'Epilogue_400Regular',
+    marginTop: 3,
+  },
+
+  /* ── Header ── */
+  headerBtn: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  sectionLabel: {
+    fontSize: 20,
+    color: 'rgba(255, 255, 255, 0.95)',
+    fontFamily: 'Epilogue_600SemiBold',
+    textAlign: 'center',
+    marginTop: 24,
+    marginBottom: 20,
+  },
+
+  /* ── Mascot Widget ── */
   mascotContainer: {
     width: '100%',
     aspectRatio: 1.1,
-    borderRadius: 32,
+    borderRadius: 28,
     overflow: 'hidden',
-    marginTop: 16,
-    marginBottom: 32,
-    backgroundColor: '#112F3D',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.3,
-    shadowRadius: 5,
-    elevation: 8,
+    marginBottom: 20,
+    backgroundColor: 'rgba(17, 47, 61, 0.9)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   mascotContent: {
     flex: 1,
@@ -235,56 +298,104 @@ const styles = StyleSheet.create({
     bottom: 0,
     width: '100%',
     height: '100%',
-    opacity: 0.8,
+    opacity: 0.7,
   },
   micButton: {
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: 'rgba(37, 183, 187, 0.4)',
-    borderWidth: 2,
-    borderColor: '#25B7BB',
+    backgroundColor: 'rgba(37, 183, 187, 0.35)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(37, 183, 187, 0.7)',
     alignItems: 'center',
     justifyContent: 'center',
   },
   inputContainer: {
     width: '100%',
-    borderRadius: 30,
+    borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
     padding: 8,
     paddingLeft: 16,
-    backgroundColor: 'rgba(11, 33, 45, 0.8)',
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.06)',
   },
-  statsGridContainer: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    marginBottom: 32,
-    width: '100%',
-  },
-  statCard: {
-    width: '47%',
-    aspectRatio: 1,
-    padding: 16,
-    borderRadius: 32,
+  inputMicBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: Colors.accent,
     alignItems: 'center',
     justifyContent: 'center',
   },
+
+  /* ── Migraine Status ── */
+  streakCircle: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    borderWidth: 3,
+    borderColor: Colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  streakNumber: {
+    fontSize: 20,
+    color: '#FFFFFF',
+    fontFamily: 'Epilogue_700Bold',
+  },
+  accentButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.accent,
+    paddingVertical: 14,
+    borderRadius: 16,
+    marginTop: 18,
+  },
+  accentButtonText: {
+    color: '#FFFFFF',
+    fontFamily: 'Epilogue_700Bold',
+    fontSize: 15,
+    marginLeft: 8,
+  },
+
+  /* ── Stats Grid ── */
+  statsGridContainer: {
+    flexDirection: 'row',
+    marginBottom: 20,
+    width: '100%',
+  },
+  statWidget: {
+    flex: 1,
+    aspectRatio: 1,
+    borderRadius: 24,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.15)',
+    overflow: 'hidden',
+  },
   statCardLeft: {
-    marginRight: '6%',
+    marginRight: 12,
+  },
+  statWidgetContent: {
+    flex: 1,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   statIconContainer: {
-    width: 48,
-    height: 48,
-    borderRadius: 16,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 8,
   },
   statNumber: {
-    fontSize: 36,
+    fontSize: 34,
     fontFamily: 'Epilogue_700Bold',
-    marginBottom: 4,
+    marginBottom: 2,
   },
   statLabel: {
     fontSize: 10,
@@ -292,5 +403,44 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
     letterSpacing: 1.5,
     fontFamily: 'Epilogue_700Bold',
+  },
+
+  /* ── Habits ── */
+  habitsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'space-between',
+  },
+  habitItem: {
+    width: '48%',
+    paddingVertical: 18,
+    paddingHorizontal: 12,
+    borderRadius: 22,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  habitIcon: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  habitLabel: {
+    fontSize: 16,
+    color: '#FFFFFF',
+    fontFamily: 'Epilogue_600SemiBold',
+  },
+
+  /* ── Insight ── */
+  insightIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 16,
+    backgroundColor: 'rgba(37, 183, 187, 0.1)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 14,
   },
 });

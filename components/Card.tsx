@@ -10,17 +10,10 @@ interface CardProps {
 }
 
 export default function Card({ children, variant = 'default', className = '', onPress, style }: CardProps) {
-  const base = 'rounded-[20px] p-5 bg-slate-800';
+  const base = 'rounded-[28px] p-6';
 
-  const variants = {
-    default: '',
-    elevated: 'shadow-lg',
-    'accent-border': 'border-l-[3px]',
-  };
-
-  // accent-border needs style prop because hex opacity in className doesn't work reliably in RN
   const accentBorderStyle: ViewStyle = variant === 'accent-border'
-    ? { borderLeftColor: 'rgba(37, 183, 187, 0.4)' }
+    ? { borderLeftColor: 'rgba(37, 183, 187, 0.4)', borderLeftWidth: 3 }
     : {};
 
   const Component = onPress ? Pressable : View;
@@ -28,8 +21,8 @@ export default function Card({ children, variant = 'default', className = '', on
   return (
     <Component
       onPress={onPress}
-      style={[accentBorderStyle, style]}
-      className={`${base} ${variants[variant]} ${className}`}
+      style={[{ backgroundColor: '#232533', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.10)' }, accentBorderStyle, style]}
+      className={`${base} ${className}`}
     >
       {children}
     </Component>

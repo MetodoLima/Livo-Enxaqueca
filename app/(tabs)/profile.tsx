@@ -4,8 +4,9 @@ import { useAuth } from '@/contexts/AuthContext';
 import { supabase } from '@/lib/supabase';
 import { Bell as BellIcon, ChevronRight, FileText, LogOut, Moon as MoonIcon, Shield, User } from 'lucide-react-native';
 import React from 'react';
-import { Alert, Platform, SafeAreaView, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
+import ScreenBackground from '@/components/ScreenBackground';
 
 const menuItems = [
   { icon: Shield, label: 'Dados de saúde', desc: 'Perfil médico e alergias' },
@@ -31,7 +32,7 @@ export default function ProfileScreen() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bgDark }}>
+    <ScreenBackground>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 160, paddingHorizontal: 24, paddingTop: 40 }}
@@ -62,7 +63,8 @@ export default function ProfileScreen() {
           {menuItems.map((item) => (
             <TouchableOpacity
               key={item.label}
-              className="flex-row items-center bg-slate-800 p-4 rounded-2xl"
+              className="flex-row items-center p-4 rounded-2xl mb-2"
+              style={{ backgroundColor: '#232533', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.10)' }}
             >
               <View className="w-12 h-12 rounded-xl bg-accent/10 items-center justify-center mr-4">
                 <item.icon size={20} color={Colors.accent} />
@@ -83,6 +85,6 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>
-    </SafeAreaView>
+    </ScreenBackground>
   );
 }

@@ -349,8 +349,7 @@ export default function StepTime({ data, onChange, onNext }: StepTimeProps) {
     } else if (preset === '1h_ago') {
       onChange({ startTime: subtractHours(new Date(), 1) });
     } else if (preset === 'custom') {
-      setPickerMode('time');
-      setPickerTarget('start');
+      // Just select the preset, the dateTimeRow is already visible for start time
     }
   };
 
@@ -361,8 +360,10 @@ export default function StepTime({ data, onChange, onNext }: StepTimeProps) {
     } else if (preset === 'now') {
       onChange({ endTime: new Date() });
     } else if (preset === 'custom') {
-      setPickerMode('time');
-      setPickerTarget('end');
+      // Initialize endTime if not set so the dateTimeRow appears
+      if (!data.endTime) {
+        onChange({ endTime: new Date() });
+      }
     }
   };
 
@@ -417,6 +418,7 @@ export default function StepTime({ data, onChange, onNext }: StepTimeProps) {
             {([
               { key: 'now' as TimePreset, label: 'Agora mesmo' },
               { key: '1h_ago' as TimePreset, label: 'Há 1 hora' },
+              { key: 'custom' as TimePreset, label: 'Outro' },
             ]).map(({ key, label }) => (
               <TouchableOpacity
                 key={key}
@@ -483,6 +485,7 @@ export default function StepTime({ data, onChange, onNext }: StepTimeProps) {
             {([
               { key: 'ongoing' as EndTimePreset, label: 'Ainda em curso' },
               { key: 'now' as EndTimePreset, label: 'Agora mesmo' },
+              { key: 'custom' as EndTimePreset, label: 'Outro' },
             ]).map(({ key, label }) => (
               <TouchableOpacity
                 key={key}
