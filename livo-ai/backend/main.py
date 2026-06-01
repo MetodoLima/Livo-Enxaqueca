@@ -5,11 +5,12 @@ import shutil
 import subprocess
 import tempfile
 from datetime import datetime
-from typing import Optional
+from typing import List, Optional
 
 import httpx
 from fastapi import FastAPI, File, Form, HTTPException, UploadFile
 from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
 
 app = FastAPI(title="Migraine Voice Logger")
 
@@ -277,6 +278,132 @@ async def merge_with_complement(pre_filled: dict, transcript: str) -> dict:
     return validate_structured(parsed)
 
 
+# Análise qualitativa
+
+INSIGHTS_ANALYSIS_PROMPT = """Você é um assistente médico especializado em enxaqueca.
+
+Abaixo estão todos os registros de crise de um paciente em ordem cronológica:
+
+{registros}
+
+Analise esses registros de forma qualitativa e retorne um JSON com exatamente 4 campos:
+
+- "padroes": descreva padrões recorrentes observados (horários, duração, intensidade, sintomas que aparecem juntos). Se houver poucos dados, diga o que já é possível observar.
+- "gatilhos_principais": analise os fatores desencadeantes mais frequentes e possíveis correlações entre eles.
+- "evolucao": descreva como as crises evoluíram ao longo do tempo (melhoraram, pioraram, ficaram estáveis, mudaram de característica).
+- "recomendacoes": com base nos dados, sugira ações concretas que o paciente pode discutir com seu médico (não substitua consulta médica).
+
+Se houver menos de 3 registros, ainda assim responda com o que for possível concluir.
+Escreva em português, de forma clara e direta para o paciente.
+Retorne apenas o JSON, sem texto adicional."""
+
+INSIGHTS_OUTPUT_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "padroes":            {"type": "string"},
+        "gatilhos_principais": {"type": "string"},
+        "evolucao":           {"type": "string"},
+        "recomendacoes":      {"type": "string"},
+    },
+    "required": ["padroes", "gatilhos_principais", "evolucao", "recomendacoes"],
+}
+
+
+class CriseRecord(BaseModel):
+    data: str
+    intensidade: Optional[float] = None
+    localizacao: Optional[str] = None
+    lado: Optional[str] = None
+    duracao_horas: Optional[float] = None
+    sintomas: List[str] = []
+    medicamentos: List[str] = []
+    gatilhos: List[str] = []
+    nivel_incapacidade: Optional[str] = None
+    resumo: Optional[str] = None
+
+
+class AnalyzeInsightsRequest(BaseModel):
+    crises: List[CriseRecord]
+
+
+def format_crises_for_prompt(crises: List[CriseRecord]) -> str:
+    lines = []
+    for i, c in enumerate(crises, 1):
+        parts = [f"Crise {i} ({c.data})"]
+        if c.intensidade is not None:
+            parts.append(f"  Intensidade: {c.intensidade}/10")
+        if c.localizacao:
+            loc = c.localizacao
+            if c.lado:
+                loc += f" {c.lado}"
+            parts.append(f"  Localização: {loc}")
+        if c.duracao_horas is not None:
+            parts.append(f"  Duração: {c.duracao_horas}h")
+        if c.nivel_incapacidade:
+            parts.append(f"  Incapacidade: {c.nivel_incapacidade}")
+        if c.sintomas:
+            parts.append(f"  Sintomas: {', '.join(c.sintomas)}")
+        if c.medicamentos:
+            parts.append(f"  Medicamentos: {', '.join(c.medicamentos)}")
+        if c.gatilhos:
+            parts.append(f"  Gatilhos: {', '.join(c.gatilhos)}")
+        if c.resumo:
+            parts.append(f"  Resumo: {c.resumo}")
+        lines.append("\n".join(parts))
+    return "\n\n".join(lines)
+
+
+async def analyze_insights_with_llm(crises: List[CriseRecord]) -> dict:
+    registros = format_crises_for_prompt(crises)
+    prompt = INSIGHTS_ANALYSIS_PROMPT.format(registros=registros)
+
+    async with httpx.AsyncClient(timeout=1200) as client:
+        r = await client.post(
+            f"{OLLAMA_URL}/api/generate",
+            json={
+                "model": OLLAMA_MODEL,
+                "prompt": prompt,
+                "stream": False,
+                "format": INSIGHTS_OUTPUT_SCHEMA,
+                "options": {"temperature": 0},
+            },
+        )
+        r.raise_for_status()
+        raw = r.json().get("response", "")
+
+    print("\n=== RAW LLM INSIGHTS RESPONSE ===")
+    print(raw)
+    print("==================================\n")
+
+    parsed = None
+    try:
+        parsed = json.loads(raw)
+    except Exception:
+        pass
+    if parsed is None:
+        try:
+            start = raw.find("{")
+            end = raw.rfind("}") + 1
+            parsed = json.loads(raw[start:end])
+        except Exception:
+            pass
+    if parsed is None:
+        try:
+            parsed = json.loads(fix_json_string(raw))
+        except Exception as e:
+            print("Erro no insights fallback:", e)
+
+    if parsed is None:
+        return {
+            "padroes": "Não foi possível gerar análise. Tente novamente.",
+            "gatilhos_principais": "",
+            "evolucao": "",
+            "recomendacoes": "",
+        }
+
+    return parsed
+
+
 #Endpoints
 
 @app.post("/api/complement-crisis")
@@ -311,6 +438,18 @@ async def complement_crisis(
         "transcript": transcript,
         "structured": structured,
     }
+
+
+@app.post("/api/analyze-insights")
+async def analyze_insights(body: AnalyzeInsightsRequest):
+    if not body.crises:
+        return {
+            "padroes": "Nenhum registro encontrado para análise.",
+            "gatilhos_principais": "",
+            "evolucao": "",
+            "recomendacoes": "Registre algumas crises primeiro para receber uma análise personalizada.",
+        }
+    return await analyze_insights_with_llm(body.crises)
 
 
 @app.get("/api/health")

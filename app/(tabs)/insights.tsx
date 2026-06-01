@@ -1,13 +1,14 @@
+import React from 'react';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
+import { Zap } from 'lucide-react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import Card from '@/components/Card';
 import ScreenBackground from '@/components/ScreenBackground';
 import { Colors } from '@/constants/Colors';
 import { InsightItem, useInsights } from '@/hooks/useInsights';
-import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
-import { Zap } from 'lucide-react-native';
-import React from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import { useQualitativeAnalysis } from '@/hooks/useQualitativeAnalysis';
 
 function BarList({ items, gradientColors }: { items: InsightItem[]; gradientColors: readonly [string, string, ...string[]] }) {
   if (items.length === 0) {
@@ -41,8 +42,16 @@ function BarList({ items, gradientColors }: { items: InsightItem[]; gradientColo
   );
 }
 
+const ANALYSIS_SECTIONS = [
+  { key: 'padroes' as const, label: 'Padrões identificados' },
+  { key: 'gatilhos_principais' as const, label: 'Gatilhos principais' },
+  { key: 'evolucao' as const, label: 'Evolução das crises' },
+  { key: 'recomendacoes' as const, label: 'Recomendações' },
+];
+
 export default function InsightsScreen() {
   const { data, loading, error } = useInsights();
+  const { analysis, loading: analysisLoading, error: analysisError, generate } = useQualitativeAnalysis();
 
   const crisesVal = data?.crisesPerMonth ?? 0;
   const intVal = data?.avgIntensity != null ? data.avgIntensity : '—';
@@ -266,6 +275,65 @@ export default function InsightsScreen() {
               )}
             </View>
 
+            {/* Qualitative Analysis */}
+            <Animated.View entering={FadeInUp.delay(750)} className="mt-16">
+              <Text className="text-xs text-muted font-epilogue-bold uppercase tracking-widest mb-4">
+                Análise qualitativa
+              </Text>
+              <Card>
+                {analysisLoading ? (
+                  <View className="items-center py-6">
+                    <ActivityIndicator size="small" color={Colors.accent} />
+                    <Text className="text-muted text-sm font-epilogue mt-3 text-center">
+                      A IA está analisando seus registros...
+                    </Text>
+                  </View>
+                ) : analysis ? (
+                  <View className="gap-5">
+                    {ANALYSIS_SECTIONS.map((section) => (
+                      <View key={section.key}>
+                        <Text className="text-[10px] text-muted uppercase tracking-widest font-epilogue-bold mb-2">
+                          {section.label}
+                        </Text>
+                        <Text className="text-soft text-sm font-epilogue" style={{ lineHeight: 22 }}>
+                          {analysis[section.key]}
+                        </Text>
+                      </View>
+                    ))}
+                    <TouchableOpacity
+                      onPress={generate}
+                      className="mt-2 items-center py-3 rounded-2xl"
+                      style={{ backgroundColor: Colors.cardDark }}
+                    >
+                      <Text className="text-muted text-xs font-epilogue-bold uppercase tracking-widest">
+                        Atualizar análise
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <View className="items-center py-4 gap-3">
+                    {analysisError ? (
+                      <Text className="text-muted text-sm font-epilogue text-center mb-2">
+                        {analysisError}
+                      </Text>
+                    ) : (
+                      <Text className="text-muted text-sm font-epilogue text-center">
+                        Gere uma análise qualitativa dos seus registros com IA.
+                      </Text>
+                    )}
+                    <TouchableOpacity
+                      onPress={generate}
+                      className="px-6 py-3 rounded-2xl"
+                      style={{ backgroundColor: Colors.accent }}
+                    >
+                      <Text className="text-white text-sm font-epilogue-bold">
+                        {analysisError ? 'Tentar novamente' : 'Gerar análise'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+              </Card>
+            </Animated.View>
           </>
         )}
       </ScrollView>

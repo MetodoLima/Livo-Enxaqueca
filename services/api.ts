@@ -77,6 +77,54 @@ export async function processText(text: string): Promise<MigraineRecord> {
   return response.json();
 }
 
+export interface CriseInsightRecord {
+  data: string;
+  intensidade?: number | null;
+  localizacao?: string | null;
+  lado?: string | null;
+  duracao_horas?: number | null;
+  sintomas: string[];
+  medicamentos: string[];
+  gatilhos: string[];
+  nivel_incapacidade?: string | null;
+  resumo?: string | null;
+}
+
+export interface QualitativeAnalysis {
+  padroes: string;
+  gatilhos_principais: string;
+  evolucao: string;
+  recomendacoes: string;
+}
+
+export async function analyzeInsights(crises: CriseInsightRecord[]): Promise<QualitativeAnalysis> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 300_000);
+
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/analyze-insights`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ crises }),
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+
+    if (!response.ok) {
+      const msg = await response.text().catch(() => String(response.status));
+      throw new Error(`Erro ao analisar insights: ${msg}`);
+    }
+
+    return response.json();
+  } catch (e) {
+    clearTimeout(timeoutId);
+    if (e instanceof Error && e.name === 'AbortError') {
+      throw new Error('Tempo esgotado. Verifique se o backend está rodando em localhost:8000.');
+    }
+    throw e;
+  }
+}
+
 export async function complementCrisis(
   preFilled: MigraineStructured,
   audioUri?: string | null,
