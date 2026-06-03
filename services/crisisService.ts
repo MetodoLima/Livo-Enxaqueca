@@ -45,11 +45,6 @@ export async function saveCrisisToSupabase(crisis: CrisisRecord): Promise<void> 
     .from('crise_enxaqueca')
     .insert({
       user_id: usuarioId,
-      intensidade_dor: crisis.intensity,
-      regiao_dor: crisis.location,
-      lado: crisis.side,
-      nivel_incapacidade: getNivelIncapacidade(crisis.intensity),
-      resumo: crisis.aiComplement?.aiResult?.structured?.resumo ?? null,
       inicio_crise: crisis.startTime.toISOString(),
       fim_crise: crisis.endTime?.toISOString() ?? null,
     })
@@ -59,14 +54,28 @@ export async function saveCrisisToSupabase(crisis: CrisisRecord): Promise<void> 
   if (criseError || !criseData) throw new Error(`Erro ao salvar crise: ${criseError?.message}`);
   const criseId = criseData.id;
 
+  const { data: registroData, error: registroError } = await supabase
+    .from('registro_crise')
+    .insert({
+      crise_id: criseId,
+      intensidade_dor: crisis.intensity,
+      regiao_dor: crisis.location,
+      lado: crisis.side,
+      nivel_incapacidade: getNivelIncapacidade(crisis.intensity),
+      resumo: crisis.aiComplement?.aiResult?.structured?.resumo ?? null,
+    })
+    .select('id')
+    .single();
+
+  if (registroError || !registroData) throw new Error(`Erro ao salvar registro: ${registroError?.message}`);
+  const registroId = registroData.id;
+
   for (const symptomId of crisis.symptoms) {
     const sintomaLabel = SYMPTOMS.find((s) => s.id === symptomId)?.label ?? symptomId;
-    console.log(sintomaLabel)
     const sintomaId = await upsertLookup('sintomas', sintomaLabel);
-    console.log(sintomaId)
     const { error } = await supabase
-      .from('sintoma_crise')
-      .insert({ crise_id: criseId, sintoma_id: sintomaId });
+      .from('sintoma_registro_crise')
+      .insert({ registro_crise_id: registroId, sintoma_id: sintomaId });
     if (error) throw new Error(`Erro ao salvar sintoma: ${error.message}`);
   }
 
@@ -78,16 +87,16 @@ export async function saveCrisisToSupabase(crisis: CrisisRecord): Promise<void> 
     const medLabel = MEDICATIONS.find((m) => m.id === med)?.label ?? med;
     const medId = await upsertLookup('medicamentos', medLabel);
     const { error } = await supabase
-      .from('medicamentos_crise')
-      .insert({ crise_id: criseId, medicamentos_id: medId });
+      .from('medicamentos_registro_crise')
+      .insert({ registro_crise_id: registroId, medicamentos_id: medId });
     if (error) throw new Error(`Erro ao salvar medicamento: ${error.message}`);
   }
 
   for (const trigger of crisis.triggers) {
     const fatorId = await upsertLookup('fatores_desencadeantes', trigger);
     const { error } = await supabase
-      .from('fatores_desencadeantes_crise')
-      .insert({ crise_id: criseId, fatores_desencadeantes_id: fatorId });
+      .from('fatores_desencadeantes_registro_crise')
+      .insert({ registro_crise_id: registroId, fatores_desencadeantes_id: fatorId });
     if (error) throw new Error(`Erro ao salvar fator desencadeante: ${error.message}`);
   }
 }

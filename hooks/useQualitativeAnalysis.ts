@@ -1,34 +1,38 @@
-import { useCallback, useState } from 'react';
 import { supabase } from '@/lib/supabase';
 import { analyzeInsights, CriseInsightRecord, QualitativeAnalysis } from '@/services/api';
+import { useCallback, useState } from 'react';
 
 function serializeCrises(rows: any[]): CriseInsightRecord[] {
-  return rows.map((c) => {
+  return rows.flatMap((c) => {
     const inicio = c.inicio_crise ? new Date(c.inicio_crise) : null;
     const fim = c.fim_crise ? new Date(c.fim_crise) : null;
     const duracao_horas =
       inicio && fim
         ? Math.round(((fim.getTime() - inicio.getTime()) / (1000 * 60 * 60)) * 10) / 10
         : null;
+    const data = inicio ? inicio.toISOString().split('T')[0] : 'data desconhecida';
 
-    return {
-      data: inicio ? inicio.toISOString().split('T')[0] : 'data desconhecida',
-      intensidade: c.intensidade_dor ?? null,
-      localizacao: c.regiao_dor ?? null,
-      lado: c.lado ?? null,
+    const registros: any[] = Array.isArray(c.registro_crise) ? c.registro_crise : [];
+    if (registros.length === 0) return [];
+
+    return registros.map((reg: any) => ({
+      data,
+      intensidade: reg.intensidade_dor ?? null,
+      localizacao: reg.regiao_dor ?? null,
+      lado: reg.lado ?? null,
       duracao_horas,
-      sintomas: (c.sintoma_crise ?? [])
+      sintomas: (reg.sintoma_registro_crise ?? [])
         .map((s: any) => s.sintomas?.nome)
         .filter(Boolean) as string[],
-      medicamentos: (c.medicamentos_crise ?? [])
+      medicamentos: (reg.medicamentos_registro_crise ?? [])
         .map((m: any) => m.medicamentos?.nome)
         .filter(Boolean) as string[],
-      gatilhos: (c.fatores_desencadeantes_crise ?? [])
+      gatilhos: (reg.fatores_desencadeantes_registro_crise ?? [])
         .map((f: any) => f.fatores_desencadeantes?.nome)
         .filter(Boolean) as string[],
-      nivel_incapacidade: c.nivel_incapacidade ?? null,
-      resumo: c.resumo ?? null,
-    };
+      nivel_incapacidade: reg.nivel_incapacidade ?? null,
+      resumo: reg.resumo ?? null,
+    }));
   });
 }
 
@@ -46,16 +50,18 @@ export function useQualitativeAnalysis() {
         .from('crise_enxaqueca')
         .select(`
           id,
-          intensidade_dor,
-          regiao_dor,
-          lado,
-          nivel_incapacidade,
-          resumo,
           inicio_crise,
           fim_crise,
-          sintoma_crise ( sintomas ( nome ) ),
-          medicamentos_crise ( medicamentos ( nome ) ),
-          fatores_desencadeantes_crise ( fatores_desencadeantes ( nome ) )
+          registro_crise (
+            intensidade_dor,
+            regiao_dor,
+            lado,
+            nivel_incapacidade,
+            resumo,
+            sintoma_registro_crise ( sintomas ( nome ) ),
+            medicamentos_registro_crise ( medicamentos ( nome ) ),
+            fatores_desencadeantes_registro_crise ( fatores_desencadeantes ( nome ) )
+          )
         `)
         .order('inicio_crise', { ascending: true });
 

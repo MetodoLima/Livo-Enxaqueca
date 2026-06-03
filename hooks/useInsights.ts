@@ -48,13 +48,15 @@ export function useInsights() {
         .from('crise_enxaqueca')
         .select(`
           id,
-          intensidade_dor,
-          regiao_dor,
           inicio_crise,
           fim_crise,
-          sintoma_crise ( sintomas ( nome ) ),
-          medicamentos_crise ( medicamentos ( nome ) ),
-          fatores_desencadeantes_crise ( fatores_desencadeantes ( nome ) )
+          registro_crise (
+            intensidade_dor,
+            regiao_dor,
+            sintoma_registro_crise ( sintomas ( nome ) ),
+            medicamentos_registro_crise ( medicamentos ( nome ) ),
+            fatores_desencadeantes_registro_crise ( fatores_desencadeantes ( nome ) )
+          )
         `)
         .order('inicio_crise', { ascending: true });
 
@@ -78,8 +80,13 @@ export function useInsights() {
         return;
       }
 
-      const intensities = crises
-        .map((c) => c.intensidade_dor)
+      // Todos os registros de todas as crises (uma crise pode ter vários registros)
+      const allRegistros = crises.flatMap((c) =>
+        Array.isArray(c.registro_crise) ? c.registro_crise : []
+      );
+
+      const intensities = allRegistros
+        .map((r: any) => r.intensidade_dor)
         .filter((v): v is number => v != null);
       const avgIntensity =
         intensities.length > 0
@@ -108,22 +115,24 @@ export function useInsights() {
       );
       const crisesPerMonth = Math.round((total / monthsDiff) * 10) / 10;
 
-      const allTriggers = crises.flatMap((c) =>
-        (c.fatores_desencadeantes_crise ?? [])
+      const allTriggers = allRegistros.flatMap((r: any) =>
+        (r.fatores_desencadeantes_registro_crise ?? [])
           .map((f: any) => f.fatores_desencadeantes?.nome)
           .filter(Boolean)
       );
-      const allSintomas = crises.flatMap((c) =>
-        (c.sintoma_crise ?? [])
+      const allSintomas = allRegistros.flatMap((r: any) =>
+        (r.sintoma_registro_crise ?? [])
           .map((s: any) => s.sintomas?.nome)
           .filter(Boolean)
       );
-      const allMedicamentos = crises.flatMap((c) =>
-        (c.medicamentos_crise ?? [])
+      const allMedicamentos = allRegistros.flatMap((r: any) =>
+        (r.medicamentos_registro_crise ?? [])
           .map((m: any) => m.medicamentos?.nome)
           .filter(Boolean)
       );
-      const allRegions = crises.map((c) => c.regiao_dor).filter(Boolean) as string[];
+      const allRegions = allRegistros
+        .map((r: any) => r.regiao_dor)
+        .filter(Boolean) as string[];
 
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
