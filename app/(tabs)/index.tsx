@@ -71,6 +71,10 @@ export default function HomeScreen() {
       mlAgua: aguaLocal > 0 ? aguaLocal : null,
       humor: selectedMood,
     });
+    setRelato('');
+    setSonoLocal(0);
+    setAguaLocal(0);
+    setSelectedMood(null);
   };
 
   const temAlgumDado =
@@ -106,7 +110,10 @@ export default function HomeScreen() {
           {/* ── Mood Selector ── */}
           <Animated.View entering={FadeInUp.delay(100)} style={{ marginBottom: 28 }}>
             <Text style={styles.sectionLabel}>Como você está hoje?</Text>
-            <MoodSelector selected={selectedMood} onSelect={setSelectedMood} />
+            <MoodSelector
+              selected={selectedMood}
+              onSelect={(mood) => setSelectedMood(mood === selectedMood ? null : mood)}
+            />
           </Animated.View>
 
           {/* ── Mascote + Registro (bloco conectado) ── */}
@@ -363,171 +370,93 @@ export default function HomeScreen() {
 
 const styles = StyleSheet.create({
   headerBtn: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
+    width: 44, height: 44, borderRadius: 22,
     backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.08)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)',
+    alignItems: 'center', justifyContent: 'center',
   },
   sectionLabel: {
-    fontSize: 20,
-    color: 'rgba(255, 255, 255, 0.95)',
-    fontFamily: 'Epilogue_600SemiBold',
-    textAlign: 'center',
-    marginTop: 24,
-    marginBottom: 20,
+    fontSize: 20, color: 'rgba(255, 255, 255, 0.95)',
+    fontFamily: 'Epilogue_600SemiBold', textAlign: 'center',
+    marginTop: 24, marginBottom: 20,
   },
   mascotContainer: {
-    width: '100%',
-    aspectRatio: 1.1,
-    borderRadius: 28,
-    borderBottomLeftRadius: 0,
-    borderBottomRightRadius: 0,
-    overflow: 'hidden',
-    backgroundColor: 'rgba(17, 47, 61, 0.9)',
-    borderWidth: 1,
-    borderBottomWidth: 0,
+    width: '100%', aspectRatio: 1.1, borderRadius: 28,
+    borderBottomLeftRadius: 0, borderBottomRightRadius: 0,
+    overflow: 'hidden', backgroundColor: 'rgba(17, 47, 61, 0.9)',
+    borderWidth: 1, borderBottomWidth: 0,
     borderColor: 'rgba(255, 255, 255, 0.12)',
   },
   mascotImageAbsolute: {
-    position: 'absolute',
-    top: 0, left: 0, right: 0, bottom: 0,
-    width: '100%', height: '100%',
-    opacity: 0.7,
+    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
+    width: '100%', height: '100%', opacity: 0.7,
   },
   mascotContent: {
-    flex: 1,
-    padding: 20,
-    paddingTop: 36,
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flex: 1, padding: 20, paddingTop: 36,
+    justifyContent: 'space-between', alignItems: 'center',
   },
   micButton: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+    width: 64, height: 64, borderRadius: 32,
     backgroundColor: 'rgba(37, 183, 187, 0.35)',
-    borderWidth: 1.5,
-    borderColor: 'rgba(37, 183, 187, 0.7)',
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderWidth: 1.5, borderColor: 'rgba(37, 183, 187, 0.7)',
+    alignItems: 'center', justifyContent: 'center',
   },
   inputContainer: {
-    width: '100%',
-    borderRadius: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 8,
-    paddingLeft: 16,
+    width: '100%', borderRadius: 20, flexDirection: 'row',
+    alignItems: 'center', padding: 8, paddingLeft: 16,
     backgroundColor: 'rgba(0, 0, 0, 0.35)',
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.06)',
+    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
   },
   rotinaCard: {
-    borderRadius: 28,
-    borderTopLeftRadius: 0,
-    borderTopRightRadius: 0,
-    overflow: 'hidden',
-    padding: 20,
-    paddingTop: 16,
-    borderWidth: 1.5,
-    borderTopWidth: 0,
+    borderRadius: 28, borderTopLeftRadius: 0, borderTopRightRadius: 0,
+    overflow: 'hidden', padding: 20, paddingTop: 16,
+    borderWidth: 1.5, borderTopWidth: 0,
     borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   dividerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    marginBottom: 20,
+    flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20,
   },
   dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    flex: 1, height: 1, backgroundColor: 'rgba(255, 255, 255, 0.1)',
   },
   dividerLabel: {
-    color: Colors.muted,
-    fontFamily: 'Epilogue_600SemiBold',
-    fontSize: 10,
-    letterSpacing: 1.5,
-    textTransform: 'uppercase',
+    color: Colors.muted, fontFamily: 'Epilogue_600SemiBold',
+    fontSize: 10, letterSpacing: 1.5, textTransform: 'uppercase',
   },
   sliderBlock: { marginBottom: 16 },
   sliderHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 4,
+    flexDirection: 'row', justifyContent: 'space-between',
+    alignItems: 'center', marginBottom: 4,
   },
-  sliderIconRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  sliderLabel: {
-    color: 'white',
-    fontFamily: 'Epilogue_600SemiBold',
-    fontSize: 14,
-  },
-  sliderValue: {
-    fontFamily: 'Epilogue_700Bold',
-    fontSize: 14,
-  },
+  sliderIconRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  sliderLabel: { color: 'white', fontFamily: 'Epilogue_600SemiBold', fontSize: 14 },
+  sliderValue: { fontFamily: 'Epilogue_700Bold', fontSize: 14 },
   sliderTicks: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingHorizontal: 4,
-    marginTop: -4,
+    flexDirection: 'row', justifyContent: 'space-between',
+    paddingHorizontal: 4, marginTop: -4,
   },
-  sliderTick: {
-    color: Colors.muted,
-    fontFamily: 'Epilogue_400Regular',
-    fontSize: 10,
-  },
+  sliderTick: { color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 10 },
   registrarBtn: {
-    marginTop: 8,
-    borderRadius: 16,
-    paddingVertical: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
+    marginTop: 8, borderRadius: 16, paddingVertical: 14,
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
   },
-  registrarBtnText: {
-    color: 'white',
-    fontFamily: 'Epilogue_700Bold',
-    fontSize: 15,
-  },
+  registrarBtnText: { color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 15 },
   widget: {
-    borderRadius: 28,
-    overflow: 'hidden',
-    marginBottom: 20,
-    borderWidth: 1.5,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
+    borderRadius: 28, overflow: 'hidden', marginBottom: 20,
+    borderWidth: 1.5, borderColor: 'rgba(255, 255, 255, 0.15)',
   },
   widgetContent: { padding: 24 },
-  widgetHeading: {
-    fontSize: 17,
-    color: '#FFFFFF',
-    fontFamily: 'Epilogue_700Bold',
-  },
+  widgetHeading: { fontSize: 17, color: '#FFFFFF', fontFamily: 'Epilogue_700Bold' },
   widgetSubtext: {
-    fontSize: 13,
-    color: Colors.muted,
-    fontFamily: 'Epilogue_400Regular',
-    marginTop: 3,
+    fontSize: 13, color: Colors.muted,
+    fontFamily: 'Epilogue_400Regular', marginTop: 3,
   },
   streakCircle: {
     width: 52, height: 52, borderRadius: 26,
     borderWidth: 3, borderColor: Colors.accent,
     alignItems: 'center', justifyContent: 'center',
   },
-  streakNumber: {
-    fontSize: 20, color: '#FFFFFF', fontFamily: 'Epilogue_700Bold',
-  },
+  streakNumber: { fontSize: 20, color: '#FFFFFF', fontFamily: 'Epilogue_700Bold' },
   accentButton: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
     backgroundColor: Colors.accent, paddingVertical: 14,
@@ -536,9 +465,7 @@ const styles = StyleSheet.create({
   accentButtonText: {
     color: '#FFFFFF', fontFamily: 'Epilogue_700Bold', fontSize: 15, marginLeft: 8,
   },
-  statsGridContainer: {
-    flexDirection: 'row', marginBottom: 20, width: '100%',
-  },
+  statsGridContainer: { flexDirection: 'row', marginBottom: 20, width: '100%' },
   statWidget: {
     flex: 1, aspectRatio: 1, borderRadius: 24,
     borderWidth: 1.5, borderColor: 'rgba(255, 255, 255, 0.15)', overflow: 'hidden',
