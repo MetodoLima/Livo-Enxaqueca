@@ -20,33 +20,47 @@ export interface CrisisByDay {
 
 const SELECT = `
   id,
-  intensidade_dor,
-  regiao_dor,
-  lado,
-  nivel_incapacidade,
-  resumo,
   inicio_crise,
   fim_crise,
-  sintoma_crise ( sintomas ( nome ) ),
-  medicamentos_crise ( medicamentos ( nome ) )
+  registro_crise (
+    id,
+    intensidade_dor,
+    regiao_dor,
+    lado,
+    nivel_incapacidade,
+    resumo,
+    sintoma_registro_crise ( sintomas ( nome ) ),
+    medicamentos_registro_crise ( medicamentos ( nome ) )
+  )
 `;
 
 function rowToCrisis(row: any): CrisisDay {
+  const registros: any[] = Array.isArray(row.registro_crise) ? row.registro_crise : [];
+  // Usa o último registro como snapshot principal (dados mais recentes)
+  const reg = registros.length > 0 ? registros[registros.length - 1] : null;
   return {
     id: row.id,
-    intensidadeDor: row.intensidade_dor ?? null,
-    regiaoDor: row.regiao_dor ?? null,
-    lado: row.lado ?? null,
-    nivelIncapacidade: row.nivel_incapacidade ?? null,
-    resumo: row.resumo ?? null,
+    intensidadeDor: reg?.intensidade_dor ?? null,
+    regiaoDor: reg?.regiao_dor ?? null,
+    lado: reg?.lado ?? null,
+    nivelIncapacidade: reg?.nivel_incapacidade ?? null,
+    resumo: reg?.resumo ?? null,
     inicioCrise: new Date(row.inicio_crise),
     fimCrise: row.fim_crise ? new Date(row.fim_crise) : null,
-    sintomas: (row.sintoma_crise ?? [])
-      .map((s: any) => s.sintomas?.nome)
-      .filter(Boolean),
-    medicamentos: (row.medicamentos_crise ?? [])
-      .map((m: any) => m.medicamentos?.nome)
-      .filter(Boolean),
+    sintomas: [
+      ...new Set(
+        registros.flatMap((r: any) =>
+          (r.sintoma_registro_crise ?? []).map((s: any) => s.sintomas?.nome).filter(Boolean)
+        )
+      ),
+    ],
+    medicamentos: [
+      ...new Set(
+        registros.flatMap((r: any) =>
+          (r.medicamentos_registro_crise ?? []).map((m: any) => m.medicamentos?.nome).filter(Boolean)
+        )
+      ),
+    ],
   };
 }
 
