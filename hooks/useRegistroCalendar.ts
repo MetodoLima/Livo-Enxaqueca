@@ -12,6 +12,24 @@ export interface RegistroCalendarDay {
   createdAt: string;
 }
 
+async function getUserId(): Promise<number | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data, error } = await supabase
+    .from('usuarios')
+    .select('id')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (error || !data) {
+    console.error('Erro ao buscar usuário:', error);
+    return null;
+  }
+
+  return data.id;
+}
+
 export function useRegistroCalendar(year: number, month: number) {
   const [registroByDay, setRegistroByDay] = useState<Record<number, RegistroCalendarDay[]>>({});
   const [loading, setLoading] = useState(false);
@@ -21,8 +39,8 @@ export function useRegistroCalendar(year: number, month: number) {
     setLoading(true);
     setError(null);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const userId = await getUserId();
+      if (!userId) return;
 
       const from = `${year}-${String(month + 1).padStart(2, '0')}-01`;
       const lastDay = new Date(year, month + 1, 0).getDate();
@@ -31,7 +49,7 @@ export function useRegistroCalendar(year: number, month: number) {
       const { data: rows, error: err } = await supabase
         .from('registro_diario')
         .select('id, data, relato, horas_sono, ml_agua, humor, created_at')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .gte('data', from)
         .lte('data', to)
         .order('created_at', { ascending: true });
