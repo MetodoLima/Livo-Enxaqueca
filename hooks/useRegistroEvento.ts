@@ -12,8 +12,6 @@ export interface RegistroEvento {
   humor: HumorId | null;
 }
 
-// Busca o id (bigint) do usuário na tabela public.usuarios
-// a partir do uuid do auth — segue o padrão do projeto
 async function getUserId(): Promise<number | null> {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
