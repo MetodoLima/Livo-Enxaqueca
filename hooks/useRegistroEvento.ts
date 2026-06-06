@@ -12,6 +12,26 @@ export interface RegistroEvento {
   humor: HumorId | null;
 }
 
+// Busca o id (bigint) do usuário na tabela public.usuarios
+// a partir do uuid do auth — segue o padrão do projeto
+async function getUserId(): Promise<number | null> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data, error } = await supabase
+    .from('usuarios')
+    .select('id')
+    .eq('user_id', user.id)
+    .maybeSingle();
+
+  if (error || !data) {
+    console.error('Erro ao buscar usuário:', error);
+    return null;
+  }
+
+  return data.id;
+}
+
 export function useRegistroEvento(data: string) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -20,11 +40,14 @@ export function useRegistroEvento(data: string) {
     setSaving(true);
     setSaved(false);
     try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      const userId = await getUserId();
+      if (!userId) {
+        console.error('Usuário não encontrado em public.usuarios');
+        return;
+      }
 
       const payload = {
-        user_id: user.id,
+        user_id: userId,
         data,
         relato: patch.relato,
         horas_sono: patch.horasSono,
@@ -36,7 +59,10 @@ export function useRegistroEvento(data: string) {
         .from('registro_diario')
         .insert(payload);
 
-      if (error) console.error('Supabase error:', error);
+      if (error) {
+        console.error('Supabase error:', error);
+        return;
+      }
 
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
