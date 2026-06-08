@@ -35,34 +35,16 @@ function getNivelIncapacidade(intensity: number | null): string | null {
   return 'severo';
 }
 
-export async function saveCrisisToSupabase(crisis: CrisisRecord): Promise<void> {
-  const { data: authData } = await supabase.auth.getUser();
-  if (!authData?.user) throw new Error('Usuário não autenticado.');
-
-  const usuarioId = await getUsuarioId(authData.user.id);
-
-  const { data: criseData, error: criseError } = await supabase
-    .from('crise_enxaqueca')
-    .insert({
-      user_id: usuarioId,
-      inicio_crise: crisis.startTime.toISOString(),
-      fim_crise: crisis.endTime?.toISOString() ?? null,
-    })
-    .select('id')
-    .single();
-
-  if (criseError || !criseData) throw new Error(`Erro ao salvar crise: ${criseError?.message}`);
-  const criseId = criseData.id;
-
+async function savePhaseToSupabase(criseId: number, phase: CrisisRecord): Promise<void> {
   const { data: registroData, error: registroError } = await supabase
     .from('registro_crise')
     .insert({
       crise_id: criseId,
-      intensidade_dor: crisis.intensity,
-      regiao_dor: crisis.location,
-      lado: crisis.side,
-      nivel_incapacidade: getNivelIncapacidade(crisis.intensity),
-      resumo: crisis.aiComplement?.aiResult?.structured?.resumo ?? null,
+      intensidade_dor: phase.intensity,
+      regiao_dor: phase.location,
+      lado: phase.side,
+      nivel_incapacidade: getNivelIncapacidade(phase.intensity),
+      resumo: phase.aiComplement?.aiResult?.structured?.resumo ?? null,
     })
     .select('id')
     .single();
@@ -70,7 +52,7 @@ export async function saveCrisisToSupabase(crisis: CrisisRecord): Promise<void> 
   if (registroError || !registroData) throw new Error(`Erro ao salvar registro: ${registroError?.message}`);
   const registroId = registroData.id;
 
-  for (const symptomId of crisis.symptoms) {
+  for (const symptomId of phase.symptoms) {
     const sintomaLabel = SYMPTOMS.find((s) => s.id === symptomId)?.label ?? symptomId;
     const sintomaId = await upsertLookup('sintomas', sintomaLabel);
     const { error } = await supabase
@@ -80,8 +62,8 @@ export async function saveCrisisToSupabase(crisis: CrisisRecord): Promise<void> 
   }
 
   const allMeds = [
-    ...crisis.medications.filter((m) => m !== 'nenhum'),
-    ...crisis.customMedications,
+    ...phase.medications.filter((m) => m !== 'nenhum'),
+    ...phase.customMedications,
   ];
   for (const med of allMeds) {
     const medLabel = MEDICATIONS.find((m) => m.id === med)?.label ?? med;
@@ -92,11 +74,42 @@ export async function saveCrisisToSupabase(crisis: CrisisRecord): Promise<void> 
     if (error) throw new Error(`Erro ao salvar medicamento: ${error.message}`);
   }
 
-  for (const trigger of crisis.triggers) {
+  for (const trigger of phase.triggers) {
     const fatorId = await upsertLookup('fatores_desencadeantes', trigger);
     const { error } = await supabase
       .from('fatores_desencadeantes_registro_crise')
       .insert({ registro_crise_id: registroId, fatores_desencadeantes_id: fatorId });
     if (error) throw new Error(`Erro ao salvar fator desencadeante: ${error.message}`);
+  }
+}
+
+export async function saveCrisisToSupabase(
+  crisis: CrisisRecord,
+  phases: CrisisRecord[] = [],
+): Promise<void> {
+  const { data: authData } = await supabase.auth.getUser();
+  if (!authData?.user) throw new Error('Usuário não autenticado.');
+
+  const usuarioId = await getUsuarioId(authData.user.id);
+
+  const allPhases = [...phases, crisis];
+  const startTime = allPhases[0].startTime;
+  const endTime = crisis.endTime;
+
+  const { data: criseData, error: criseError } = await supabase
+    .from('crise_enxaqueca')
+    .insert({
+      user_id: usuarioId,
+      inicio_crise: startTime.toISOString(),
+      fim_crise: endTime?.toISOString() ?? null,
+    })
+    .select('id')
+    .single();
+
+  if (criseError || !criseData) throw new Error(`Erro ao salvar crise: ${criseError?.message}`);
+  const criseId = criseData.id;
+
+  for (const phase of allPhases) {
+    await savePhaseToSupabase(criseId, phase);
   }
 }
