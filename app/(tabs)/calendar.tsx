@@ -64,7 +64,6 @@ function CrisisListItem({ crisis, index }: { crisis: CrisisDay; index: number })
   const duration = formatDuration(crisis.inicioCrise, crisis.fimCrise);
 
   const handlePress = () => {
-    // Serializa a crise como JSON na URL para evitar fetch duplicado na tela de detalhe
     router.push({
       pathname: '/crisis/[id]',
       params: {

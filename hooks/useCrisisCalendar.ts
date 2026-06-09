@@ -1,15 +1,24 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
 
-export interface CrisisDay {
+export interface CrisisPhase {
   id: number;
   intensidadeDor: number | null;
   regiaoDor: string | null;
   lado: string | null;
   nivelIncapacidade: string | null;
   resumo: string | null;
+  sintomas: string[];
+  medicamentos: string[];
+}
+
+export interface CrisisDay {
+  id: number;
   inicioCrise: Date;
   fimCrise: Date | null;
+  fases: CrisisPhase[];
+  // campos derivados da última fase para exibição rápida no calendário
+  intensidadeDor: number | null;
   sintomas: string[];
   medicamentos: string[];
 }
@@ -36,31 +45,35 @@ const SELECT = `
 
 function rowToCrisis(row: any): CrisisDay {
   const registros: any[] = Array.isArray(row.registro_crise) ? row.registro_crise : [];
-  // Usa o último registro como snapshot principal (dados mais recentes)
-  const reg = registros.length > 0 ? registros[registros.length - 1] : null;
+
+  const fases: CrisisPhase[] = registros.map((r: any) => ({
+    id: r.id,
+    intensidadeDor: r.intensidade_dor ?? null,
+    regiaoDor: r.regiao_dor ?? null,
+    lado: r.lado ?? null,
+    nivelIncapacidade: r.nivel_incapacidade ?? null,
+    resumo: r.resumo ?? null,
+    sintomas: (r.sintoma_registro_crise ?? [])
+      .map((s: any) => s.sintomas?.nome)
+      .filter(Boolean),
+    medicamentos: (r.medicamentos_registro_crise ?? [])
+      .map((m: any) => m.medicamentos?.nome)
+      .filter(Boolean),
+  }));
+
+  const maxIntensidadeFase = fases.reduce<CrisisPhase | null>(
+    (max, f) => (f.intensidadeDor !== null && (max === null || f.intensidadeDor > (max.intensidadeDor ?? 0)) ? f : max),
+    null
+  );
+
   return {
     id: row.id,
-    intensidadeDor: reg?.intensidade_dor ?? null,
-    regiaoDor: reg?.regiao_dor ?? null,
-    lado: reg?.lado ?? null,
-    nivelIncapacidade: reg?.nivel_incapacidade ?? null,
-    resumo: reg?.resumo ?? null,
     inicioCrise: new Date(row.inicio_crise),
     fimCrise: row.fim_crise ? new Date(row.fim_crise) : null,
-    sintomas: [
-      ...new Set(
-        registros.flatMap((r: any) =>
-          (r.sintoma_registro_crise ?? []).map((s: any) => s.sintomas?.nome).filter(Boolean)
-        )
-      ),
-    ],
-    medicamentos: [
-      ...new Set(
-        registros.flatMap((r: any) =>
-          (r.medicamentos_registro_crise ?? []).map((m: any) => m.medicamentos?.nome).filter(Boolean)
-        )
-      ),
-    ],
+    fases,
+    intensidadeDor: maxIntensidadeFase?.intensidadeDor ?? null,
+    sintomas: [...new Set(fases.flatMap((f) => f.sintomas))],
+    medicamentos: [...new Set(fases.flatMap((f) => f.medicamentos))],
   };
 }
 

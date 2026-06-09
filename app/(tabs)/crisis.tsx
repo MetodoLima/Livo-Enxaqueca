@@ -338,7 +338,10 @@ export default function CrisisDetailScreen() {
   const handleFinish = async () => {
     setFinishing(true);
     try {
-      await saveCrisisToSupabase(activeCrisis!, phases);
+      const crisisToSave = activeCrisis!.endTime
+        ? activeCrisis!
+        : { ...activeCrisis!, endTime: new Date() };
+      await saveCrisisToSupabase(crisisToSave, phases);
       clearCrisis();
       router.replace('/(tabs)' as any);
     } catch (e) {
