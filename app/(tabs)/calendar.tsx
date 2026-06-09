@@ -4,19 +4,26 @@ import {
   Text,
   ScrollView,
   TouchableOpacity,
-  SafeAreaView,
   ActivityIndicator,
   LayoutAnimation,
   Platform,
   UIManager,
 } from 'react-native';
-import { ChevronLeft, ChevronRight, AlertCircle, ChevronRight as ArrowRight } from 'lucide-react-native';
+import {
+  ChevronLeft,
+  ChevronRight,
+  AlertCircle,
+  ChevronRight as ArrowRight,
+  Moon,
+  Droplets,
+} from 'lucide-react-native';
 import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/Colors';
 import Card from '@/components/Card';
 import ScreenBackground from '@/components/ScreenBackground';
 import { useCrisisCalendar, CrisisDay } from '@/hooks/useCrisisCalendar';
+import { useRegistroCalendar, RegistroCalendarDay } from '@/hooks/useRegistroCalendar';
 import { INTENSITY_CONFIG } from '@/types/crisis';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -28,6 +35,15 @@ const MONTH_NAMES = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ];
+
+const HUMOR_LABEL: Record<string, string> = {
+  terrible: 'Péssimo', bad: 'Ruim', 'so-so': 'Regular', okay: 'Bem', great: 'Ótimo',
+};
+const HUMOR_EMOJI: Record<string, string> = {
+  terrible: '😣', bad: '😕', 'so-so': '😐', okay: '🙂', great: '😄',
+};
+
+type Tab = 'todos' | 'crises' | 'eventos';
 
 // ── Helpers ───────────────────────────────────────────────────────────
 
@@ -55,7 +71,18 @@ function formatDuration(start: Date, end: Date | null): string {
   return `${hours}h ${minutes}min`;
 }
 
-// ── CrisisListItem — botão compacto ───────────────────────────────────
+function formatSono(h: number): string {
+  const horas = Math.floor(h);
+  const min = h % 1 !== 0 ? '30min' : '';
+  return min ? `${horas}h ${min}` : `${horas}h`;
+}
+
+function formatAgua(ml: number): string {
+  if (ml >= 1000) return `${(ml / 1000).toFixed(1).replace('.0', '')}L`;
+  return `${ml}ml`;
+}
+
+// ── CrisisListItem ────────────────────────────────────────────────────
 
 function CrisisListItem({ crisis, index }: { crisis: CrisisDay; index: number }) {
   const router = useRouter();
@@ -63,68 +90,175 @@ function CrisisListItem({ crisis, index }: { crisis: CrisisDay; index: number })
   const label = getIntensityLabel(crisis.intensidadeDor);
   const duration = formatDuration(crisis.inicioCrise, crisis.fimCrise);
 
-  const handlePress = () => {
-    router.push({
-      pathname: '/crisis/[id]',
-      params: {
-        id: String(crisis.id),
-        data: JSON.stringify({
-          ...crisis,
-          inicioCrise: crisis.inicioCrise.toISOString(),
-          fimCrise: crisis.fimCrise ? crisis.fimCrise.toISOString() : null,
-        }),
-      },
-    });
-  };
-
   return (
     <Animated.View entering={FadeInDown.delay(index * 60).duration(250)}>
       <TouchableOpacity
-        onPress={handlePress}
+        onPress={() => router.push({
+          pathname: '/crisis/[id]',
+          params: {
+            id: String(crisis.id),
+            data: JSON.stringify({
+              ...crisis,
+              inicioCrise: crisis.inicioCrise.toISOString(),
+              fimCrise: crisis.fimCrise ? crisis.fimCrise.toISOString() : null,
+            }),
+          },
+        })}
         activeOpacity={0.7}
         style={{
-          flexDirection: 'row',
-          alignItems: 'center',
-          backgroundColor: '#112236',
-          borderRadius: 16,
-          marginBottom: 10,
-          padding: 16,
-          borderLeftWidth: 3,
-          borderLeftColor: color,
+          flexDirection: 'row', alignItems: 'center',
+          backgroundColor: '#112236', borderRadius: 16,
+          marginBottom: 10, padding: 16,
+          borderLeftWidth: 3, borderLeftColor: color,
         }}
       >
-        {/* Horário */}
         <View style={{ marginRight: 14 }}>
-          <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 11 }}>
-            INÍCIO
-          </Text>
+          <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 11 }}>INÍCIO</Text>
           <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 15, marginTop: 2 }}>
             {formatTime(crisis.inicioCrise)}
           </Text>
         </View>
-
-        {/* Divisor */}
         <View style={{ width: 1, height: 36, backgroundColor: '#1E3A52', marginRight: 14 }} />
-
-        {/* Info central */}
         <View style={{ flex: 1 }}>
           <Text style={{ color, fontFamily: 'Epilogue_700Bold', fontSize: 14 }}>
             {crisis.intensidadeDor !== null ? `${crisis.intensidadeDor}/10` : '—'}{' '}
-            <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 12 }}>
-              {label}
-            </Text>
+            <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 12 }}>{label}</Text>
           </Text>
           <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 12, marginTop: 3 }}>
             {duration}
             {crisis.sintomas.length > 0 && ` · ${crisis.sintomas.length} sintoma${crisis.sintomas.length > 1 ? 's' : ''}`}
           </Text>
         </View>
-
-        {/* Seta */}
         <ArrowRight size={16} color={Colors.muted} />
       </TouchableOpacity>
     </Animated.View>
   );
+}
+
+// ── RegistroListItem ──────────────────────────────────────────────────
+
+function RegistroListItem({ registro, index }: { registro: RegistroCalendarDay; index: number }) {
+  const router = useRouter();
+  const hora = new Date(registro.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+  return (
+    <Animated.View entering={FadeInDown.delay(index * 60).duration(250)}>
+      <TouchableOpacity
+        onPress={() => router.push({
+          pathname: '/eventos/[id]',
+          params: {
+            id: String(registro.id),
+            data: JSON.stringify(registro),
+          },
+        })}
+        activeOpacity={0.7}
+        style={{
+          flexDirection: 'row', alignItems: 'center',
+          backgroundColor: '#112236', borderRadius: 16,
+          marginBottom: 10, padding: 16,
+          borderLeftWidth: 3, borderLeftColor: Colors.accent,
+        }}
+      >
+        {/* Hora */}
+        <View style={{ marginRight: 14 }}>
+          <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 11 }}>HORA</Text>
+          <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 15, marginTop: 2 }}>
+            {hora}
+          </Text>
+        </View>
+
+        <View style={{ width: 1, height: 36, backgroundColor: '#1E3A52', marginRight: 14 }} />
+
+        {/* Conteúdo */}
+        <View style={{ flex: 1 }}>
+          {registro.humor ? (
+            <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 14 }}>
+              {HUMOR_EMOJI[registro.humor]}{' '}
+              <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 12 }}>
+                {HUMOR_LABEL[registro.humor]}
+              </Text>
+            </Text>
+          ) : (
+            <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 13 }}>
+              Sem humor registrado
+            </Text>
+          )}
+          <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 12, marginTop: 3 }}>
+            {[
+              registro.horasSono !== null && `${formatSono(registro.horasSono)} sono`,
+              registro.mlAgua !== null && `${formatAgua(registro.mlAgua)} água`,
+            ].filter(Boolean).join(' · ') || 'Sem dados de rotina'}
+          </Text>
+        </View>
+
+        <ArrowRight size={16} color={Colors.muted} />
+      </TouchableOpacity>
+    </Animated.View>
+  );
+}
+
+// ── TabBar ────────────────────────────────────────────────────────────
+
+function TabBar({ active, onChange, hasCrises, hasRegistro }: {
+  active: Tab;
+  onChange: (t: Tab) => void;
+  hasCrises: boolean;
+  hasRegistro: boolean;
+}) {
+  const tabs: { key: Tab; label: string }[] = [
+    { key: 'todos', label: 'Tudo' },
+    { key: 'crises', label: 'Crises' },
+    { key: 'eventos', label: 'Eventos' },
+  ];
+
+  return (
+    <View style={{
+      flexDirection: 'row', backgroundColor: '#0F1E2E',
+      borderRadius: 14, padding: 4, marginBottom: 16,
+    }}>
+      {tabs.map((tab) => {
+        const isActive = active === tab.key;
+        const hasData = tab.key === 'crises' ? hasCrises : tab.key === 'eventos' ? hasRegistro : hasCrises || hasRegistro;
+        return (
+          <TouchableOpacity
+            key={tab.key}
+            onPress={() => onChange(tab.key)}
+            style={{
+              flex: 1, paddingVertical: 8, borderRadius: 10,
+              alignItems: 'center', justifyContent: 'center',
+              backgroundColor: isActive ? Colors.accent : 'transparent',
+              flexDirection: 'row', gap: 6,
+            }}
+          >
+            <Text style={{
+              color: isActive ? 'white' : Colors.muted,
+              fontFamily: isActive ? 'Epilogue_700Bold' : 'Epilogue_400Regular',
+              fontSize: 13,
+            }}>
+              {tab.label}
+            </Text>
+            {hasData && !isActive && (
+              <View style={{
+                width: 6, height: 6, borderRadius: 3,
+                backgroundColor: tab.key === 'crises' ? '#EF4444' : Colors.accent,
+              }} />
+            )}
+          </TouchableOpacity>
+        );
+      })}
+    </View>
+  );
+}
+
+// ── TimelineEntry ─────────────────────────────────────────────────────
+
+type TimelineEntry =
+  | { type: 'crise'; time: Date; data: CrisisDay }
+  | { type: 'registro'; time: Date; data: RegistroCalendarDay };
+
+function TimelineItem({ entry, index }: { entry: TimelineEntry; index: number }) {
+  if (entry.type === 'crise') return <CrisisListItem crisis={entry.data} index={index} />;
+  return <RegistroListItem registro={entry.data} index={index} />;
 }
 
 // ── CalendarScreen ────────────────────────────────────────────────────
@@ -134,8 +268,13 @@ export default function CalendarScreen() {
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
+  const [activeTab, setActiveTab] = useState<Tab>('todos');
 
-  const { crisisByDay, loading, error } = useCrisisCalendar(year, month);
+  const { crisisByDay, loading: loadingCrises, error: errorCrises } = useCrisisCalendar(year, month);
+  const { registroByDay, loading: loadingRegistro, error: errorRegistro } = useRegistroCalendar(year, month);
+
+  const loading = loadingCrises || loadingRegistro;
+  const error = errorCrises || errorRegistro;
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstWeekday = new Date(year, month, 1).getDay();
@@ -157,16 +296,23 @@ export default function CalendarScreen() {
   const handleDayPress = useCallback((day: number) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setSelectedDay((prev) => (prev === day ? null : day));
+    setActiveTab('todos');
   }, []);
 
   const selectedCrises = selectedDay ? (crisisByDay[selectedDay] ?? []) : [];
+  const selectedRegistros = selectedDay ? (registroByDay[selectedDay] ?? []) : [];
+  const hasCrises = selectedCrises.length > 0;
+  const hasRegistro = selectedRegistros.length > 0;
+
+  const timeline: TimelineEntry[] = [];
+  selectedCrises.forEach((c) => timeline.push({ type: 'crise', time: c.inicioCrise, data: c }));
+  selectedRegistros.forEach((r) => timeline.push({ type: 'registro', time: new Date(r.createdAt), data: r }));
+  timeline.sort((a, b) => a.time.getTime() - b.time.getTime());
+
   const totalCrises = Object.values(crisisByDay).reduce((acc, arr) => acc + arr.length, 0);
   const criseDays = Object.keys(crisisByDay).length;
   const avgIntensity = (() => {
-    const all = Object.values(crisisByDay)
-      .flat()
-      .map((c) => c.intensidadeDor)
-      .filter((i): i is number => i !== null);
+    const all = Object.values(crisisByDay).flat().map((c) => c.intensidadeDor).filter((i): i is number => i !== null);
     if (all.length === 0) return null;
     return (all.reduce((a, b) => a + b, 0) / all.length).toFixed(1);
   })();
@@ -226,11 +372,12 @@ export default function CalendarScreen() {
                 ))}
 
                 {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
-                  const hasCrisis = !!crisisByDay[day]?.length;
+                  const hasCrisisDay = !!crisisByDay[day]?.length;
+                  const hasRegistroDay = !!registroByDay[day]?.length;
                   const crisisCount = crisisByDay[day]?.length ?? 0;
                   const isSelected = selectedDay === day;
                   const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
-                  const maxIntensity = hasCrisis
+                  const maxIntensity = hasCrisisDay
                     ? Math.max(...(crisisByDay[day] ?? []).map((c) => c.intensidadeDor ?? 0))
                     : null;
                   const crisisColor = maxIntensity !== null ? getIntensityColor(maxIntensity) : null;
@@ -240,15 +387,12 @@ export default function CalendarScreen() {
                       key={day}
                       onPress={() => handleDayPress(day)}
                       style={{
-                        width: 40,
-                        height: 40,
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        marginBottom: 4,
-                        borderRadius: 12,
+                        width: 40, height: 40,
+                        alignItems: 'center', justifyContent: 'center',
+                        marginBottom: 4, borderRadius: 12,
                         backgroundColor: isSelected
                           ? Colors.accent
-                          : hasCrisis
+                          : hasCrisisDay
                           ? `${crisisColor}25`
                           : 'transparent',
                         borderWidth: isToday && !isSelected ? 1.5 : 0,
@@ -256,14 +400,22 @@ export default function CalendarScreen() {
                       }}
                     >
                       <Text style={{
-                        color: isSelected ? 'white' : hasCrisis ? crisisColor ?? 'white' : 'white',
-                        fontFamily: isSelected || hasCrisis ? 'Epilogue_700Bold' : 'Epilogue_400Regular',
+                        color: isSelected ? 'white' : hasCrisisDay ? crisisColor ?? 'white' : 'white',
+                        fontFamily: isSelected || hasCrisisDay ? 'Epilogue_700Bold' : 'Epilogue_400Regular',
                         fontSize: 14,
                       }}>
                         {day}
                       </Text>
 
-                      {hasCrisis && !isSelected && crisisCount > 1 && (
+                      {hasCrisisDay && !isSelected && crisisCount === 1 && (
+                        <View style={{
+                          position: 'absolute', bottom: 3,
+                          width: 4, height: 4, borderRadius: 2,
+                          backgroundColor: crisisColor ?? Colors.accent,
+                        }} />
+                      )}
+
+                      {hasCrisisDay && !isSelected && crisisCount > 1 && (
                         <View style={{
                           position: 'absolute', top: 3, right: 3,
                           width: 14, height: 14, borderRadius: 7,
@@ -276,11 +428,11 @@ export default function CalendarScreen() {
                         </View>
                       )}
 
-                      {hasCrisis && !isSelected && crisisCount === 1 && (
+                      {hasRegistroDay && !isSelected && (
                         <View style={{
-                          position: 'absolute', bottom: 3,
-                          width: 4, height: 4, borderRadius: 2,
-                          backgroundColor: crisisColor ?? Colors.accent,
+                          position: 'absolute', bottom: 3, right: 3,
+                          width: 5, height: 5, borderRadius: 2,
+                          backgroundColor: Colors.accent, opacity: 0.8,
                         }} />
                       )}
                     </TouchableOpacity>
@@ -290,10 +442,14 @@ export default function CalendarScreen() {
             )}
 
             {/* Legenda */}
-            <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#1E3A52', flexDirection: 'row', gap: 16 }}>
+            <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#1E3A52', flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <View style={{ width: 10, height: 10, borderRadius: 3, backgroundColor: '#EF444430' }} />
-                <Text style={{ fontSize: 10, color: Colors.muted, fontFamily: 'Epilogue_400Regular' }}>Crise registrada</Text>
+                <Text style={{ fontSize: 10, color: Colors.muted, fontFamily: 'Epilogue_400Regular' }}>Crise</Text>
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: Colors.accent, opacity: 0.8 }} />
+                <Text style={{ fontSize: 10, color: Colors.muted, fontFamily: 'Epilogue_400Regular' }}>Registro</Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <View style={{ width: 10, height: 10, borderRadius: 3, borderWidth: 1.5, borderColor: Colors.accent }} />
@@ -333,55 +489,94 @@ export default function CalendarScreen() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 16, backgroundColor: '#EF444420', borderRadius: 16, marginBottom: 16 }}>
               <AlertCircle size={16} color="#EF4444" />
               <Text style={{ color: '#EF4444', fontFamily: 'Epilogue_400Regular', fontSize: 13 }}>
-                Erro ao carregar crises: {error}
+                Erro ao carregar dados: {error}
               </Text>
             </View>
           )}
 
-          {/* Lista de crises do dia selecionado */}
+          {/* Painel do dia selecionado */}
           {selectedDay !== null && (
             <Animated.View entering={FadeInUp.duration(250)}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
                 <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 18 }}>
                   {selectedDay} de {MONTH_NAMES[month]}
                 </Text>
-                {selectedCrises.length > 0 && (
-                  <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 13 }}>
-                    {selectedCrises.length} {selectedCrises.length === 1 ? 'crise' : 'crises'}
-                  </Text>
-                )}
+                <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 13 }}>
+                  {hasCrises && `${selectedCrises.length} crise${selectedCrises.length > 1 ? 's' : ''}`}
+                  {hasCrises && hasRegistro && ' · '}
+                  {hasRegistro && `${selectedRegistros.length} evento${selectedRegistros.length > 1 ? 's' : ''}`}
+                </Text>
               </View>
 
-              {selectedCrises.length === 0 ? (
+              {(hasCrises || hasRegistro) && (
+                <TabBar
+                  active={activeTab}
+                  onChange={setActiveTab}
+                  hasCrises={hasCrises}
+                  hasRegistro={hasRegistro}
+                />
+              )}
+
+              {!hasCrises && !hasRegistro ? (
                 <View style={{
                   padding: 32, borderWidth: 1.5, borderStyle: 'dashed',
                   borderColor: '#1E3A52', borderRadius: 20, alignItems: 'center',
                 }}>
                   <Text style={{ fontSize: 28, marginBottom: 8 }}>✨</Text>
                   <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 14, textAlign: 'center' }}>
-                    Nenhuma crise neste dia
+                    Nenhum dado neste dia
                   </Text>
                 </View>
-              ) : (
-                selectedCrises.map((crisis, i) => (
-                  <CrisisListItem key={crisis.id} crisis={crisis} index={i} />
+              ) : activeTab === 'todos' ? (
+                timeline.map((entry, i) => (
+                  <TimelineItem key={`${entry.type}-${i}`} entry={entry} index={i} />
                 ))
+              ) : activeTab === 'crises' ? (
+                hasCrises ? (
+                  selectedCrises.map((crisis, i) => (
+                    <CrisisListItem key={crisis.id} crisis={crisis} index={i} />
+                  ))
+                ) : (
+                  <View style={{
+                    padding: 24, borderWidth: 1.5, borderStyle: 'dashed',
+                    borderColor: '#1E3A52', borderRadius: 20, alignItems: 'center',
+                  }}>
+                    <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 14 }}>
+                      Nenhuma crise neste dia
+                    </Text>
+                  </View>
+                )
+              ) : (
+                hasRegistro ? (
+                  selectedRegistros.map((r, i) => (
+                    <RegistroListItem key={r.id} registro={r} index={i} />
+                  ))
+                ) : (
+                  <View style={{
+                    padding: 24, borderWidth: 1.5, borderStyle: 'dashed',
+                    borderColor: '#1E3A52', borderRadius: 20, alignItems: 'center',
+                  }}>
+                    <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 14 }}>
+                      Nenhum evento registrado neste dia
+                    </Text>
+                  </View>
+                )
               )}
             </Animated.View>
           )}
 
           {/* Estado vazio do mês */}
-          {!loading && !error && totalCrises === 0 && selectedDay === null && (
+          {!loading && !error && totalCrises === 0 && Object.keys(registroByDay).length === 0 && selectedDay === null && (
             <Animated.View entering={FadeInUp.duration(300)} style={{
               padding: 40, borderWidth: 1.5, borderStyle: 'dashed',
               borderColor: '#1E3A52', borderRadius: 24, alignItems: 'center',
             }}>
               <Text style={{ fontSize: 36, marginBottom: 12 }}>🌿</Text>
               <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 16, marginBottom: 4 }}>
-                Mês sem crises
+                Mês sem registros
               </Text>
               <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 13, textAlign: 'center' }}>
-                Nenhuma crise registrada em {MONTH_NAMES[month]}
+                Nenhuma crise ou evento em {MONTH_NAMES[month]}
               </Text>
             </Animated.View>
           )}
