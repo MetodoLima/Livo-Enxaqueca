@@ -1,5 +1,10 @@
 import Card from '@/components/Card';
-import { IntensityEditor, LocationEditor, SymptomsEditor } from '@/components/crisis/EditModals';
+import {
+  IntensityEditor,
+  LocationEditor,
+  MedicationsEditor,
+  SymptomsEditor,
+} from '@/components/crisis/EditModals';
 import { Colors } from '@/constants/Colors';
 import { useCrisis } from '@/contexts/CrisisContext';
 import { complementCrisis } from '@/services/api';
@@ -12,6 +17,7 @@ import {
   SYMPTOMS,
   crisisToMigraineStructured,
   mergeAiResultIntoCrisis,
+  type CrisisRecord,
 } from '@/types/crisis';
 import PulsingMic from '@/components/PulsingMic';
 import { audioAvailable, useAudioRecorder } from '@/hooks/useAudioRecorder';
@@ -22,17 +28,17 @@ import {
   ChevronRight,
   Clock,
   Mic,
+  Plus,
   Send,
-  Wind,
+  Trash2,
   X,
-  Zap
+  Zap,
 } from 'lucide-react-native';
-import React, { useState } from 'react';
+import React, { useCallback, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
   Image,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -44,11 +50,227 @@ import ScreenBackground from '@/components/ScreenBackground';
 import Animated, { FadeInUp, ZoomIn } from 'react-native-reanimated';
 
 
+// ── Past phase card (collapsible) ─────────────────────────────────────
+function PhaseCard({
+  phase,
+  index,
+  onDelete,
+}: {
+  phase: CrisisRecord;
+  index: number;
+  onDelete: () => void;
+}) {
+  const [expanded, setExpanded] = useState(false);
+
+  const confirmDelete = useCallback(() => {
+    Alert.alert(
+      'Remover fase?',
+      `A Fase ${index + 1} será removida do registro.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        { text: 'Remover', style: 'destructive', onPress: onDelete },
+      ],
+    );
+  }, [index, onDelete]);
+
+  const fmtTime = (d: Date) =>
+    d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+  const intensityConfig = phase.intensity !== null ? INTENSITY_CONFIG[phase.intensity] : null;
+  const locationData = LOCATIONS.find((l) => l.id === phase.location);
+  const sideData = SIDES.find((s) => s.id === phase.side);
+  const symptomNames = phase.symptoms
+    .map((id) => SYMPTOMS.find((s) => s.id === id))
+    .filter(Boolean);
+  const medicationNames = phase.medications
+    .map((id) => MEDICATIONS.find((m) => m.id === id))
+    .filter(Boolean);
+
+  const timeRange = `${fmtTime(phase.startTime)} – ${
+    phase.endTime ? fmtTime(phase.endTime) : 'Em andamento'
+  }`;
+
+  // Brief summary line shown even when collapsed
+  const collapsedDetail = [
+    locationData ? `${locationData.emoji} ${locationData.label}` : null,
+    sideData?.label,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
+  return (
+    <Card className="mb-3">
+      <TouchableOpacity
+        onPress={() => setExpanded((v) => !v)}
+        activeOpacity={0.7}
+        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+      >
+        <View style={{ flex: 1 }}>
+          <Text style={phaseStyles.label}>Fase {index + 1}</Text>
+          <Text style={phaseStyles.timeRange}>{timeRange}</Text>
+          {collapsedDetail ? (
+            <Text style={phaseStyles.collapsedDetail}>{collapsedDetail}</Text>
+          ) : null}
+        </View>
+        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginLeft: 12 }}>
+          {intensityConfig && (
+            <Text style={[phaseStyles.intensityBadge, { color: intensityConfig.color }]}>
+              {phase.intensity}/10
+            </Text>
+          )}
+          <ChevronDown
+            size={18}
+            color={Colors.muted}
+            style={{ transform: [{ rotate: expanded ? '180deg' : '0deg' }] }}
+          />
+        </View>
+      </TouchableOpacity>
+
+      {expanded && (
+        <View style={phaseStyles.body}>
+          {intensityConfig && (
+            <View style={phaseStyles.row}>
+              <Text style={phaseStyles.rowLabel}>Intensidade</Text>
+              <Text style={[phaseStyles.rowValue, { color: intensityConfig.color }]}>
+                {phase.intensity}/10 · {intensityConfig.label}
+              </Text>
+            </View>
+          )}
+          {(locationData || sideData) && (
+            <View style={{ flexDirection: 'row', gap: 32, marginBottom: 10 }}>
+              {locationData && (
+                <View>
+                  <Text style={phaseStyles.rowLabel}>Localização</Text>
+                  <Text style={phaseStyles.rowValue}>
+                    {locationData.emoji} {locationData.label}
+                  </Text>
+                </View>
+              )}
+              {sideData && (
+                <View>
+                  <Text style={phaseStyles.rowLabel}>Lado</Text>
+                  <Text style={phaseStyles.rowValue}>{sideData.label}</Text>
+                </View>
+              )}
+            </View>
+          )}
+          {symptomNames.length > 0 && (
+            <View style={{ marginBottom: 10 }}>
+              <Text style={[phaseStyles.rowLabel, { marginBottom: 6 }]}>Sintomas</Text>
+              <View style={styles.tagRow}>
+                {symptomNames.map(
+                  (s) =>
+                    s && (
+                      <View key={s.id} style={styles.tag}>
+                        <Text style={styles.tagEmoji}>{s.emoji}</Text>
+                        <Text style={styles.tagText}>{s.label}</Text>
+                      </View>
+                    ),
+                )}
+              </View>
+            </View>
+          )}
+          {(medicationNames.length > 0 || phase.customMedications.length > 0) && (
+            <View style={{ marginBottom: 14 }}>
+              <Text style={[phaseStyles.rowLabel, { marginBottom: 6 }]}>Medicamentos</Text>
+              <View style={styles.tagRow}>
+                {medicationNames.map(
+                  (m) =>
+                    m && (
+                      <View key={m.id} style={[styles.tag, { backgroundColor: `${Colors.accent}15` }]}>
+                        <Text style={styles.tagEmoji}>{m.emoji}</Text>
+                        <Text style={[styles.tagText, { color: Colors.accent }]}>{m.label}</Text>
+                      </View>
+                    ),
+                )}
+                {phase.customMedications.map((name) => (
+                  <View key={name} style={[styles.tag, { backgroundColor: `${Colors.accent}15` }]}>
+                    <Text style={styles.tagEmoji}>💊</Text>
+                    <Text style={[styles.tagText, { color: Colors.accent }]}>{name}</Text>
+                  </View>
+                ))}
+              </View>
+            </View>
+          )}
+
+          {/* Delete phase */}
+          <TouchableOpacity onPress={confirmDelete} style={phaseStyles.deleteBtn}>
+            <Trash2 size={14} color="#EF4444" />
+            <Text style={phaseStyles.deleteBtnText}>Remover esta fase</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+    </Card>
+  );
+}
+
+const phaseStyles = StyleSheet.create({
+  label: {
+    fontSize: 10,
+    fontFamily: 'Epilogue_700Bold',
+    color: Colors.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+    marginBottom: 2,
+  },
+  timeRange: {
+    fontSize: 15,
+    fontFamily: 'Epilogue_600SemiBold',
+    color: 'white',
+  },
+  collapsedDetail: {
+    fontSize: 12,
+    fontFamily: 'Epilogue_400Regular',
+    color: Colors.muted,
+    marginTop: 3,
+  },
+  intensityBadge: {
+    fontSize: 13,
+    fontFamily: 'Epilogue_700Bold',
+  },
+  body: {
+    marginTop: 14,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.06)',
+    paddingTop: 14,
+  },
+  row: {
+    marginBottom: 10,
+  },
+  rowLabel: {
+    fontSize: 10,
+    fontFamily: 'Epilogue_700Bold',
+    color: Colors.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+  },
+  rowValue: {
+    fontSize: 14,
+    fontFamily: 'Epilogue_600SemiBold',
+    color: 'white',
+    marginTop: 2,
+  },
+  deleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    alignSelf: 'flex-start',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 10,
+    backgroundColor: 'rgba(239,68,68,0.08)',
+  },
+  deleteBtnText: {
+    fontSize: 12,
+    fontFamily: 'Epilogue_600SemiBold',
+    color: '#EF4444',
+  },
+});
+
+
 // ── Empty state ───────────────────────────────────────────────────────
 function EmptyState() {
   const router = useRouter();
-
-  // Calculate days since last crisis (placeholder: 3 days)
   const daysSinceLastCrisis = 3;
 
   return (
@@ -97,14 +319,14 @@ function EmptyState() {
 
 // ── Main screen ───────────────────────────────────────────────────────
 export default function CrisisDetailScreen() {
-  const { activeCrisis, updateActiveCrisis, clearCrisis, hasActiveCrisis } = useCrisis();
+  const { activeCrisis, phases, updateActiveCrisis, addPhase, removePhase, clearCrisis, hasActiveCrisis } = useCrisis();
   const router = useRouter();
 
-  // Edit modal state
-  const [editingField, setEditingField] = useState<'intensity' | 'location' | 'symptoms' | null>(null);
+  const [editingField, setEditingField] = useState<
+    'intensity' | 'location' | 'symptoms' | 'medications' | null
+  >(null);
   const [finishing, setFinishing] = useState(false);
 
-  // Voice / text complement state
   const [showVoice, setShowVoice] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [text, setText] = useState('');
@@ -112,21 +334,23 @@ export default function CrisisDetailScreen() {
 
   const { isRecording, recordSecs, error: micError, startRecording, stopRecording } = useAudioRecorder();
 
-  // ── Handle finalize ─────────────────────────────────────────────────
+  // ── Finalize ────────────────────────────────────────────────────────
   const handleFinish = async () => {
     setFinishing(true);
     try {
-      await saveCrisisToSupabase(activeCrisis!);
+      const crisisToSave = activeCrisis!.endTime
+        ? activeCrisis!
+        : { ...activeCrisis!, endTime: new Date() };
+      await saveCrisisToSupabase(crisisToSave, phases);
       clearCrisis();
       router.replace('/(tabs)' as any);
     } catch (e) {
       setFinishing(false);
-      const msg = e instanceof Error ? e.message : String(e);
-      Alert.alert('Erro ao salvar', msg);
+      Alert.alert('Erro ao salvar', e instanceof Error ? e.message : String(e));
     }
   };
 
-  // ── Success animation ───────────────────────────────────────────────
+  // ── Success screen ──────────────────────────────────────────────────
   if (finishing) {
     return (
       <View style={styles.successContainer}>
@@ -211,6 +435,8 @@ export default function CrisisDetailScreen() {
     return `${Math.floor(mins / 60)}h ${mins % 60}m`;
   };
 
+  const currentPhaseNumber = phases.length + 1;
+
   return (
     <ScreenBackground>
       <ScrollView
@@ -221,15 +447,26 @@ export default function CrisisDetailScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Resumo da crise</Text>
-          <TouchableOpacity
-            onPress={handleFinish}
-            style={styles.finishBtn}
-          >
+          <TouchableOpacity onPress={handleFinish} style={styles.finishBtn}>
             <Text style={styles.finishBtnText}>Finalizar</Text>
           </TouchableOpacity>
         </View>
 
-        {/* ── Time + Duration card ── */}
+        {/* ── Past phases ── */}
+        {phases.length > 0 && (
+          <Animated.View entering={FadeInUp.delay(50)}>
+            {phases.map((phase, i) => (
+              <PhaseCard key={i} phase={phase} index={i} onDelete={() => removePhase(i)} />
+            ))}
+            <View style={styles.phaseDivider}>
+              <View style={styles.phaseDividerLine} />
+              <Text style={styles.phaseDividerLabel}>Fase {currentPhaseNumber}</Text>
+              <View style={styles.phaseDividerLine} />
+            </View>
+          </Animated.View>
+        )}
+
+        {/* ── Time + Duration ── */}
         <Animated.View entering={FadeInUp.delay(100)}>
           <Card className="mb-4">
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -239,10 +476,7 @@ export default function CrisisDetailScreen() {
               </View>
               <View style={{ alignItems: 'flex-end' }}>
                 <Text style={styles.cardLabel}>Duração</Text>
-                <Text style={[
-                  styles.cardValue,
-                  { color: crisis.endTime ? Colors.accent : Colors.orange },
-                ]}>
+                <Text style={[styles.cardValue, { color: crisis.endTime ? Colors.accent : Colors.orange }]}>
                   {getDuration()}
                 </Text>
               </View>
@@ -292,11 +526,11 @@ export default function CrisisDetailScreen() {
               {locationData ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
                   <Text style={{ fontSize: 22 }}>{locationData.emoji}</Text>
-                  <Text style={[styles.smallValue]}>{locationData.label}</Text>
+                  <Text style={styles.smallValue}>{locationData.label}</Text>
                 </View>
               ) : (
-                <View style={styles.addBtn}>
-                  <Text style={styles.addBtnText}>Editar</Text>
+                <View style={styles.editHint}>
+                  <Text style={styles.editHintText}>Editar</Text>
                 </View>
               )}
             </Card>
@@ -305,8 +539,8 @@ export default function CrisisDetailScreen() {
               {sideData ? (
                 <Text style={[styles.smallValue, { marginTop: 6 }]}>{sideData.label}</Text>
               ) : (
-                <View style={styles.addBtn}>
-                  <Text style={styles.addBtnText}>Editar</Text>
+                <View style={styles.editHint}>
+                  <Text style={styles.editHintText}>Editar</Text>
                 </View>
               )}
             </Card>
@@ -330,8 +564,8 @@ export default function CrisisDetailScreen() {
                 ))}
               </View>
             ) : (
-              <View style={styles.addBtn}>
-                <Text style={styles.addBtnText}>Editar</Text>
+              <View style={styles.editHint}>
+                <Text style={styles.editHintText}>Editar</Text>
               </View>
             )}
           </Card>
@@ -339,8 +573,11 @@ export default function CrisisDetailScreen() {
 
         {/* ── Medications ── */}
         <Animated.View entering={FadeInUp.delay(450)}>
-          <Card className="mb-4">
-            <Text style={[styles.cardLabel, { marginBottom: 10 }]}>Medicamentos</Text>
+          <Card className="mb-4" onPress={() => setEditingField('medications')}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+              <Text style={[styles.cardLabel, { marginBottom: 10 }]}>Medicamentos</Text>
+              <ChevronRight size={16} color={Colors.muted} style={{ marginBottom: 6 }} />
+            </View>
             {(medicationNames.length > 0 || crisis.customMedications.length > 0) ? (
               <View style={styles.tagRow}>
                 {medicationNames.map((m) => m && (
@@ -357,11 +594,29 @@ export default function CrisisDetailScreen() {
                 ))}
               </View>
             ) : (
-              <Text style={{ fontSize: 13, fontFamily: 'Epilogue_400Regular', color: Colors.muted }}>
-                Nenhum registrado
-              </Text>
+              <View style={styles.editHint}>
+                <Text style={styles.editHintText}>Editar</Text>
+              </View>
             )}
           </Card>
+        </Animated.View>
+
+        {/* ── Add new phase ── */}
+        <Animated.View entering={FadeInUp.delay(500)}>
+          <TouchableOpacity onPress={addPhase} style={styles.addPhaseBtn} activeOpacity={0.75}>
+            <View style={styles.addPhaseIconCircle}>
+              <Plus size={18} color={Colors.purple} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.addPhaseTitle}>Registrar nova fase</Text>
+              <Text style={styles.addPhaseSub}>
+                {phases.length === 0
+                  ? 'A dor mudou? Salve este momento e atualize'
+                  : `Fase ${currentPhaseNumber} em andamento · toque para registrar outra`}
+              </Text>
+            </View>
+            <ChevronRight size={18} color={`${Colors.purple}60`} />
+          </TouchableOpacity>
         </Animated.View>
 
         {/* ── AI summary ── */}
@@ -370,7 +625,7 @@ export default function CrisisDetailScreen() {
           const gatilhos = crisis.triggers;
           if (!structured?.resumo && gatilhos.length === 0) return null;
           return (
-            <Animated.View entering={FadeInUp.delay(500)}>
+            <Animated.View entering={FadeInUp.delay(560)}>
               <Card className="mb-4" variant="accent-border">
                 <Text style={styles.cardLabel}>Análise da IA</Text>
                 {structured?.resumo && (
@@ -378,17 +633,17 @@ export default function CrisisDetailScreen() {
                 )}
                 {gatilhos.length > 0 && (
                   <View style={{ marginTop: structured?.resumo ? 14 : 4 }}>
-                    <Text style={[styles.cardLabel, { marginBottom: 8 }]}>
-                      Possíveis gatilhos
-                    </Text>
+                    <Text style={[styles.cardLabel, { marginBottom: 8 }]}>Possíveis gatilhos</Text>
                     {gatilhos.map((g, i) => (
                       <View key={i} style={styles.gatilhoRow}>
                         <Zap size={13} color={Colors.orange} style={{ marginRight: 6 }} />
                         <Text style={styles.gatilhoText}>{g}</Text>
                         <TouchableOpacity
-                          onPress={() => updateActiveCrisis({
-                            triggers: crisis.triggers.filter((_, idx) => idx !== i),
-                          })}
+                          onPress={() =>
+                            updateActiveCrisis({
+                              triggers: crisis.triggers.filter((_, idx) => idx !== i),
+                            })
+                          }
                           hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                         >
                           <X size={14} color={Colors.muted} />
@@ -402,13 +657,10 @@ export default function CrisisDetailScreen() {
           );
         })()}
 
-        {/* ── Voice complement section ── */}
-        <Animated.View entering={FadeInUp.delay(600)}>
+        {/* ── Voice complement ── */}
+        <Animated.View entering={FadeInUp.delay(620)}>
           {!showVoice ? (
-            <TouchableOpacity
-              onPress={() => setShowVoice(true)}
-              style={styles.voiceEntryBtn}
-            >
+            <TouchableOpacity onPress={() => setShowVoice(true)} style={styles.voiceEntryBtn}>
               <Mic size={22} color={Colors.accent} />
               <View style={{ flex: 1, marginLeft: 12 }}>
                 <Text style={styles.voiceEntryTitle}>Adicionar mais detalhes</Text>
@@ -418,7 +670,6 @@ export default function CrisisDetailScreen() {
             </TouchableOpacity>
           ) : (
             <Card className="mb-4">
-              {/* Close voice panel */}
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
                 <Text style={[styles.cardLabel, { marginBottom: 0 }]}>Complementar registro</Text>
                 <TouchableOpacity onPress={() => { setShowVoice(false); if (isRecording) stopRecording(); }}>
@@ -433,7 +684,6 @@ export default function CrisisDetailScreen() {
                 </View>
               ) : (
                 <>
-                  {/* Mic */}
                   {audioAvailable && (
                     <View style={{ alignItems: 'center', marginBottom: 20 }}>
                       {isRecording ? (
@@ -449,7 +699,6 @@ export default function CrisisDetailScreen() {
                     </View>
                   )}
 
-                  {/* Text fallback */}
                   <TextInput
                     value={text}
                     onChangeText={setText}
@@ -460,7 +709,9 @@ export default function CrisisDetailScreen() {
                     editable={!isRecording}
                   />
 
-                  {(error || micError) && <Text style={styles.errorText}>{error || micError}</Text>}
+                  {(error || micError) && (
+                    <Text style={styles.errorText}>{error || micError}</Text>
+                  )}
 
                   {text.trim().length > 0 && !isRecording && (
                     <TouchableOpacity onPress={submitText} style={styles.sendBtn}>
@@ -495,6 +746,13 @@ export default function CrisisDetailScreen() {
         symptoms={crisis.symptoms}
         onChange={(symptoms) => updateActiveCrisis({ symptoms })}
       />
+      <MedicationsEditor
+        visible={editingField === 'medications'}
+        onClose={() => setEditingField(null)}
+        medications={crisis.medications}
+        customMedications={crisis.customMedications}
+        onChange={updateActiveCrisis}
+      />
     </ScreenBackground>
   );
 }
@@ -524,6 +782,27 @@ const styles = StyleSheet.create({
     color: Colors.accent,
   },
 
+  // Phase divider
+  phaseDivider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 16,
+    marginTop: 4,
+    gap: 10,
+  },
+  phaseDividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.07)',
+  },
+  phaseDividerLabel: {
+    fontSize: 10,
+    fontFamily: 'Epilogue_700Bold',
+    color: Colors.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+  },
+
   // Cards
   cardLabel: {
     fontSize: 11,
@@ -551,6 +830,21 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
+  // Edit hint (replaces generic "Editar" button look)
+  editHint: {
+    marginTop: 8,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.05)',
+    alignSelf: 'flex-start',
+  },
+  editHintText: {
+    fontSize: 13,
+    fontFamily: 'Epilogue_600SemiBold',
+    color: Colors.accent,
+  },
+
   // Tags
   tagRow: {
     flexDirection: 'row',
@@ -575,21 +869,6 @@ const styles = StyleSheet.create({
     color: Colors.purple,
   },
 
-  // Add button
-  addBtn: {
-    marginTop: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    alignSelf: 'flex-start',
-  },
-  addBtnText: {
-    fontSize: 13,
-    fontFamily: 'Epilogue_600SemiBold',
-    color: Colors.accent,
-  },
-
   // End crisis
   endCrisisBtn: {
     flexDirection: 'row',
@@ -606,6 +885,38 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontFamily: 'Epilogue_600SemiBold',
     color: Colors.orange,
+  },
+
+  // Add new phase
+  addPhaseBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 14,
+    padding: 18,
+    borderRadius: 18,
+    backgroundColor: `${Colors.purple}12`,
+    borderWidth: 1.5,
+    borderColor: `${Colors.purple}35`,
+    marginBottom: 16,
+  },
+  addPhaseIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: `${Colors.purple}22`,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addPhaseTitle: {
+    fontSize: 15,
+    fontFamily: 'Epilogue_700Bold',
+    color: 'white',
+  },
+  addPhaseSub: {
+    fontSize: 12,
+    fontFamily: 'Epilogue_400Regular',
+    color: Colors.muted,
+    marginTop: 2,
   },
 
   // AI
@@ -638,6 +949,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(139,163,167,0.12)',
     borderStyle: 'dashed',
+    marginBottom: 12,
   },
   voiceEntryTitle: {
     fontSize: 15,

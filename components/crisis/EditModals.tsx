@@ -1,14 +1,16 @@
-import React from 'react';
-import { View, Text, TouchableOpacity, Modal, ScrollView, StyleSheet } from 'react-native';
-import { X } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Modal, ScrollView, StyleSheet, TextInput } from 'react-native';
+import { Plus, X } from 'lucide-react-native';
 import { Colors } from '@/constants/Colors';
 import {
   INTENSITY_CONFIG,
   LOCATIONS,
+  MEDICATIONS,
   SIDES,
   SYMPTOMS,
   type CrisisRecord,
   type LocationId,
+  type MedicationId,
   type SideId,
   type SymptomId,
 } from '@/types/crisis';
@@ -170,6 +172,128 @@ export function SymptomsEditor({
   );
 }
 
+// ── Medications Editor ────────────────────────────────────────────────
+export function MedicationsEditor({
+  visible, onClose, medications, customMedications, onChange,
+}: {
+  visible: boolean; onClose: () => void;
+  medications: MedicationId[];
+  customMedications: string[];
+  onChange: (patch: Partial<CrisisRecord>) => void;
+}) {
+  const [customText, setCustomText] = useState('');
+
+  const toggleMedication = (id: MedicationId) => {
+    if (id === 'nenhum') {
+      onChange(
+        medications.includes('nenhum')
+          ? { medications: [] }
+          : { medications: ['nenhum'], customMedications: [] },
+      );
+      return;
+    }
+    const withoutNenhum = medications.filter((m) => m !== 'nenhum');
+    const next = withoutNenhum.includes(id)
+      ? withoutNenhum.filter((m) => m !== id)
+      : [...withoutNenhum, id];
+    onChange({ medications: next });
+  };
+
+  const addCustom = () => {
+    const trimmed = customText.trim();
+    if (!trimmed || customMedications.includes(trimmed)) return;
+    const medsWithoutNenhum = medications.filter((m) => m !== 'nenhum');
+    onChange({
+      medications: medsWithoutNenhum,
+      customMedications: [...customMedications, trimmed],
+    });
+    setCustomText('');
+  };
+
+  const removeCustom = (name: string) => {
+    onChange({ customMedications: customMedications.filter((m) => m !== name) });
+  };
+
+  const regularMeds = MEDICATIONS.filter((m) => m.id !== 'nenhum');
+  const nenhumMed = MEDICATIONS.find((m) => m.id === 'nenhum')!;
+
+  return (
+    <EditModal visible={visible} onClose={onClose} title="Medicamentos">
+      <View style={es.grid}>
+        {regularMeds.map((med) => {
+          const active = medications.includes(med.id);
+          return (
+            <TouchableOpacity
+              key={med.id}
+              onPress={() => toggleMedication(med.id)}
+              style={[es.gridItem, active && es.gridItemActive]}
+            >
+              <Text style={{ fontSize: 24 }}>{med.emoji}</Text>
+              <Text style={[es.gridLabel, active && { color: Colors.accent }]}>{med.label}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
+
+      {/* Custom medication input */}
+      <View style={{ marginTop: 16, marginBottom: 10 }}>
+        <Text style={mes.sectionLabel}>Outro remédio</Text>
+        <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
+          <TextInput
+            value={customText}
+            onChangeText={setCustomText}
+            placeholder="Ex: Cefaliv, Dorflex..."
+            placeholderTextColor="#4A6A82"
+            style={mes.customInput}
+            onSubmitEditing={addCustom}
+            returnKeyType="done"
+          />
+          <TouchableOpacity
+            onPress={addCustom}
+            style={[mes.addBtn, !customText.trim() && mes.addBtnDisabled]}
+            disabled={!customText.trim()}
+          >
+            <Plus size={20} color={customText.trim() ? 'white' : '#3A5A72'} />
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Custom medication tags */}
+      {customMedications.length > 0 && (
+        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
+          {customMedications.map((name) => (
+            <View key={name} style={mes.customTag}>
+              <Text style={{ fontSize: 14 }}>💊</Text>
+              <Text style={mes.customTagText}>{name}</Text>
+              <TouchableOpacity
+                onPress={() => removeCustom(name)}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+              >
+                <X size={14} color={Colors.accent} />
+              </TouchableOpacity>
+            </View>
+          ))}
+        </View>
+      )}
+
+      {/* Nenhum option */}
+      <TouchableOpacity
+        onPress={() => toggleMedication('nenhum')}
+        style={[mes.nenhumBtn, medications.includes('nenhum') && mes.nenhumBtnActive]}
+      >
+        <Text style={{ fontSize: 20 }}>{nenhumMed.emoji}</Text>
+        <Text style={[mes.nenhumLabel, medications.includes('nenhum') && { color: 'white' }]}>
+          Não tomei nenhum remédio
+        </Text>
+      </TouchableOpacity>
+
+      <TouchableOpacity onPress={onClose} style={es.doneBtn}>
+        <Text style={es.doneBtnText}>Confirmar</Text>
+      </TouchableOpacity>
+    </EditModal>
+  );
+}
+
 const es = StyleSheet.create({
   // Intensity rows
   row: { flexDirection: 'row', alignItems: 'center', height: 42, borderRadius: 8 },
@@ -202,4 +326,75 @@ const es = StyleSheet.create({
     paddingVertical: 16, borderRadius: 14, alignItems: 'center',
   },
   doneBtnText: { fontSize: 16, fontFamily: 'Epilogue_700Bold', color: 'white' },
+});
+
+const mes = StyleSheet.create({
+  sectionLabel: {
+    fontSize: 11,
+    fontFamily: 'Epilogue_700Bold',
+    color: Colors.muted,
+    textTransform: 'uppercase',
+    letterSpacing: 1.5,
+  },
+  customInput: {
+    flex: 1,
+    backgroundColor: '#112236',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#1E3A52',
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    fontSize: 15,
+    fontFamily: 'Epilogue_400Regular',
+    color: 'white',
+  },
+  addBtn: {
+    width: 50,
+    borderRadius: 14,
+    backgroundColor: Colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  addBtnDisabled: {
+    backgroundColor: '#1E3A52',
+  },
+  customTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 14,
+    backgroundColor: `${Colors.accent}15`,
+    borderWidth: 1.5,
+    borderColor: Colors.accent,
+  },
+  customTagText: {
+    fontSize: 14,
+    fontFamily: 'Epilogue_600SemiBold',
+    color: Colors.accent,
+  },
+  nenhumBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    paddingHorizontal: 18,
+    paddingVertical: 16,
+    borderRadius: 16,
+    backgroundColor: 'rgba(255,255,255,0.03)',
+    borderWidth: 1.5,
+    borderColor: '#1E3A52',
+    borderStyle: 'dashed',
+    marginBottom: 4,
+  },
+  nenhumBtnActive: {
+    backgroundColor: `${Colors.muted}15`,
+    borderColor: Colors.muted,
+    borderStyle: 'solid',
+  },
+  nenhumLabel: {
+    fontSize: 15,
+    fontFamily: 'Epilogue_600SemiBold',
+    color: Colors.muted,
+  },
 });
