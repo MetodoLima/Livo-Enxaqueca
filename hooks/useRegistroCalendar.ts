@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
+import { useFocusEffect } from 'expo-router';
 import { supabase } from '@/lib/supabase';
 import { HumorId } from '@/hooks/useRegistroEvento';
 
@@ -78,9 +79,11 @@ export function useRegistroCalendar(year: number, month: number) {
     }
   }, [year, month]);
 
-  useEffect(() => {
-    fetchRegistros();
-  }, [fetchRegistros]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchRegistros();
+    }, [fetchRegistros])
+  );
 
-  return { registroByDay, loading, error };
+  return { registroByDay, loading, error, refetch: fetchRegistros };
 }
