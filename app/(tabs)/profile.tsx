@@ -1,12 +1,14 @@
 import Card from '@/components/Card';
+import ExportModal from '@/components/ExportModal';
+import ScreenBackground from '@/components/ScreenBackground';
 import { Colors } from '@/constants/Colors';
 import { useAuth } from '@/contexts/AuthContext';
+import { usePdfExport } from '@/hooks/usePdfExport';
 import { supabase } from '@/lib/supabase';
 import { Bell as BellIcon, ChevronRight, FileText, LogOut, Moon as MoonIcon, Shield, User } from 'lucide-react-native';
-import React from 'react';
+import React, { useState } from 'react';
 import { Alert, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
-import ScreenBackground from '@/components/ScreenBackground';
 
 const menuItems = [
   { icon: Shield, label: 'Dados de saúde', desc: 'Perfil médico e alergias' },
@@ -17,6 +19,26 @@ const menuItems = [
 
 export default function ProfileScreen() {
   const { user } = useAuth();
+  const [exportModalVisible, setExportModalVisible] = useState(false);
+  const { exportPdf, loading: pdfLoading } = usePdfExport();
+
+  const handleExport = async (months: number) => {
+    const userName = user?.user_metadata?.name ?? user?.email ?? 'Paciente';
+    try {
+      await exportPdf(months, userName);
+      setExportModalVisible(false);
+    } catch {
+      setExportModalVisible(false);
+      Alert.alert('Erro', 'Não foi possível gerar o relatório. Tente novamente.');
+    }
+  };
+
+  const handleMenuPress = (label: string) => {
+    if (label === 'Exportar dados') {
+      setExportModalVisible(true);
+    }
+  };
+
   const handleLogout = async () => {
     if (Platform.OS === 'web') {
       const confirmed = window.confirm('Tem certeza que deseja sair?');
@@ -63,6 +85,7 @@ export default function ProfileScreen() {
           {menuItems.map((item) => (
             <TouchableOpacity
               key={item.label}
+              onPress={() => handleMenuPress(item.label)}
               className="flex-row items-center p-4 rounded-2xl mb-2"
               style={{ backgroundColor: '#232533', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.10)' }}
             >
@@ -85,6 +108,13 @@ export default function ProfileScreen() {
           </TouchableOpacity>
         </Animated.View>
       </ScrollView>
+
+      <ExportModal
+        visible={exportModalVisible}
+        loading={pdfLoading}
+        onClose={() => setExportModalVisible(false)}
+        onSelect={handleExport}
+      />
     </ScreenBackground>
   );
 }
