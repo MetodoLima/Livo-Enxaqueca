@@ -286,12 +286,11 @@ Abaixo estão todos os registros de crise de um paciente em ordem cronológica:
 
 {registros}
 
-Analise esses registros de forma qualitativa e retorne um JSON com exatamente 4 campos:
+Analise esses registros de forma qualitativa e retorne um JSON com exatamente 3 campos:
 
 - "padroes": descreva padrões recorrentes observados (horários, duração, intensidade, sintomas que aparecem juntos). Se houver poucos dados, diga o que já é possível observar.
 - "gatilhos_principais": analise os fatores desencadeantes mais frequentes e possíveis correlações entre eles.
 - "evolucao": descreva como as crises evoluíram ao longo do tempo (melhoraram, pioraram, ficaram estáveis, mudaram de característica).
-- "recomendacoes": com base nos dados, sugira ações concretas que o paciente pode discutir com seu médico (não substitua consulta médica).
 
 Se houver menos de 3 registros, ainda assim responda com o que for possível concluir.
 Escreva em português, de forma clara e direta para o paciente.
@@ -303,9 +302,8 @@ INSIGHTS_OUTPUT_SCHEMA = {
         "padroes":            {"type": "string"},
         "gatilhos_principais": {"type": "string"},
         "evolucao":           {"type": "string"},
-        "recomendacoes":      {"type": "string"},
     },
-    "required": ["padroes", "gatilhos_principais", "evolucao", "recomendacoes"],
+    "required": ["padroes", "gatilhos_principais", "evolucao"],
 }
 
 
@@ -398,7 +396,6 @@ async def analyze_insights_with_llm(crises: List[CriseRecord]) -> dict:
             "padroes": "Não foi possível gerar análise. Tente novamente.",
             "gatilhos_principais": "",
             "evolucao": "",
-            "recomendacoes": "",
         }
 
     return parsed
@@ -447,7 +444,6 @@ async def analyze_insights(body: AnalyzeInsightsRequest):
             "padroes": "Nenhum registro encontrado para análise.",
             "gatilhos_principais": "",
             "evolucao": "",
-            "recomendacoes": "Registre algumas crises primeiro para receber uma análise personalizada.",
         }
     return await analyze_insights_with_llm(body.crises)
 
