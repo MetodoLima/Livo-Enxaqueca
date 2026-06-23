@@ -94,7 +94,6 @@ export interface QualitativeAnalysis {
   padroes: string;
   gatilhos_principais: string;
   evolucao: string;
-  recomendacoes: string;
 }
 
 export async function analyzeInsights(crises: CriseInsightRecord[]): Promise<QualitativeAnalysis> {

@@ -46,7 +46,6 @@ const ANALYSIS_SECTIONS = [
   { key: 'padroes' as const, label: 'Padrões identificados' },
   { key: 'gatilhos_principais' as const, label: 'Gatilhos principais' },
   { key: 'evolucao' as const, label: 'Evolução das crises' },
-  { key: 'recomendacoes' as const, label: 'Recomendações' },
 ];
 
 export default function InsightsScreen() {
@@ -107,7 +106,7 @@ export default function InsightsScreen() {
                 />
                 <View style={{ flex: 1, padding: 24, justifyContent: 'space-between' }}>
                   <View className="flex-row justify-between">
-                    <Text style={styles.widgetTitle}>Total de Crises (mês)</Text>
+                    <Text style={styles.widgetTitle}>Média de Crises / Mês</Text>
                     <Zap size={20} color="rgba(255,255,255,0.7)" />
                   </View>
                   <View className="flex-row items-end mt-2">
@@ -276,63 +275,69 @@ export default function InsightsScreen() {
             </View>
 
             {/* Qualitative Analysis */}
-            <Animated.View entering={FadeInUp.delay(750)} className="mt-16">
-              <Text className="text-xs text-muted font-epilogue-bold uppercase tracking-widest mb-4">
-                Análise qualitativa
-              </Text>
-              <Card>
-                {analysisLoading ? (
-                  <View className="items-center py-6">
-                    <ActivityIndicator size="small" color={Colors.accent} />
-                    <Text className="text-muted text-sm font-epilogue mt-3 text-center">
-                      A IA está analisando seus registros...
-                    </Text>
-                  </View>
-                ) : analysis ? (
-                  <View className="gap-5">
-                    {ANALYSIS_SECTIONS.map((section) => (
-                      <View key={section.key}>
-                        <Text className="text-[10px] text-muted uppercase tracking-widest font-epilogue-bold mb-2">
-                          {section.label}
+            <Animated.View entering={FadeInUp.delay(750)} style={{ marginTop: 32 }}>
+              <View style={[styles.listWidget, { overflow: 'hidden' }]}>
+                <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFillObject, { borderRadius: 32 }]} />
+                <LinearGradient
+                  colors={['rgba(37, 183, 187, 0.3)', 'rgba(17, 47, 61, 0.6)']}
+                  start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
+                  style={StyleSheet.absoluteFillObject}
+                />
+                <View style={{ padding: 24 }}>
+                  <Text className="text-white font-epilogue-bold text-lg mb-6">Análise Qualitativa</Text>
+                  {analysisLoading ? (
+                    <View className="items-center py-6">
+                      <ActivityIndicator size="small" color={Colors.accent} />
+                      <Text className="text-muted text-sm font-epilogue mt-3 text-center">
+                        A IA está analisando seus registros...
+                      </Text>
+                    </View>
+                  ) : analysis ? (
+                    <View className="gap-5">
+                      {ANALYSIS_SECTIONS.map((section) => (
+                        <View key={section.key}>
+                          <Text className="text-[10px] text-muted uppercase tracking-widest font-epilogue-bold mb-2">
+                            {section.label}
+                          </Text>
+                          <Text className="text-soft text-sm font-epilogue" style={{ lineHeight: 22 }}>
+                            {analysis[section.key]}
+                          </Text>
+                        </View>
+                      ))}
+                      <TouchableOpacity
+                        onPress={generate}
+                        className="mt-2 items-center py-3 rounded-2xl"
+                        style={{ backgroundColor: Colors.cardDark }}
+                      >
+                        <Text className="text-muted text-xs font-epilogue-bold uppercase tracking-widest">
+                          Atualizar análise
                         </Text>
-                        <Text className="text-soft text-sm font-epilogue" style={{ lineHeight: 22 }}>
-                          {analysis[section.key]}
+                      </TouchableOpacity>
+                    </View>
+                  ) : (
+                    <View className="items-center py-4 gap-3">
+                      {analysisError ? (
+                        <Text className="text-muted text-sm font-epilogue text-center mb-2">
+                          {analysisError}
                         </Text>
-                      </View>
-                    ))}
-                    <TouchableOpacity
-                      onPress={generate}
-                      className="mt-2 items-center py-3 rounded-2xl"
-                      style={{ backgroundColor: Colors.cardDark }}
-                    >
-                      <Text className="text-muted text-xs font-epilogue-bold uppercase tracking-widest">
-                        Atualizar análise
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <View className="items-center py-4 gap-3">
-                    {analysisError ? (
-                      <Text className="text-muted text-sm font-epilogue text-center mb-2">
-                        {analysisError}
-                      </Text>
-                    ) : (
-                      <Text className="text-muted text-sm font-epilogue text-center">
-                        Gere uma análise qualitativa dos seus registros com IA.
-                      </Text>
-                    )}
-                    <TouchableOpacity
-                      onPress={generate}
-                      className="px-6 py-3 rounded-2xl"
-                      style={{ backgroundColor: Colors.accent }}
-                    >
-                      <Text className="text-white text-sm font-epilogue-bold">
-                        {analysisError ? 'Tentar novamente' : 'Gerar análise'}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                )}
-              </Card>
+                      ) : (
+                        <Text className="text-muted text-sm font-epilogue text-center">
+                          Gere uma análise qualitativa dos seus registros com IA.
+                        </Text>
+                      )}
+                      <TouchableOpacity
+                        onPress={generate}
+                        className="px-6 py-3 rounded-2xl"
+                        style={{ backgroundColor: Colors.accent }}
+                      >
+                        <Text className="text-white text-sm font-epilogue-bold">
+                          {analysisError ? 'Tentar novamente' : 'Gerar análise'}
+                        </Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              </View>
             </Animated.View>
           </>
         )}
