@@ -34,7 +34,7 @@ import {
   X,
   Zap,
 } from 'lucide-react-native';
-import React, { useCallback, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -48,6 +48,7 @@ import {
 } from 'react-native';
 import ScreenBackground from '@/components/ScreenBackground';
 import Animated, { FadeInUp, ZoomIn } from 'react-native-reanimated';
+import { supabase } from '@/lib/supabase';
 
 
 // ── Past phase card (collapsible) ─────────────────────────────────────
@@ -268,10 +269,46 @@ const phaseStyles = StyleSheet.create({
 });
 
 
+// ── Helpers for time since last crisis ─────────────────────────────────
+function formatTimeSince(lastDate: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - lastDate.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 60) return `${diffMins} minuto${diffMins !== 1 ? 's' : ''}`;
+  if (diffHours < 24) return `${diffHours} hora${diffHours !== 1 ? 's' : ''}`;
+  if (diffDays === 1) return '1 dia';
+  return `${diffDays} dias`;
+}
+
 // ── Empty state ───────────────────────────────────────────────────────
 function EmptyState() {
   const router = useRouter();
-  const daysSinceLastCrisis = 3;
+  const [timeSinceLabel, setTimeSinceLabel] = useState<string | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: authData } = await supabase.auth.getUser();
+        if (!authData?.user || cancelled) return;
+        const { data } = await supabase
+          .from('crise_enxaqueca')
+          .select('fim_crise')
+          .not('fim_crise', 'is', null)
+          .order('fim_crise', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (cancelled) return;
+        if (data?.fim_crise) {
+          setTimeSinceLabel(formatTimeSince(new Date(data.fim_crise)));
+        }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   return (
     <ScreenBackground>
@@ -286,11 +323,17 @@ function EmptyState() {
 
         <Animated.View entering={FadeInUp.delay(250)}>
           <Text style={styles.emptyTitle}>Tudo tranquilo!</Text>
-          <Text style={styles.emptyHighlight}>
-            Você está há{' '}
-            <Text style={{ color: Colors.accent }}>{daysSinceLastCrisis} dias</Text>
-            {' '}sem crises
-          </Text>
+          {timeSinceLabel ? (
+            <Text style={styles.emptyHighlight}>
+              Você está há{' '}
+              <Text style={{ color: Colors.accent }}>{timeSinceLabel}</Text>
+              {' '}sem crises
+            </Text>
+          ) : (
+            <Text style={styles.emptyHighlight}>
+              Nenhuma crise registrada
+            </Text>
+          )}
           <Text style={styles.emptySub}>
             Continue assim! Caso tenha uma crise, registre aqui para acompanhar seu progresso.
           </Text>
@@ -335,20 +378,31 @@ export default function CrisisDetailScreen() {
   const { isRecording, recordSecs, error: micError, startRecording, stopRecording } = useAudioRecorder();
 
   // ── Finalize ────────────────────────────────────────────────────────
+  const [savedIntensity, setSavedIntensity] = useState<number | null>(null);
+
   const handleFinish = async () => {
     setFinishing(true);
+    setSavedIntensity(activeCrisis?.intensity ?? null);
     try {
       const crisisToSave = activeCrisis!.endTime
         ? activeCrisis!
         : { ...activeCrisis!, endTime: new Date() };
       await saveCrisisToSupabase(crisisToSave, phases);
       clearCrisis();
-      router.replace('/(tabs)' as any);
     } catch (e) {
       setFinishing(false);
       Alert.alert('Erro ao salvar', e instanceof Error ? e.message : String(e));
     }
   };
+
+  // Auto-dismiss success screen after 1.5s
+  useEffect(() => {
+    if (!finishing) return;
+    const timer = setTimeout(() => {
+      setFinishing(false);
+    }, 1500);
+    return () => clearTimeout(timer);
+  }, [finishing]);
 
   // ── Success screen ──────────────────────────────────────────────────
   if (finishing) {
@@ -359,8 +413,8 @@ export default function CrisisDetailScreen() {
         </Animated.View>
         <Text style={styles.successTitle}>Crise registrada!</Text>
         <Text style={styles.successSub}>
-          {activeCrisis?.intensity != null
-            ? `Intensidade ${activeCrisis.intensity}/10`
+          {savedIntensity != null
+            ? `Intensidade ${savedIntensity}/10`
             : 'Registro salvo com sucesso.'}
         </Text>
       </View>

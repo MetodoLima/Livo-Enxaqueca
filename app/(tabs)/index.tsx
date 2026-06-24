@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -15,7 +15,7 @@ import {
   Zap,
   ChevronRight,
   Activity,
-  Sparkles,
+  TrendingDown,
   Bell,
   Moon,
   Droplets,
@@ -32,6 +32,7 @@ import ScreenBackground from '@/components/ScreenBackground';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRegistroEvento } from '@/hooks/useRegistroEvento';
+import { supabase } from '@/lib/supabase';
 
 function toDateString(date: Date): string {
   return date.toISOString().split('T')[0];
@@ -50,12 +51,72 @@ function formatAgua(ml: number): string {
   return `${ml}ml`;
 }
 
+// ── Helper: format time since last crisis ──────────────────────────────
+function formatTimeSinceHome(lastDate: Date): { number: string; label: string } {
+  const now = new Date();
+  const diffMs = now.getTime() - lastDate.getTime();
+  const diffMins = Math.floor(diffMs / 60000);
+  const diffHours = Math.floor(diffMs / 3600000);
+  const diffDays = Math.floor(diffMs / 86400000);
+
+  if (diffMins < 60) return { number: String(diffMins), label: `minuto${diffMins !== 1 ? 's' : ''} sem crises` };
+  if (diffHours < 24) return { number: String(diffHours), label: `hora${diffHours !== 1 ? 's' : ''} sem crises` };
+  return { number: String(diffDays), label: `dia${diffDays !== 1 ? 's' : ''} sem crises` };
+}
+
 export default function HomeScreen() {
   const { user } = useAuth();
   const [selectedMood, setSelectedMood] = useState<MoodId | null>(null);
   const [relato, setRelato] = useState('');
   const [sonoLocal, setSonoLocal] = useState(0);
   const [aguaLocal, setAguaLocal] = useState(0);
+
+  // ── Home stats ──────────────────────────────────────────────────────
+  const [streakInfo, setStreakInfo] = useState<{ number: string; label: string } | null>(null);
+  const [crisesThisMonth, setCrisesThisMonth] = useState<number | null>(null);
+  const [avgIntensity, setAvgIntensity] = useState<number | null>(null);
+
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      try {
+        const { data: authData } = await supabase.auth.getUser();
+        if (!authData?.user || cancelled) return;
+
+        // Last crisis end time
+        const { data: lastCrisis } = await supabase
+          .from('crise_enxaqueca')
+          .select('fim_crise')
+          .not('fim_crise', 'is', null)
+          .order('fim_crise', { ascending: false })
+          .limit(1)
+          .maybeSingle();
+        if (!cancelled && lastCrisis?.fim_crise) {
+          setStreakInfo(formatTimeSinceHome(new Date(lastCrisis.fim_crise)));
+        }
+
+        // Crises this month
+        const now = new Date();
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
+        const { count } = await supabase
+          .from('crise_enxaqueca')
+          .select('id', { count: 'exact', head: true })
+          .gte('inicio_crise', monthStart);
+        if (!cancelled) setCrisesThisMonth(count ?? 0);
+
+        // Average intensity (all-time via registro_crise)
+        const { data: intensidades } = await supabase
+          .from('registro_crise')
+          .select('intensidade_dor')
+          .not('intensidade_dor', 'is', null);
+        if (!cancelled && intensidades && intensidades.length > 0) {
+          const vals = intensidades.map((r: any) => r.intensidade_dor as number);
+          setAvgIntensity(Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10);
+        }
+      } catch {}
+    })();
+    return () => { cancelled = true; };
+  }, []);
 
   const today = toDateString(new Date());
   const { saving, saved, salvar } = useRegistroEvento(today);
@@ -127,7 +188,7 @@ export default function HomeScreen() {
                 resizeMode="cover"
               />
               <View style={styles.mascotContent}>
-                <Text className="text-white text-lg font-epilogue-bold text-center shadow-lg">
+                <Text className="text-white text-2xl font-epilogue-bold text-center shadow-lg">
                   Registre um evento
                 </Text>
                 <TouchableOpacity style={styles.micButton}>
@@ -284,11 +345,13 @@ export default function HomeScreen() {
               <View style={styles.widgetContent}>
                 <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                   <View style={styles.streakCircle}>
-                    <Text style={styles.streakNumber}>3</Text>
+                    <Text style={styles.streakNumber}>{streakInfo?.number ?? '–'}</Text>
                   </View>
                   <View style={{ marginLeft: 16, flex: 1 }}>
                     <Text style={styles.widgetHeading}>Sem enxaqueca</Text>
-                    <Text style={styles.widgetSubtext}>3 dias consecutivos sem crises</Text>
+                    <Text style={styles.widgetSubtext}>
+                      {streakInfo ? streakInfo.label : 'Nenhuma crise registrada'}
+                    </Text>
                   </View>
                 </View>
                 <Link href="/record-crisis" asChild>
@@ -314,7 +377,7 @@ export default function HomeScreen() {
                 <View style={[styles.statIconContainer, { backgroundColor: 'rgba(255, 255, 255, 0.15)' }]}>
                   <Activity size={22} color="white" />
                 </View>
-                <Text style={[styles.statNumber, { color: 'white' }]}>2</Text>
+                <Text style={[styles.statNumber, { color: 'white' }]}>{crisesThisMonth ?? '–'}</Text>
                 <Text style={[styles.statLabel, { color: 'white' }]}>Crises Mês</Text>
               </View>
             </Animated.View>
@@ -328,10 +391,10 @@ export default function HomeScreen() {
               />
               <View style={styles.statWidgetContent}>
                 <View style={[styles.statIconContainer, { backgroundColor: 'rgba(255, 255, 255, 0.15)' }]}>
-                  <Sparkles size={22} color="white" />
+                  <TrendingDown size={22} color="white" />
                 </View>
-                <Text style={[styles.statNumber, { color: 'white' }]}>5</Text>
-                <Text style={[styles.statLabel, { color: 'white' }]}>Doses Tomadas</Text>
+                <Text style={[styles.statNumber, { color: 'white' }]}>{avgIntensity ?? '–'}</Text>
+                <Text style={[styles.statLabel, { color: 'white' }]}>Intensidade Média</Text>
               </View>
             </Animated.View>
           </View>
@@ -396,7 +459,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between', alignItems: 'center',
   },
   micButton: {
-    width: 64, height: 64, borderRadius: 32,
+    width: 76, height: 76, borderRadius: 38,
     backgroundColor: 'rgba(37, 183, 187, 0.35)',
     borderWidth: 1.5, borderColor: 'rgba(37, 183, 187, 0.7)',
     alignItems: 'center', justifyContent: 'center',
