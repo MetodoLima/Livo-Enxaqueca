@@ -24,14 +24,13 @@ function countTop(items: string[], total: number, limit = 5): InsightItem[] {
   for (const item of items) {
     counts[item] = (counts[item] ?? 0) + 1;
   }
-  return Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, limit)
-    .map(([nome, count]) => ({
-      nome,
-      count,
-      pct: Math.round((count / total) * 100),
-    }));
+  const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  const sliced = limit > 0 ? sorted.slice(0, limit) : sorted;
+  return sliced.map(([nome, count]) => ({
+    nome,
+    count,
+    pct: Math.round((count / total) * 100),
+  }));
 }
 
 export function useInsights() {
@@ -51,6 +50,7 @@ export function useInsights() {
           inicio_crise,
           fim_crise,
           registro_crise (
+            id,
             intensidade_dor,
             regiao_dor,
             sintoma_registro_crise ( sintomas ( nome ) ),
@@ -125,14 +125,22 @@ export function useInsights() {
           .map((s: any) => s.sintomas?.nome)
           .filter(Boolean)
       );
-      const allMedicamentos = allRegistros.flatMap((r: any) =>
-        (r.medicamentos_registro_crise ?? [])
-          .map((m: any) => m.medicamentos?.nome)
-          .filter(Boolean)
-      );
       const allRegions = allRegistros
         .map((r: any) => r.regiao_dor)
         .filter(Boolean) as string[];
+
+      // Query direta para medicamentos: garante que remédios customizados também sejam incluídos
+      const registroIds = allRegistros.map((r: any) => r.id).filter(Boolean);
+      let allMedicamentos: string[] = [];
+      if (registroIds.length > 0) {
+        const { data: medRows } = await supabase
+          .from('medicamentos_registro_crise')
+          .select('medicamentos ( nome )')
+          .in('registro_crise_id', registroIds);
+        allMedicamentos = (medRows ?? [])
+          .map((row: any) => row.medicamentos?.nome)
+          .filter(Boolean);
+      }
 
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
@@ -161,7 +169,7 @@ export function useInsights() {
         topTriggers: countTop(allTriggers, total),
         topSintomas: countTop(allSintomas, total),
         topRegions: countTop(allRegions, total),
-        topMedicamentos: countTop(allMedicamentos, total),
+        topMedicamentos: countTop(allMedicamentos, total, 0),
         trend,
       });
     } catch (err: any) {
