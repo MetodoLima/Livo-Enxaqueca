@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, PanResponder } from 'react-native';
+import { View, Text, StyleSheet, Dimensions, PanResponder, Platform } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { Colors } from '@/constants/Colors';
 import StepFooter from './StepFooter';
@@ -9,7 +9,6 @@ const SCREEN_HEIGHT = Dimensions.get('window').height;
 const SLIDER_HEIGHT = SCREEN_HEIGHT * 0.52;
 const SLIDER_WIDTH = 48;
 const THUMB_SIZE = 48;
-
 const EVEN_VALUES = [0, 2, 4, 6, 8, 10];
 
 interface StepIntensityProps {
@@ -40,21 +39,44 @@ export default function StepIntensity({ data, onChange, onNext }: StepIntensityP
     : null;
   const currentColor = currentConfig?.color ?? '#1E3A52';
 
+  function applyY(newY: number) {
+    const clamped = Math.max(0, Math.min(newY, SLIDER_HEIGHT - THUMB_SIZE));
+    thumbYRef.current = clamped;
+    setThumbY(clamped);
+    setValue(positionToValue(clamped));
+  }
+
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
+
       onPanResponderGrant: (e) => {
         startYRef.current = e.nativeEvent.pageY;
         startThumbRef.current = thumbYRef.current;
+
+        // No web, locationY é a posição do clique relativa ao elemento —
+        // usamos ela para pular direto para o ponto clicado
+        if (Platform.OS === 'web') {
+          const clickY = (e.nativeEvent as any).locationY ?? 0;
+          applyY(clickY - THUMB_SIZE / 2);
+          startThumbRef.current = Math.max(0, Math.min(clickY - THUMB_SIZE / 2, SLIDER_HEIGHT - THUMB_SIZE));
+        }
       },
+
       onPanResponderMove: (e) => {
-        const dy = e.nativeEvent.pageY - startYRef.current;
-        const newY = Math.max(0, Math.min(startThumbRef.current + dy, SLIDER_HEIGHT - THUMB_SIZE));
-        thumbYRef.current = newY;
-        setThumbY(newY);
-        setValue(positionToValue(newY));
+        if (Platform.OS === 'web') {
+          // No web, locationY continua sendo relativo ao elemento durante
+          // o drag — é estável e não precisa de medição absoluta
+          const currentY = (e.nativeEvent as any).locationY ?? 0;
+          applyY(currentY - THUMB_SIZE / 2);
+        } else {
+          // No nativo, usa delta (pageY - startY) + posição inicial do thumb
+          const dy = e.nativeEvent.pageY - startYRef.current;
+          applyY(startThumbRef.current + dy);
+        }
       },
+
       onPanResponderRelease: () => {
         const finalValue = positionToValue(thumbYRef.current);
         setValue(finalValue);
