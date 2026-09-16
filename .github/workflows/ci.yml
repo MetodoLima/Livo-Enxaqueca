@@ -35,7 +35,10 @@ jobs:
           python-version: "3.12"
 
       - name: Install ruff and mypy
-        run: pip install ruff mypy
+        # Versoes fixadas. O ruff 0.16 ampliou o conjunto de regras padrao e passou
+        # a acusar 38 erros em livo-ai/backend/main.py, arquivo intocado desde junho.
+        # Estas sao as versoes do ultimo CI verde, o run de 2026-07-02.
+        run: pip install ruff==0.15.20 mypy==2.1.0
 
       - name: Ruff lint
         run: ruff check livo-ai/backend/
