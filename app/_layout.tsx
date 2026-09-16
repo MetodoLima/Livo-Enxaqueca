@@ -41,18 +41,18 @@ const LivoTheme = {
 };
 
 function RootLayoutNav() {
-  const { session, loading, isSetupCompleted } = useAuth();
+  const { localSession, localSessionStatus, isSetupCompleted } = useAuth();
   const segments = useSegments();
   const router = useRouter();
   const navigationState = useRootNavigationState();
 
   useEffect(() => {
-    if (loading || !navigationState?.key) return;
+    if (localSessionStatus === 'loading' || !navigationState?.key) return;
 
     const inAuthGroup = String(segments[0]) === '(auth)';
     const inSetupGroup = String(segments[0]) === '(setup)';
 
-    if (!session) {
+    if (!localSession) {
       if (!inAuthGroup) {
         router.replace('/login' as any);
       }
@@ -69,7 +69,7 @@ function RootLayoutNav() {
         router.replace('/(tabs)' as any);
       }
     }
-  }, [session, loading, segments, isSetupCompleted, navigationState?.key]);
+  }, [localSession, localSessionStatus, segments, isSetupCompleted, navigationState?.key]);
 
   return (
     <ThemeProvider value={LivoTheme}>
