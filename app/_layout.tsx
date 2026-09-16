@@ -9,6 +9,7 @@ import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { CrisisProvider } from '@/contexts/CrisisContext';
+import { ConnectivityProvider } from '@/contexts/ConnectivityContext';
 import { useRouter, useSegments, useRootNavigationState } from 'expo-router';
 
 import {
@@ -110,11 +111,13 @@ export default function RootLayout() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <AuthProvider>
-        <CrisisProvider>
-          <RootLayoutNav />
-        </CrisisProvider>
-      </AuthProvider>
+      <ConnectivityProvider>
+        <AuthProvider>
+          <CrisisProvider>
+            <RootLayoutNav />
+          </CrisisProvider>
+        </AuthProvider>
+      </ConnectivityProvider>
     </GestureHandlerRootView>
   );
 }
