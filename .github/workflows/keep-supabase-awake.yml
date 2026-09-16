@@ -1,0 +1,36 @@
+name: Keep Supabase awake
+
+# O projeto e do plano gratuito, que pausa o banco depois de sete dias de baixa
+# atividade e derruba o app inteiro. Uma consulta a cada dois dias evita isso.
+# Ver issue #74.
+
+on:
+  schedule:
+    - cron: '17 9 */2 * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  ping:
+    name: Consulta de catalogo
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Ler credenciais do eas.json
+        # As credenciais ainda vivem no repositorio. Quando a #37 mover a
+        # configuracao para fora, trocar estas linhas por secrets.
+        run: |
+          KEY=$(jq -r '.build.preview.env.EXPO_PUBLIC_SUPABASE_ANON_KEY' eas.json)
+          echo "::add-mask::$KEY"
+          echo "SUPABASE_ANON_KEY=$KEY" >> "$GITHUB_ENV"
+          echo "SUPABASE_URL=$(jq -r '.build.preview.env.EXPO_PUBLIC_SUPABASE_URL' eas.json)" >> "$GITHUB_ENV"
+
+      - name: Consultar a tabela de sintomas
+        run: |
+          curl --fail --silent --show-error \
+            -H "apikey: $SUPABASE_ANON_KEY" \
+            -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
+            "$SUPABASE_URL/rest/v1/sintomas?select=id&limit=1"
