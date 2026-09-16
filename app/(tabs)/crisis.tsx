@@ -362,7 +362,7 @@ function EmptyState() {
 
 // ── Main screen ───────────────────────────────────────────────────────
 export default function CrisisDetailScreen() {
-  const { activeCrisis, phases, updateActiveCrisis, addPhase, removePhase, clearCrisis, hasActiveCrisis } = useCrisis();
+  const { activeCrisis, phases, updateActiveCrisis, addPhase, removePhase, clearCrisis, hasActiveCrisis, hydrated } = useCrisis();
   const router = useRouter();
 
   const [editingField, setEditingField] = useState<
@@ -420,6 +420,11 @@ export default function CrisisDetailScreen() {
       </View>
     );
   }
+
+  // Enquanto a crise guardada no aparelho não foi lida, não dá para saber se
+  // existe crise em andamento. Mostrar EmptyState aqui faria piscar
+  // "nenhuma crise" antes da crise restaurada aparecer.
+  if (!hydrated) return null;
 
   if (!hasActiveCrisis || !activeCrisis) return <EmptyState />;
 
