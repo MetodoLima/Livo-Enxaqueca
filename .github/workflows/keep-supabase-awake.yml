@@ -17,7 +17,7 @@ jobs:
     name: Consulta de catalogo
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Ler credenciais do eas.json
         # As credenciais ainda vivem no repositorio. Quando a #37 mover a
