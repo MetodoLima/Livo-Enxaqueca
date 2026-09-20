@@ -1,4 +1,5 @@
 import { supabase } from '@/lib/supabase';
+import { medicationLabel, symptomLabel } from '@/types/crisis';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { useState } from 'react';
@@ -46,6 +47,19 @@ function intensityColor(v: number): string {
   return '#ef4444';
 }
 
+// O banco guarda os ids do catalogo; o relatorio mostra os rotulos. Medicamentos
+// digitados pelo usuario e fatores desencadeantes sao texto livre e passam direto.
+function phaseLabels(r: any): { sintomas: string[]; medicamentos: string[]; fatores: string[] } {
+  return {
+    sintomas: ((r.sintomas ?? []) as string[]).map(symptomLabel),
+    medicamentos: [
+      ...((r.medicamentos ?? []) as string[]).map(medicationLabel),
+      ...((r.medicamentos_livres ?? []) as string[]),
+    ],
+    fatores: (r.fatores ?? []) as string[],
+  };
+}
+
 function countTop(items: string[], limit = 5): Array<{ nome: string; count: number }> {
   const counts: Record<string, number> = {};
   for (const item of items) counts[item] = (counts[item] ?? 0) + 1;
@@ -65,9 +79,7 @@ async function fetchCrises(months: number) {
       id, inicio_crise, fim_crise,
       registro_crise (
         intensidade_dor, regiao_dor, lado, nivel_incapacidade, resumo,
-        sintoma_registro_crise ( sintomas ( nome ) ),
-        medicamentos_registro_crise ( medicamentos ( nome ) ),
-        fatores_desencadeantes_registro_crise ( fatores_desencadeantes ( nome ) )
+        sintomas, medicamentos, medicamentos_livres, fatores
       )
     `)
     .gte('inicio_crise', since.toISOString())
@@ -109,17 +121,9 @@ function buildHtml(crises: any[], userName: string, months: number): string {
 
   const crisesPerMonth = (total / months).toFixed(1);
 
-  const allSintomas = allRegistros.flatMap((r: any) =>
-    (r.sintoma_registro_crise ?? []).map((s: any) => s.sintomas?.nome).filter(Boolean)
-  );
-  const allMeds = allRegistros.flatMap((r: any) =>
-    (r.medicamentos_registro_crise ?? []).map((m: any) => m.medicamentos?.nome).filter(Boolean)
-  );
-  const allTriggers = allRegistros.flatMap((r: any) =>
-    (r.fatores_desencadeantes_registro_crise ?? []).map(
-      (f: any) => f.fatores_desencadeantes?.nome
-    ).filter(Boolean)
-  );
+  const allSintomas = allRegistros.flatMap((r: any) => phaseLabels(r).sintomas);
+  const allMeds = allRegistros.flatMap((r: any) => phaseLabels(r).medicamentos);
+  const allTriggers = allRegistros.flatMap((r: any) => phaseLabels(r).fatores);
 
   const topSintomas = countTop(allSintomas);
   const topMeds = countTop(allMeds);
@@ -139,31 +143,9 @@ function buildHtml(crises: any[], userName: string, months: number): string {
         .filter((v: any): v is number => v != null)
         .reduce((max: number, v: number) => Math.max(max, v), -1);
 
-      const sintomas = [
-        ...new Set(
-          registros.flatMap((r: any) =>
-            (r.sintoma_registro_crise ?? []).map((s: any) => s.sintomas?.nome).filter(Boolean)
-          )
-        ),
-      ] as string[];
-
-      const meds = [
-        ...new Set(
-          registros.flatMap((r: any) =>
-            (r.medicamentos_registro_crise ?? []).map((m: any) => m.medicamentos?.nome).filter(Boolean)
-          )
-        ),
-      ] as string[];
-
-      const triggers = [
-        ...new Set(
-          registros.flatMap((r: any) =>
-            (r.fatores_desencadeantes_registro_crise ?? [])
-              .map((f: any) => f.fatores_desencadeantes?.nome)
-              .filter(Boolean)
-          )
-        ),
-      ] as string[];
+      const sintomas = [...new Set(registros.flatMap((r: any) => phaseLabels(r).sintomas))];
+      const meds = [...new Set(registros.flatMap((r: any) => phaseLabels(r).medicamentos))];
+      const triggers = [...new Set(registros.flatMap((r: any) => phaseLabels(r).fatores))];
 
       const regions = [
         ...new Set(registros.map((r: any) => r.regiao_dor).filter(Boolean)),

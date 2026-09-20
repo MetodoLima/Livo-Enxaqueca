@@ -1,5 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { analyzeInsights, CriseInsightRecord, QualitativeAnalysis } from '@/services/api';
+import { medicationLabel, symptomLabel } from '@/types/crisis';
 import { useCallback, useState } from 'react';
 
 function serializeCrises(rows: any[]): CriseInsightRecord[] {
@@ -21,15 +22,12 @@ function serializeCrises(rows: any[]): CriseInsightRecord[] {
       localizacao: reg.regiao_dor ?? null,
       lado: reg.lado ?? null,
       duracao_horas,
-      sintomas: (reg.sintoma_registro_crise ?? [])
-        .map((s: any) => s.sintomas?.nome)
-        .filter(Boolean) as string[],
-      medicamentos: (reg.medicamentos_registro_crise ?? [])
-        .map((m: any) => m.medicamentos?.nome)
-        .filter(Boolean) as string[],
-      gatilhos: (reg.fatores_desencadeantes_registro_crise ?? [])
-        .map((f: any) => f.fatores_desencadeantes?.nome)
-        .filter(Boolean) as string[],
+      sintomas: ((reg.sintomas ?? []) as string[]).map(symptomLabel),
+      medicamentos: [
+        ...((reg.medicamentos ?? []) as string[]).map(medicationLabel),
+        ...((reg.medicamentos_livres ?? []) as string[]),
+      ],
+      gatilhos: (reg.fatores ?? []) as string[],
       nivel_incapacidade: reg.nivel_incapacidade ?? null,
       resumo: reg.resumo ?? null,
     }));
@@ -58,9 +56,10 @@ export function useQualitativeAnalysis() {
             lado,
             nivel_incapacidade,
             resumo,
-            sintoma_registro_crise ( sintomas ( nome ) ),
-            medicamentos_registro_crise ( medicamentos ( nome ) ),
-            fatores_desencadeantes_registro_crise ( fatores_desencadeantes ( nome ) )
+            sintomas,
+            medicamentos,
+            medicamentos_livres,
+            fatores
           )
         `)
         .order('inicio_crise', { ascending: true });

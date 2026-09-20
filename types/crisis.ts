@@ -44,6 +44,19 @@ export const MEDICATIONS = [
 
 export type MedicationId = (typeof MEDICATIONS)[number]['id'];
 
+// ── Rótulos para exibição ─────────────────────────────────────────────
+// O banco guarda os ids do catálogo, não os rótulos, para que renomear um rótulo
+// não exija migrar dados. Quem exibe traduz aqui. O fallback devolve o próprio
+// valor, que é o caso dos medicamentos digitados pelo usuário e dos fatores
+// desencadeantes, que são texto livre.
+export function symptomLabel(id: string): string {
+  return SYMPTOMS.find((s) => s.id === id)?.label ?? id;
+}
+
+export function medicationLabel(id: string): string {
+  return MEDICATIONS.find((m) => m.id === id)?.label ?? id;
+}
+
 // ── Intensity labels ──────────────────────────────────────────────────
 export const INTENSITY_CONFIG = [
   { value: 0,  label: 'Sem dor',        sublabel: 'Nenhuma dor',              emoji: '😌', color: '#10B981' },

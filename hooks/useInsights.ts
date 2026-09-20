@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { medicationLabel, symptomLabel } from '@/types/crisis';
 
 export interface InsightItem {
   nome: string;
@@ -53,9 +54,10 @@ export function useInsights() {
             id,
             intensidade_dor,
             regiao_dor,
-            sintoma_registro_crise ( sintomas ( nome ) ),
-            medicamentos_registro_crise ( medicamentos ( nome ) ),
-            fatores_desencadeantes_registro_crise ( fatores_desencadeantes ( nome ) )
+            sintomas,
+            medicamentos,
+            medicamentos_livres,
+            fatores
           )
         `)
         .order('inicio_crise', { ascending: true });
@@ -115,32 +117,20 @@ export function useInsights() {
       );
       const crisesPerMonth = Math.round((total / monthsDiff) * 10) / 10;
 
-      const allTriggers = allRegistros.flatMap((r: any) =>
-        (r.fatores_desencadeantes_registro_crise ?? [])
-          .map((f: any) => f.fatores_desencadeantes?.nome)
-          .filter(Boolean)
-      );
+      const allTriggers = allRegistros.flatMap((r: any) => (r.fatores ?? []) as string[]);
       const allSintomas = allRegistros.flatMap((r: any) =>
-        (r.sintoma_registro_crise ?? [])
-          .map((s: any) => s.sintomas?.nome)
-          .filter(Boolean)
+        ((r.sintomas ?? []) as string[]).map(symptomLabel)
       );
       const allRegions = allRegistros
         .map((r: any) => r.regiao_dor)
         .filter(Boolean) as string[];
 
-      // Query direta para medicamentos: garante que remédios customizados também sejam incluídos
-      const registroIds = allRegistros.map((r: any) => r.id).filter(Boolean);
-      let allMedicamentos: string[] = [];
-      if (registroIds.length > 0) {
-        const { data: medRows } = await supabase
-          .from('medicamentos_registro_crise')
-          .select('medicamentos ( nome )')
-          .in('registro_crise_id', registroIds);
-        allMedicamentos = (medRows ?? [])
-          .map((row: any) => row.medicamentos?.nome)
-          .filter(Boolean);
-      }
+      // Os medicamentos vinham numa segunda consulta, porque a tabela de juncao era o
+      // unico lugar onde os customizados apareciam. Agora os dois vem no mesmo select.
+      const allMedicamentos = allRegistros.flatMap((r: any) => [
+        ...((r.medicamentos ?? []) as string[]).map(medicationLabel),
+        ...((r.medicamentos_livres ?? []) as string[]),
+      ]);
 
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
