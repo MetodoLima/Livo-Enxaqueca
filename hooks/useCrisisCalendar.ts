@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { medicationLabel, symptomLabel } from '@/types/crisis';
 
 export interface CrisisPhase {
   id: number;
@@ -38,8 +39,9 @@ const SELECT = `
     lado,
     nivel_incapacidade,
     resumo,
-    sintoma_registro_crise ( sintomas ( nome ) ),
-    medicamentos_registro_crise ( medicamentos ( nome ) )
+    sintomas,
+    medicamentos,
+    medicamentos_livres
   )
 `;
 
@@ -53,12 +55,11 @@ function rowToCrisis(row: any): CrisisDay {
     lado: r.lado ?? null,
     nivelIncapacidade: r.nivel_incapacidade ?? null,
     resumo: r.resumo ?? null,
-    sintomas: (r.sintoma_registro_crise ?? [])
-      .map((s: any) => s.sintomas?.nome)
-      .filter(Boolean),
-    medicamentos: (r.medicamentos_registro_crise ?? [])
-      .map((m: any) => m.medicamentos?.nome)
-      .filter(Boolean),
+    sintomas: ((r.sintomas ?? []) as string[]).map(symptomLabel),
+    medicamentos: [
+      ...((r.medicamentos ?? []) as string[]).map(medicationLabel),
+      ...((r.medicamentos_livres ?? []) as string[]),
+    ],
   }));
 
   const maxIntensidadeFase = fases.reduce<CrisisPhase | null>(

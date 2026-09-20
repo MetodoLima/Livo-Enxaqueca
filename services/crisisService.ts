@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import { CrisisRecord, MEDICATIONS, SYMPTOMS } from '@/types/crisis';
+import { CrisisRecord } from '@/types/crisis';
 
 async function getUsuarioId(authUserId: string): Promise<number> {
   const { data, error } = await supabase
@@ -11,23 +11,6 @@ async function getUsuarioId(authUserId: string): Promise<number> {
   return data.id;
 }
 
-async function upsertLookup(table: string, nome: string): Promise<number> {
-  const { data: existing } = await supabase
-    .from(table)
-    .select('id')
-    .eq('nome', nome)
-    .maybeSingle();
-  if (existing) return existing.id;
-
-  const { data: inserted, error } = await supabase
-    .from(table)
-    .insert({ nome })
-    .select('id')
-    .single();
-  if (error || !inserted) throw new Error(`Erro ao inserir em ${table} ("${nome}"): ${error?.message}`);
-  return inserted.id;
-}
-
 function getNivelIncapacidade(intensity: number | null): string | null {
   if (intensity === null) return null;
   if (intensity <= 3) return 'leve';
@@ -35,52 +18,26 @@ function getNivelIncapacidade(intensity: number | null): string | null {
   return 'severo';
 }
 
+// Uma fase e uma linha. Antes, cada sintoma, medicamento e fator custava uma consulta
+// ao catalogo e um insert na tabela de juncao, o que passava de quarenta requisicoes em
+// serie por crise e era impossivel offline. Os catalogos agora vivem em types/crisis.ts
+// e o registro guarda os ids.
 async function savePhaseToSupabase(criseId: number, phase: CrisisRecord): Promise<void> {
-  const { data: registroData, error: registroError } = await supabase
-    .from('registro_crise')
-    .insert({
-      crise_id: criseId,
-      intensidade_dor: phase.intensity,
-      regiao_dor: phase.location,
-      lado: phase.side,
-      nivel_incapacidade: getNivelIncapacidade(phase.intensity),
-      resumo: phase.aiComplement?.aiResult?.structured?.resumo ?? null,
-    })
-    .select('id')
-    .single();
+  const { error } = await supabase.from('registro_crise').insert({
+    crise_id: criseId,
+    intensidade_dor: phase.intensity,
+    regiao_dor: phase.location,
+    lado: phase.side,
+    nivel_incapacidade: getNivelIncapacidade(phase.intensity),
+    resumo: phase.aiComplement?.aiResult?.structured?.resumo ?? null,
+    sintomas: phase.symptoms,
+    // 'nenhum' e opcao de interface para dizer que nao tomou nada, nao medicamento.
+    medicamentos: phase.medications.filter((m) => m !== 'nenhum'),
+    medicamentos_livres: phase.customMedications,
+    fatores: phase.triggers,
+  });
 
-  if (registroError || !registroData) throw new Error(`Erro ao salvar registro: ${registroError?.message}`);
-  const registroId = registroData.id;
-
-  for (const symptomId of phase.symptoms) {
-    const sintomaLabel = SYMPTOMS.find((s) => s.id === symptomId)?.label ?? symptomId;
-    const sintomaId = await upsertLookup('sintomas', sintomaLabel);
-    const { error } = await supabase
-      .from('sintoma_registro_crise')
-      .insert({ registro_crise_id: registroId, sintoma_id: sintomaId });
-    if (error) throw new Error(`Erro ao salvar sintoma: ${error.message}`);
-  }
-
-  const allMeds = [
-    ...phase.medications.filter((m) => m !== 'nenhum'),
-    ...phase.customMedications,
-  ];
-  for (const med of allMeds) {
-    const medLabel = MEDICATIONS.find((m) => m.id === med)?.label ?? med;
-    const medId = await upsertLookup('medicamentos', medLabel);
-    const { error } = await supabase
-      .from('medicamentos_registro_crise')
-      .insert({ registro_crise_id: registroId, medicamentos_id: medId });
-    if (error) throw new Error(`Erro ao salvar medicamento: ${error.message}`);
-  }
-
-  for (const trigger of phase.triggers) {
-    const fatorId = await upsertLookup('fatores_desencadeantes', trigger);
-    const { error } = await supabase
-      .from('fatores_desencadeantes_registro_crise')
-      .insert({ registro_crise_id: registroId, fatores_desencadeantes_id: fatorId });
-    if (error) throw new Error(`Erro ao salvar fator desencadeante: ${error.message}`);
-  }
+  if (error) throw new Error(`Erro ao salvar registro: ${error.message}`);
 }
 
 export async function saveCrisisToSupabase(
