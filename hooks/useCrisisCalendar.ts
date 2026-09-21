@@ -3,7 +3,7 @@ import { supabase } from '@/lib/supabase';
 import { medicationLabel, symptomLabel } from '@/types/crisis';
 
 export interface CrisisPhase {
-  id: number;
+  id: string;
   intensidadeDor: number | null;
   regiaoDor: string | null;
   lado: string | null;
@@ -14,7 +14,7 @@ export interface CrisisPhase {
 }
 
 export interface CrisisDay {
-  id: number;
+  id: string;
   inicioCrise: Date;
   fimCrise: Date | null;
   fases: CrisisPhase[];
