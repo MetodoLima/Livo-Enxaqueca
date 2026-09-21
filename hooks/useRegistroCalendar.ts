@@ -4,7 +4,7 @@ import { supabase } from '@/lib/supabase';
 import { HumorId } from '@/hooks/useRegistroEvento';
 
 export interface RegistroCalendarDay {
-  id: number;
+  id: string;
   data: string;
   relato: string | null;
   horasSono: number | null;

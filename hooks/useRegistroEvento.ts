@@ -1,5 +1,6 @@
 import { useState, useCallback } from 'react';
 import { supabase } from '@/lib/supabase';
+import { randomUUID } from 'expo-crypto';
 
 export type HumorId = 'terrible' | 'bad' | 'so-so' | 'okay' | 'great';
 
@@ -45,12 +46,15 @@ export function useRegistroEvento(data: string) {
       }
 
       const payload = {
+        // O id vem do aparelho, nao do banco: sem isso a criacao offline e impossivel.
+        id: randomUUID(),
         user_id: userId,
         data,
         relato: patch.relato,
         horas_sono: patch.horasSono,
         ml_agua: patch.mlAgua,
         humor: patch.humor,
+        updated_at: new Date().toISOString(),
       };
 
       const { error } = await supabase
