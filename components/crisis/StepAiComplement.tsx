@@ -6,16 +6,16 @@ import {
   TextInput,
   ActivityIndicator,
   StyleSheet,
+  Switch,
 } from 'react-native';
 import { Mic, Send } from 'lucide-react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 import { Colors } from '@/constants/Colors';
 import StepFooter from './StepFooter';
-import { complementCrisis } from '@/services/api';
 import type { CrisisRecord, AiComplement } from '@/types/crisis';
 import { crisisToMigraineStructured, mergeAiResultIntoCrisis } from '@/types/crisis';
 import PulsingMic from '@/components/PulsingMic';
-import { audioAvailable, useAudioRecorder } from '@/hooks/useAudioRecorder';
+import { useCrisisAiComplement } from '@/hooks/useCrisisAiComplement';
 
 interface StepAiComplementProps {
   data: CrisisRecord;
@@ -31,26 +31,37 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
   const [text, setText] = useState('');
   const [error, setError] = useState<string | null>(null);
 
-  const { isRecording, recordSecs, error: micError, startRecording, stopRecording } = useAudioRecorder();
+  const {
+    useLocalAi,
+    toggleLocalAi,
+    onDeviceAvailable,
+    audioAvailable,
+    isRecording,
+    recordSecs,
+    micError,
+    startRecording,
+    stopAndProcess: stopAndProcessAi,
+    submitText: submitTextAi,
+    stageLabel,
+    downloadProgress,
+  } = useCrisisAiComplement();
 
   const fmtSecs = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
   // ── Audio ───────────────────────────────────────────────────────────
   const stopAndProcess = async () => {
-    try {
-      const uri = await stopRecording();
-      if (!uri) throw new Error('URI de áudio inválido.');
-      setSubStep('processing');
-      const preFilled = crisisToMigraineStructured(data);
-      const result = await complementCrisis(preFilled, uri, null);
-      const complement: AiComplement = { audioUri: uri, textNote: null, aiResult: result };
-      onChange({ ...mergeAiResultIntoCrisis(data, result.structured), aiComplement: complement });
-      setSubStep('done');
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Erro ao processar o áudio.');
+    setSubStep('processing');
+    const preFilled = crisisToMigraineStructured(data);
+    const result = await stopAndProcessAi(preFilled);
+    if (!result) {
+      setError('Erro ao processar o áudio.');
       setSubStep('idle');
+      return;
     }
+    const complement: AiComplement = { audioUri: null, textNote: null, aiResult: result };
+    onChange({ ...mergeAiResultIntoCrisis(data, result.structured), aiComplement: complement });
+    setSubStep('done');
   };
 
   // ── Text ────────────────────────────────────────────────────────────
@@ -58,16 +69,16 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
     if (!text.trim()) return;
     setError(null);
     setSubStep('processing');
-    try {
-      const preFilled = crisisToMigraineStructured(data);
-      const result = await complementCrisis(preFilled, null, text.trim());
-      const complement: AiComplement = { audioUri: null, textNote: text.trim(), aiResult: result };
-      onChange({ ...mergeAiResultIntoCrisis(data, result.structured), aiComplement: complement });
-      setSubStep('done');
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Erro ao processar o texto.');
+    const preFilled = crisisToMigraineStructured(data);
+    const result = await submitTextAi(preFilled, text.trim());
+    if (!result) {
+      setError('Erro ao processar o texto.');
       setSubStep('idle');
+      return;
     }
+    const complement: AiComplement = { audioUri: null, textNote: text.trim(), aiResult: result };
+    onChange({ ...mergeAiResultIntoCrisis(data, result.structured), aiComplement: complement });
+    setSubStep('done');
   };
 
   // ── Processing state ────────────────────────────────────────────────
@@ -78,8 +89,13 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
           <ActivityIndicator size="large" color={Colors.accent} />
           <Text style={styles.processingText}>Analisando...</Text>
           <Text style={styles.processingSubText}>
-            A IA está extraindo os dados do seu relato
+            {stageLabel ?? 'A IA está extraindo os dados do seu relato'}
           </Text>
+          {downloadProgress != null && (
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: `${Math.round(downloadProgress * 100)}%` }]} />
+            </View>
+          )}
         </View>
       </View>
     );
@@ -115,6 +131,22 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
           <Text style={styles.subtitle}>
             {`Gravando  ${fmtSecs(recordSecs)}`}
           </Text>
+        )}
+
+        {onDeviceAvailable && !isRecording && (
+          <View style={styles.localAiRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.localAiLabel}>IA local (beta)</Text>
+              <Text style={styles.localAiHint}>
+                {useLocalAi ? 'Processa no aparelho, sem enviar dados' : 'Processa no servidor'}
+              </Text>
+            </View>
+            <Switch
+              value={useLocalAi}
+              onValueChange={toggleLocalAi}
+              trackColor={{ false: 'rgba(139,163,167,0.3)', true: Colors.accent }}
+            />
+          </View>
         )}
 
         {/* Mic area */}
@@ -193,6 +225,27 @@ const styles = StyleSheet.create({
     fontFamily: 'Epilogue_700Bold',
     color: 'white',
     marginBottom: 20,
+  },
+  localAiRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(139,163,167,0.18)',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 20,
+  },
+  localAiLabel: {
+    fontSize: 14,
+    fontFamily: 'Epilogue_600SemiBold',
+    color: 'white',
+  },
+  localAiHint: {
+    fontSize: 12,
+    fontFamily: 'Epilogue_400Regular',
+    color: Colors.muted,
+    marginTop: 2,
   },
   subtitle: {
     fontSize: 15,
@@ -293,6 +346,19 @@ const styles = StyleSheet.create({
     marginTop: 8,
     textAlign: 'center',
     paddingHorizontal: 32,
+  },
+  progressTrack: {
+    width: 200,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(139,163,167,0.3)',
+    marginTop: 16,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 3,
+    backgroundColor: Colors.accent,
   },
 
   // Done

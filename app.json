@@ -14,7 +14,8 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.anonymous.livonative"
     },
     "android": {
       "adaptiveIcon": {
@@ -37,7 +38,27 @@
     "plugins": [
       "expo-router",
       "expo-audio",
-      "expo-asset"
+      "expo-asset",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "15.1"
+          },
+          "android": {
+            "extraProguardRules": "-keep class com.rnllama.** { *; }\n-keep class com.rnwhisper.** { *; }"
+          }
+        }
+      ],
+      [
+        "llama.rn",
+        {
+          "enableEntitlements": true,
+          "entitlementsProfile": "development",
+          "forceCxx20": true,
+          "enableOpenCLAndHexagon": true
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
@@ -45,8 +66,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "0fed407a-81df-4058-bad8-42ca936bcf8a"
+        "projectId": "53166223-e112-4a41-a4ed-613f5b2d278c"
       }
-    }
+    },
+    "owner": "vinlavor"
   }
 }
