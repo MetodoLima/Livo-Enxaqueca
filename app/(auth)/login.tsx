@@ -3,7 +3,6 @@ import React, { useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import { supabase } from '../../lib/supabase';
-import { classifyAuthError } from '../../util/authError';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -25,7 +24,6 @@ export default function Login() {
     setLoading(false);
 
     if (error) {
-      console.warn('[Auth] signInWithPassword error classified as', classifyAuthError(error));
       Alert.alert('Erro de Login', error.message);
     }
   };
