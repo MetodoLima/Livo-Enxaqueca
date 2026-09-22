@@ -1,6 +1,7 @@
 import { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { classifyAuthError } from '../util/authError';
 
 export type LocalSessionStatus = 'loading' | 'available' | 'absent';
 
@@ -38,6 +39,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const checkSetupStatus = async () => {
     if (localSession?.user) {
       const { data, error } = await supabase.auth.getUser();
+      if (error) {
+        console.warn('[Auth] getUser error classified as', classifyAuthError(error));
+      }
       if (!error && data?.user) {
         setIsSetupCompleted(!!data.user.user_metadata?.setupCompleted);
       }
@@ -85,10 +89,12 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         if (!error) {
           applyLocalSession(storedSession);
         } else {
+          console.warn('[Auth] getSession error classified as', classifyAuthError(error));
           setLocalSessionStatus('absent');
         }
       })
-      .catch(() => {
+      .catch((error: unknown) => {
+        console.warn('[Auth] getSession exception classified as', classifyAuthError(error));
         if (!cancelled && !initializedByAuthEvent.current) {
           setLocalSessionStatus('absent');
         }

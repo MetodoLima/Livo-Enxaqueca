@@ -4,6 +4,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
 import { supabase } from '../../lib/supabase';
+import { classifyAuthError } from '../../util/authError';
 
 export default function Register() {
   const [name, setName] = useState('');
@@ -117,6 +118,7 @@ export default function Register() {
     setLoading(false);
 
     if (error) {
+      console.warn('[Auth] signUp error classified as', classifyAuthError(error));
       Alert.alert('Erro de Cadastro', error.message);
     } else if (data.session) {
       // Login automático e redirecionamento tratados pelo AuthProvider
