@@ -177,7 +177,7 @@ export const classifyAuthError = (error: unknown): AuthErrorClassification => {
 
   const cause = asErrorLike(errorLike.cause) ?? asErrorLike(errorLike.originalError);
   const causeKind = cause ? classifyKnownError(cause) : undefined;
-  if (causeKind) {
+  if (cause && causeKind) {
     return metadata(causeKind, {
       ...errorLike,
       status: asStatus(cause.status) ?? asStatus(errorLike.status),

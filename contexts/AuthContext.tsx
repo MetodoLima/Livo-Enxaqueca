@@ -1,6 +1,7 @@
 import { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { useConnectivity } from '../hooks/useConnectivity';
 
 export type LocalSessionStatus = 'loading' | 'available' | 'absent';
 
@@ -27,6 +28,7 @@ const AuthContext = createContext<AuthContextType>({
 export const useAuth = () => useContext(AuthContext);
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const { status: connectivityStatus } = useConnectivity();
   const [localSession, setLocalSession] = useState<Session | null>(null);
   const [localSessionStatus, setLocalSessionStatus] = useState<LocalSessionStatus>('loading');
   const [isSetupCompleted, setIsSetupCompleted] = useState(false);
@@ -36,13 +38,24 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const loading = localSessionStatus === 'loading';
 
   const checkSetupStatus = async () => {
-    if (localSession?.user) {
+    const localSetupCompleted = !!localSession?.user?.user_metadata?.setupCompleted;
+    setIsSetupCompleted(localSetupCompleted);
+
+    if (localSession?.user && connectivityStatus === 'online') {
       const { data, error } = await supabase.auth.getUser();
       if (!error && data?.user) {
         setIsSetupCompleted(!!data.user.user_metadata?.setupCompleted);
       }
     }
+    // Offline uses the local session metadata. Unknown is not offline: we only
+    // avoid a remote validation until connectivity has been determined.
   };
+
+  useEffect(() => {
+    if (localSession?.user) {
+      void checkSetupStatus();
+    }
+  }, [localSession, connectivityStatus]);
 
   useEffect(() => {
     let cancelled = false;

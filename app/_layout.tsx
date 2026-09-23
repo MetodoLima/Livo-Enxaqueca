@@ -10,6 +10,7 @@ import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { CrisisProvider } from '@/contexts/CrisisContext';
 import { ConnectivityProvider } from '@/contexts/ConnectivityContext';
+import { useConnectivity } from '@/hooks/useConnectivity';
 import { useRouter, useSegments, useRootNavigationState } from 'expo-router';
 
 import {
@@ -42,6 +43,7 @@ const LivoTheme = {
 
 function RootLayoutNav() {
   const { localSession, localSessionStatus, isSetupCompleted } = useAuth();
+  const { status: connectivityStatus } = useConnectivity();
   const segments = useSegments();
   const router = useRouter();
   const navigationState = useRootNavigationState();
@@ -57,6 +59,10 @@ function RootLayoutNav() {
         router.replace('/login' as any);
       }
     } else {
+      // Wait for connectivity before deciding setup status for a local session.
+      // Unknown is not offline; this only prevents a premature redirect.
+      if (connectivityStatus === 'unknown') return;
+
       if (inAuthGroup) {
         if (!isSetupCompleted) {
           router.replace('/(setup)/step1' as any);
@@ -69,7 +75,7 @@ function RootLayoutNav() {
         router.replace('/(tabs)' as any);
       }
     }
-  }, [localSession, localSessionStatus, segments, isSetupCompleted, navigationState?.key]);
+  }, [localSession, localSessionStatus, connectivityStatus, segments, isSetupCompleted, navigationState?.key]);
 
   return (
     <ThemeProvider value={LivoTheme}>
