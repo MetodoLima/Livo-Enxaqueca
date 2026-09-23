@@ -2,7 +2,7 @@ import { Link } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
-import { supabase } from '../../lib/supabase';
+import { sessionRepository } from '@/repositories';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -16,15 +16,12 @@ export default function Login() {
     }
 
     setLoading(true);
-    const { error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    const { error } = await sessionRepository.signIn(email, password);
 
     setLoading(false);
 
     if (error) {
-      Alert.alert('Erro de Login', error.message);
+      Alert.alert('Erro de Login', error);
     }
   };
 

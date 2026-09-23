@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
+import { crisisRepository, type Crisis } from '@/repositories';
 import { medicationLabel, symptomLabel } from '@/types/crisis';
 
 export interface CrisisPhase {
@@ -28,38 +28,18 @@ export interface CrisisByDay {
   [day: number]: CrisisDay[];
 }
 
-const SELECT = `
-  id,
-  inicio_crise,
-  fim_crise,
-  registro_crise (
-    id,
-    intensidade_dor,
-    regiao_dor,
-    lado,
-    nivel_incapacidade,
-    resumo,
-    sintomas,
-    medicamentos,
-    medicamentos_livres
-  )
-`;
-
-function rowToCrisis(row: any): CrisisDay {
-  const registros: any[] = Array.isArray(row.registro_crise) ? row.registro_crise : [];
-
-  const fases: CrisisPhase[] = registros.map((r: any) => ({
-    id: r.id,
-    intensidadeDor: r.intensidade_dor ?? null,
-    regiaoDor: r.regiao_dor ?? null,
-    lado: r.lado ?? null,
-    nivelIncapacidade: r.nivel_incapacidade ?? null,
-    resumo: r.resumo ?? null,
-    sintomas: ((r.sintomas ?? []) as string[]).map(symptomLabel),
-    medicamentos: [
-      ...((r.medicamentos ?? []) as string[]).map(medicationLabel),
-      ...((r.medicamentos_livres ?? []) as string[]),
-    ],
+// O repositorio entrega os ids do catalogo; o calendario mostra os rotulos.
+// Crise sem inicio nao chega aqui: nao ha dia do mes onde coloca-la.
+function toCrisisDay(crise: Crisis & { inicioCrise: Date }): CrisisDay {
+  const fases: CrisisPhase[] = crise.fases.map((f) => ({
+    id: f.id,
+    intensidadeDor: f.intensidadeDor,
+    regiaoDor: f.regiaoDor,
+    lado: f.lado,
+    nivelIncapacidade: f.nivelIncapacidade,
+    resumo: f.resumo,
+    sintomas: f.sintomas.map(symptomLabel),
+    medicamentos: [...f.medicamentos.map(medicationLabel), ...f.medicamentosLivres],
   }));
 
   const maxIntensidadeFase = fases.reduce<CrisisPhase | null>(
@@ -68,9 +48,9 @@ function rowToCrisis(row: any): CrisisDay {
   );
 
   return {
-    id: row.id,
-    inicioCrise: new Date(row.inicio_crise),
-    fimCrise: row.fim_crise ? new Date(row.fim_crise) : null,
+    id: crise.id,
+    inicioCrise: crise.inicioCrise,
+    fimCrise: crise.fimCrise,
     fases,
     intensidadeDor: maxIntensidadeFase?.intensidadeDor ?? null,
     sintomas: [...new Set(fases.flatMap((f) => f.sintomas))],
@@ -125,27 +105,20 @@ export function useCrisisCalendar(year: number, month: number) {
       }
     };
 
+    const comInicio = (crises: Crisis[]) =>
+      crises.filter((c): c is Crisis & { inicioCrise: Date } => c.inicioCrise !== null);
+
     try {
       // Crises que começam neste mês
-      const { data, error: err1 } = await supabase
-        .from('crise_enxaqueca')
-        .select(SELECT)
-        .gte('inicio_crise', firstDay.toISOString())
-        .lte('inicio_crise', lastDay.toISOString())
-        .order('inicio_crise', { ascending: true });
-
-      if (err1) throw err1;
-      for (const row of data ?? []) spreadCrisis(rowToCrisis(row));
+      const doMes = await crisisRepository.list({ desde: firstDay, ate: lastDay });
+      for (const crise of comInicio(doMes)) spreadCrisis(toCrisisDay(crise));
 
       // Crises que começaram antes mas terminam neste mês
-      const { data: prevData } = await supabase
-        .from('crise_enxaqueca')
-        .select(SELECT)
-        .lt('inicio_crise', firstDay.toISOString())
-        .gte('fim_crise', firstDay.toISOString())
-        .order('inicio_crise', { ascending: true });
-
-      for (const row of prevData ?? []) spreadCrisis(rowToCrisis(row));
+      const anteriores = await crisisRepository.list({
+        comecouAntesDe: firstDay,
+        terminaApos: firstDay,
+      });
+      for (const crise of comInicio(anteriores)) spreadCrisis(toCrisisDay(crise));
 
       setCrisisByDay(grouped);
     } catch (err: any) {

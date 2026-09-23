@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { supabase } from '@/lib/supabase';
+import { crisisRepository } from '@/repositories';
 import { medicationLabel, symptomLabel } from '@/types/crisis';
 
 export interface InsightItem {
@@ -44,27 +44,7 @@ export function useInsights() {
     setError(null);
 
     try {
-      const { data: rows, error: supabaseError } = await supabase
-        .from('crise_enxaqueca')
-        .select(`
-          id,
-          inicio_crise,
-          fim_crise,
-          registro_crise (
-            id,
-            intensidade_dor,
-            regiao_dor,
-            sintomas,
-            medicamentos,
-            medicamentos_livres,
-            fatores
-          )
-        `)
-        .order('inicio_crise', { ascending: true });
-
-      if (supabaseError) throw supabaseError;
-
-      const crises = rows ?? [];
+      const crises = await crisisRepository.list();
       const total = crises.length;
 
       if (total === 0) {
@@ -83,32 +63,32 @@ export function useInsights() {
       }
 
       // Todos os registros de todas as crises (uma crise pode ter vários registros)
-      const allRegistros = crises.flatMap((c) =>
-        Array.isArray(c.registro_crise) ? c.registro_crise : []
-      );
+      const allRegistros = crises.flatMap((c) => c.fases);
 
       const intensities = allRegistros
-        .map((r: any) => r.intensidade_dor)
+        .map((r) => r.intensidadeDor)
         .filter((v): v is number => v != null);
       const avgIntensity =
         intensities.length > 0
           ? Math.round((intensities.reduce((a, b) => a + b, 0) / intensities.length) * 10) / 10
           : null;
 
+      // Só crise com as duas pontas entra na média de duração, como antes.
       const durations = crises
-        .filter((c) => c.inicio_crise && c.fim_crise)
-        .map(
-          (c) =>
-            (new Date(c.fim_crise).getTime() - new Date(c.inicio_crise).getTime()) /
-            (1000 * 60 * 60)
-        );
+        .filter((c) => c.inicioCrise !== null && c.fimCrise !== null)
+        .map((c) => (c.fimCrise!.getTime() - c.inicioCrise!.getTime()) / (1000 * 60 * 60));
       const avgDurationHours =
         durations.length > 0
           ? Math.round((durations.reduce((a, b) => a + b, 0) / durations.length) * 10) / 10
           : null;
 
-      const firstDate = new Date(crises[0].inicio_crise);
+      // inicio_crise aceita nulo no schema, e a ordenacao joga os nulos para o fim.
+      const comInicio = crises.filter((c) => c.inicioCrise !== null) as Array<
+        (typeof crises)[number] & { inicioCrise: Date }
+      >;
+
       const now = new Date();
+      const firstDate = comInicio[0]?.inicioCrise ?? now;
       const monthsDiff = Math.max(
         1,
         (now.getFullYear() - firstDate.getFullYear()) * 12 +
@@ -117,28 +97,23 @@ export function useInsights() {
       );
       const crisesPerMonth = Math.round((total / monthsDiff) * 10) / 10;
 
-      const allTriggers = allRegistros.flatMap((r: any) => (r.fatores ?? []) as string[]);
-      const allSintomas = allRegistros.flatMap((r: any) =>
-        ((r.sintomas ?? []) as string[]).map(symptomLabel)
-      );
-      const allRegions = allRegistros
-        .map((r: any) => r.regiao_dor)
-        .filter(Boolean) as string[];
+      const allTriggers = allRegistros.flatMap((r) => r.fatores);
+      const allSintomas = allRegistros.flatMap((r) => r.sintomas.map(symptomLabel));
+      const allRegions = allRegistros.map((r) => r.regiaoDor).filter(Boolean) as string[];
 
       // Os medicamentos vinham numa segunda consulta, porque a tabela de juncao era o
       // unico lugar onde os customizados apareciam. Agora os dois vem no mesmo select.
-      const allMedicamentos = allRegistros.flatMap((r: any) => [
-        ...((r.medicamentos ?? []) as string[]).map(medicationLabel),
-        ...((r.medicamentos_livres ?? []) as string[]),
+      const allMedicamentos = allRegistros.flatMap((r) => [
+        ...r.medicamentos.map(medicationLabel),
+        ...r.medicamentosLivres,
       ]);
 
       const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
       const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
-      const last30 = crises.filter((c) => new Date(c.inicio_crise) >= thirtyDaysAgo).length;
-      const prev30 = crises.filter((c) => {
-        const d = new Date(c.inicio_crise);
-        return d >= sixtyDaysAgo && d < thirtyDaysAgo;
-      }).length;
+      const last30 = comInicio.filter((c) => c.inicioCrise >= thirtyDaysAgo).length;
+      const prev30 = comInicio.filter(
+        (c) => c.inicioCrise >= sixtyDaysAgo && c.inicioCrise < thirtyDaysAgo
+      ).length;
 
       let trend: InsightsData['trend'] = null;
       if (prev30 > 0) {

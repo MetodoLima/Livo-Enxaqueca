@@ -1,35 +1,31 @@
-import { supabase } from '@/lib/supabase';
+import { crisisRepository, type Crisis } from '@/repositories';
 import { analyzeInsights, CriseInsightRecord, QualitativeAnalysis } from '@/services/api';
 import { medicationLabel, symptomLabel } from '@/types/crisis';
 import { useCallback, useState } from 'react';
 
-function serializeCrises(rows: any[]): CriseInsightRecord[] {
-  return rows.flatMap((c) => {
-    const inicio = c.inicio_crise ? new Date(c.inicio_crise) : null;
-    const fim = c.fim_crise ? new Date(c.fim_crise) : null;
+function serializeCrises(crises: Crisis[]): CriseInsightRecord[] {
+  return crises.flatMap((c) => {
+    const inicio = c.inicioCrise;
+    const fim = c.fimCrise;
     const duracao_horas =
       inicio && fim
         ? Math.round(((fim.getTime() - inicio.getTime()) / (1000 * 60 * 60)) * 10) / 10
         : null;
     const data = inicio ? inicio.toISOString().split('T')[0] : 'data desconhecida';
 
-    const registros: any[] = Array.isArray(c.registro_crise) ? c.registro_crise : [];
-    if (registros.length === 0) return [];
+    if (c.fases.length === 0) return [];
 
-    return registros.map((reg: any) => ({
+    return c.fases.map((reg) => ({
       data,
-      intensidade: reg.intensidade_dor ?? null,
-      localizacao: reg.regiao_dor ?? null,
-      lado: reg.lado ?? null,
+      intensidade: reg.intensidadeDor,
+      localizacao: reg.regiaoDor,
+      lado: reg.lado,
       duracao_horas,
-      sintomas: ((reg.sintomas ?? []) as string[]).map(symptomLabel),
-      medicamentos: [
-        ...((reg.medicamentos ?? []) as string[]).map(medicationLabel),
-        ...((reg.medicamentos_livres ?? []) as string[]),
-      ],
-      gatilhos: (reg.fatores ?? []) as string[],
-      nivel_incapacidade: reg.nivel_incapacidade ?? null,
-      resumo: reg.resumo ?? null,
+      sintomas: reg.sintomas.map(symptomLabel),
+      medicamentos: [...reg.medicamentos.map(medicationLabel), ...reg.medicamentosLivres],
+      gatilhos: reg.fatores,
+      nivel_incapacidade: reg.nivelIncapacidade,
+      resumo: reg.resumo,
     }));
   });
 }
@@ -44,29 +40,7 @@ export function useQualitativeAnalysis() {
     setError(null);
 
     try {
-      const { data: rows, error: supabaseError } = await supabase
-        .from('crise_enxaqueca')
-        .select(`
-          id,
-          inicio_crise,
-          fim_crise,
-          registro_crise (
-            intensidade_dor,
-            regiao_dor,
-            lado,
-            nivel_incapacidade,
-            resumo,
-            sintomas,
-            medicamentos,
-            medicamentos_livres,
-            fatores
-          )
-        `)
-        .order('inicio_crise', { ascending: true });
-
-      if (supabaseError) throw supabaseError;
-
-      const crises = serializeCrises(rows ?? []);
+      const crises = serializeCrises(await crisisRepository.list());
       const result = await analyzeInsights(crises);
       setAnalysis(result);
     } catch (err: any) {

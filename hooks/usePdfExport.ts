@@ -1,4 +1,4 @@
-import { supabase } from '@/lib/supabase';
+import { crisisRepository, type Crisis } from '@/repositories';
 import { medicationLabel, symptomLabel } from '@/types/crisis';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
@@ -69,24 +69,37 @@ function countTop(items: string[], limit = 5): Array<{ nome: string; count: numb
     .map(([nome, count]) => ({ nome, count }));
 }
 
+/**
+ * O gerador de HTML abaixo tem quase duzentas linhas e le os nomes de coluna do banco.
+ * Reescrever tudo para os nomes do dominio nao e o que a #48 pede e arriscaria um relatorio
+ * que acabou de ser conferido no aparelho, entao a conversao acontece aqui, num lugar so.
+ * Tipar o gerador e a T5.2.
+ */
+function toReportRows(crises: Crisis[]) {
+  return crises.map((c) => ({
+    id: c.id,
+    inicio_crise: c.inicioCrise ? c.inicioCrise.toISOString() : null,
+    fim_crise: c.fimCrise ? c.fimCrise.toISOString() : null,
+    registro_crise: c.fases.map((f) => ({
+      intensidade_dor: f.intensidadeDor,
+      regiao_dor: f.regiaoDor,
+      lado: f.lado,
+      nivel_incapacidade: f.nivelIncapacidade,
+      resumo: f.resumo,
+      sintomas: f.sintomas,
+      medicamentos: f.medicamentos,
+      medicamentos_livres: f.medicamentosLivres,
+      fatores: f.fatores,
+    })),
+  }));
+}
+
 async function fetchCrises(months: number) {
   const since = new Date();
   since.setMonth(since.getMonth() - months);
 
-  const { data, error } = await supabase
-    .from('crise_enxaqueca')
-    .select(`
-      id, inicio_crise, fim_crise,
-      registro_crise (
-        intensidade_dor, regiao_dor, lado, nivel_incapacidade, resumo,
-        sintomas, medicamentos, medicamentos_livres, fatores
-      )
-    `)
-    .gte('inicio_crise', since.toISOString())
-    .order('inicio_crise', { ascending: false });
-
-  if (error) throw error;
-  return data ?? [];
+  const crises = await crisisRepository.list({ desde: since, ordem: 'desc' });
+  return toReportRows(crises);
 }
 
 function buildHtml(crises: any[], userName: string, months: number): string {
