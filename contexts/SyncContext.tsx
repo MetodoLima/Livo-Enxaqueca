@@ -1,27 +1,30 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useConnectivity } from '@/hooks/useConnectivity';
-import { onReplicated, pullFromServer } from '@/sync/pull';
+import { contarPendentes, onDadosLocaisMudaram, sincronizar } from '@/sync';
 
 /**
- * Dispara a replicacao do servidor para o banco local. Issue #49.
+ * Sincronizacao: envia a fila e replica do servidor. Issues #49 e #50.
  *
- * Replica ao entrar com sessao, e de novo quando a conexao volta. O estado exposto aqui e o
- * que a #51 vai mostrar na interface.
+ * Roda ao entrar com sessao e de novo quando a conexao volta. O estado exposto aqui e o que a
+ * #51 vai mostrar na interface — especialmente `pendentes`, que e o numero de registros
+ * gravados no aparelho e ainda nao enviados.
  */
 
 type SyncContextType = {
-  replicando: boolean;
-  ultimaReplicacao: Date | null;
+  sincronizando: boolean;
+  ultimaAtualizacao: Date | null;
+  pendentes: number;
   erro: string | null;
-  replicarAgora: () => Promise<void>;
+  sincronizarAgora: () => Promise<void>;
 };
 
 const SyncContext = createContext<SyncContextType>({
-  replicando: false,
-  ultimaReplicacao: null,
+  sincronizando: false,
+  ultimaAtualizacao: null,
+  pendentes: 0,
   erro: null,
-  replicarAgora: async () => {},
+  sincronizarAgora: async () => {},
 });
 
 export const useSync = () => useContext(SyncContext);
@@ -30,44 +33,60 @@ export const SyncProvider = ({ children }: { children: React.ReactNode }) => {
   const { user } = useAuth();
   const { isOnline } = useConnectivity();
 
-  const [replicando, setReplicando] = useState(false);
-  const [ultimaReplicacao, setUltimaReplicacao] = useState<Date | null>(null);
+  const [sincronizando, setSincronizando] = useState(false);
+  const [ultimaAtualizacao, setUltimaAtualizacao] = useState<Date | null>(null);
+  const [pendentes, setPendentes] = useState(0);
   const [erro, setErro] = useState<string | null>(null);
 
-  // Duas replicacoes ao mesmo tempo escreveriam na mesma transacao. O ref segura isso sem
-  // depender do estado, que so atualiza no render seguinte.
-  const emAndamento = useRef(false);
+  const montado = useRef(true);
+  useEffect(() => {
+    montado.current = true;
+    return () => {
+      montado.current = false;
+    };
+  }, []);
 
-  const replicarAgora = useCallback(async () => {
-    if (emAndamento.current) return;
-    emAndamento.current = true;
-    setReplicando(true);
+  const sincronizarAgora = useCallback(async () => {
+    setSincronizando(true);
     setErro(null);
     try {
-      // Nao marca a data aqui: quem marca e o ouvinte de onReplicated, logo abaixo, para que
-      // replicacao disparada de qualquer lugar atualize as telas do mesmo jeito.
-      await pullFromServer();
+      // A trava contra concorrencia vive no modulo de sincronizacao, nao aqui: a gravacao
+      // dispara envio de dentro do repositorio, fora do React, e um guarda de componente nao
+      // veria aquela chamada.
+      const resultado = await sincronizar();
+      if (montado.current) setPendentes(resultado.pendentes);
     } catch (e: any) {
-      setErro(e?.message ?? 'Erro ao sincronizar com o servidor');
+      if (montado.current) setErro(e?.message ?? 'Erro ao sincronizar com o servidor');
     } finally {
-      emAndamento.current = false;
-      setReplicando(false);
+      if (montado.current) setSincronizando(false);
     }
   }, []);
 
   // Qualquer replicacao, venha de onde vier, atualiza a data e com ela as telas que leem.
-  useEffect(() => onReplicated(() => setUltimaReplicacao(new Date())), []);
+  useEffect(() => onDadosLocaisMudaram(() => setUltimaAtualizacao(new Date())), []);
+
+  // O contador precisa estar certo antes da primeira sincronizacao: se o app abriu offline
+  // com fila cheia, o numero tem que aparecer sem esperar rede.
+  useEffect(() => {
+    contarPendentes()
+      .then((total) => {
+        if (montado.current) setPendentes(total);
+      })
+      .catch(() => undefined);
+  }, [ultimaAtualizacao]);
 
   // `isOnline` e falso enquanto a conectividade esta sendo determinada, entao esperar por ele
-  // ja cobre o boot: nao se tenta replicar antes de saber se ha rede. Quando a conexao volta,
-  // isOnline vira true e o efeito roda de novo.
+  // ja cobre o boot: nao se tenta sincronizar antes de saber se ha rede. Quando a conexao
+  // volta, isOnline vira true e o efeito roda de novo.
   useEffect(() => {
     if (!user || !isOnline) return;
-    void replicarAgora();
-  }, [user, isOnline, replicarAgora]);
+    void sincronizarAgora();
+  }, [user, isOnline, sincronizarAgora]);
 
   return (
-    <SyncContext.Provider value={{ replicando, ultimaReplicacao, erro, replicarAgora }}>
+    <SyncContext.Provider
+      value={{ sincronizando, ultimaAtualizacao, pendentes, erro, sincronizarAgora }}
+    >
       {children}
     </SyncContext.Provider>
   );

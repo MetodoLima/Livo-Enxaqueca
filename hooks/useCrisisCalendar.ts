@@ -60,7 +60,7 @@ function toCrisisDay(crise: Crisis & { inicioCrise: Date }): CrisisDay {
 }
 
 export function useCrisisCalendar(year: number, month: number) {
-  const { ultimaReplicacao } = useSync();
+  const { ultimaAtualizacao } = useSync();
   const [crisisByDay, setCrisisByDay] = useState<CrisisByDay>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -128,7 +128,7 @@ export function useCrisisCalendar(year: number, month: number) {
     } finally {
       setLoading(false);
     }
-  }, [year, month, ultimaReplicacao]);
+  }, [year, month, ultimaAtualizacao]);
 
   useEffect(() => {
     fetchCrises();

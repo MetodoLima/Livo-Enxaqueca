@@ -38,7 +38,7 @@ function countTop(items: string[], total: number, limit = 5): InsightItem[] {
 export function useInsights() {
   // Relê quando a replicação termina: na primeira abertura o banco local ainda está vazio
   // quando este hook monta, e sem isso a tela ficaria vazia até sair e voltar.
-  const { ultimaReplicacao } = useSync();
+  const { ultimaAtualizacao } = useSync();
   const [data, setData] = useState<InsightsData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -146,7 +146,7 @@ export function useInsights() {
     } finally {
       setLoading(false);
     }
-  }, [ultimaReplicacao]);
+  }, [ultimaAtualizacao]);
 
   useEffect(() => {
     fetchInsights();

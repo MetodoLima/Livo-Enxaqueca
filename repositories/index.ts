@@ -1,10 +1,15 @@
-import { pullFromServer } from '@/sync/pull';
+import { getDb } from '@/db';
+import { enviarPendentes } from '@/sync';
+import { notificarDadosLocais } from '@/sync/notify';
+import type { CrisisRecord } from '@/types/crisis';
 import { crisisRepository as localCrisis } from './local/crisisRepository';
 import { dailyRecordRepository as localDailyRecord } from './local/dailyRecordRepository';
-import { crisisRepository as remoteCrisis } from './remote/crisisRepository';
-import { dailyRecordRepository as remoteDailyRecord } from './remote/dailyRecordRepository';
-import type { CrisisRecord } from '@/types/crisis';
-import type { CrisisRepository, DailyRecordRepository, NewDailyRecord } from './types';
+import type {
+  CrisisRepository,
+  DailyRecordRepository,
+  NewDailyRecord,
+  SaveOutcome,
+} from './types';
 
 /**
  * Unica superficie de import da camada de dado. Issues #48 e #49.
@@ -15,24 +20,43 @@ import type { CrisisRepository, DailyRecordRepository, NewDailyRecord } from './
  */
 
 /**
- * As leituras vem do banco local, a gravacao ainda vai direto ao servidor.
+ * Leitura e escrita vao para o banco local. Issue #50.
  *
- * Essa mistura e PROVISORIA e termina na #50, que grava no SQLite com synced = 0 e enfileira
- * o envio. Ate lá, registrar uma crise sem rede continua falhando; o que a #49 entrega e o
- * historico abrir sem rede.
+ * Gravar nunca depende de rede: a linha nasce no SQLite com `synced = 0` e aparece na tela na
+ * hora, porque a leitura tambem e local desde a #49. O envio acontece em seguida se houver
+ * conexao, e o que a tela recebe de volta e o FATO de ter subido ou nao — nao um palpite a
+ * partir do estado da rede.
  *
- * Por causa dessa mistura, gravar precisa replicar em seguida: sem isso a crise iria para o
- * servidor e nao apareceria no calendario, que agora le da replica. A #50 remove essa
- * chamada, porque lá a escrita ja nasce local.
+ * Se o envio falhar, a gravacao continua valida. Perder o registro por falta de rede e
+ * exatamente o que esta frente existe para impedir.
  */
-async function salvarERreplicar<T>(
-  salvarNoServidor: () => Promise<T>,
-): Promise<T> {
-  const resultado = await salvarNoServidor();
-  // A gravacao ja aconteceu. Falha ao replicar nao pode virar erro de gravacao para a tela:
-  // o dado esta no servidor e a proxima replicacao o traz.
-  await pullFromServer().catch(() => undefined);
-  return resultado;
+async function gravarEEnviar(gravarLocal: () => Promise<string>): Promise<SaveOutcome> {
+  const id = await gravarLocal();
+
+  // A tela le do banco local, entao o registro ja pode aparecer antes de qualquer rede.
+  notificarDadosLocais();
+
+  try {
+    // Só envia, nao replica: a linha ja esta no banco local e a tela ja a mostra. Replicar
+    // aqui faria cada registro salvo rebaixar o historico inteiro com a tela esperando.
+    await enviarPendentes();
+    // Nao basta contar quantos subiram na rodada: o que interessa e se ESTE registro saiu da
+    // fila. Outro pendente antigo pode ter subido e este ter falhado.
+    return { enviado: !(await estaPendente(id)) };
+  } catch {
+    return { enviado: false };
+  }
+}
+
+async function estaPendente(id: string): Promise<boolean> {
+  const db = await getDb();
+  const linha = await db.getFirstAsync<{ total: number }>(
+    `select
+       (select count(*) from crise_enxaqueca where id = ? and synced = 0) +
+       (select count(*) from registro_diario where id = ? and synced = 0) as total`,
+    [id, id],
+  );
+  return (linha?.total ?? 0) > 0;
 }
 
 export const crisisRepository: CrisisRepository = {
@@ -41,13 +65,12 @@ export const crisisRepository: CrisisRepository = {
   countSince: localCrisis.countSince,
   intensities: localCrisis.intensities,
   save: (crisis: CrisisRecord, fases: CrisisRecord[] = []) =>
-    salvarERreplicar(() => remoteCrisis.save(crisis, fases)),
+    gravarEEnviar(() => localCrisis.save(crisis, fases)),
 };
 
 export const dailyRecordRepository: DailyRecordRepository = {
   listBetween: localDailyRecord.listBetween,
-  save: (registro: NewDailyRecord) =>
-    salvarERreplicar(() => remoteDailyRecord.save(registro)),
+  save: (registro: NewDailyRecord) => gravarEEnviar(() => localDailyRecord.save(registro)),
 };
 
 // Sem equivalente local, e de proposito. Setup acontece uma vez, com conexao. Sessao e
@@ -71,6 +94,7 @@ export type {
   SetupAnswer,
   SetupOption,
   SetupQuestion,
+  SaveOutcome,
   SetupRepository,
   SignUpOutcome,
   UserRepository,

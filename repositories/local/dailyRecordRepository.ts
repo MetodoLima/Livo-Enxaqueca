@@ -1,5 +1,6 @@
 import { getDb } from '@/db';
-import type { DailyRecord, HumorId } from '../types';
+import { randomUUID } from 'expo-crypto';
+import type { DailyRecord, HumorId, NewDailyRecord } from '../types';
 
 /**
  * Leitura de registro diario contra o banco local. Issue #49.
@@ -41,5 +42,36 @@ export const dailyRecordRepository = {
       humor: (l.humor ?? null) as HumorId | null,
       createdAt: l.created_at ?? '',
     }));
+  },
+
+  /**
+   * Grava o registro no aparelho, com `synced = 0`. Issue #50.
+   *
+   * Nao consulta o servidor para descobrir o usuario — era isso que produzia "Perfil do
+   * usuario nao encontrado" ao salvar em modo aviao. O dono e resolvido na hora do envio,
+   * lendo sync_state, e conferido pela politica de INSERT dentro do banco.
+   */
+  async save(registro: NewDailyRecord): Promise<string> {
+    const db = await getDb();
+    const id = randomUUID();
+    const agora = new Date().toISOString();
+
+    await db.runAsync(
+      `insert into registro_diario
+         (id, data, relato, horas_sono, ml_agua, humor, created_at, updated_at, synced)
+       values (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+      [
+        id,
+        registro.data,
+        registro.relato,
+        registro.horasSono,
+        registro.mlAgua,
+        registro.humor,
+        agora,
+        agora,
+      ],
+    );
+
+    return id;
   },
 };

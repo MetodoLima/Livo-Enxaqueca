@@ -1,7 +1,30 @@
 import { supabase } from '@/lib/supabase';
-import { CrisisRecord } from '@/types/crisis';
-import { randomUUID } from 'expo-crypto';
-import type { Crisis, CrisisFilter, CrisisRepository, Phase } from '../types';
+import type { Crisis, CrisisFilter, Phase } from '../types';
+
+/**
+ * O formato que a funcao salvar_crise espera. Nomes de coluna, nao de dominio, porque este e
+ * o contrato com o banco e nao com o app.
+ */
+export type CrisePayload = {
+  id: string;
+  inicio_crise: string | null;
+  fim_crise: string | null;
+  updated_at: string;
+};
+
+export type FasePayload = {
+  id: string;
+  intensidade_dor: number | null;
+  regiao_dor: string | null;
+  lado: string | null;
+  nivel_incapacidade: string | null;
+  resumo: string | null;
+  sintomas: string[];
+  medicamentos: string[];
+  medicamentos_livres: string[];
+  fatores: string[];
+  updated_at: string;
+};
 
 /**
  * Implementacao contra o Supabase. Issue #48.
@@ -53,31 +76,7 @@ function toCrisis(row: any): Crisis {
   };
 }
 
-function nivelIncapacidade(intensity: number | null): string | null {
-  if (intensity === null) return null;
-  if (intensity <= 3) return 'leve';
-  if (intensity <= 6) return 'moderado';
-  return 'severo';
-}
-
-function faseToPayload(phase: CrisisRecord) {
-  return {
-    id: randomUUID(),
-    intensidade_dor: phase.intensity,
-    regiao_dor: phase.location,
-    lado: phase.side,
-    nivel_incapacidade: nivelIncapacidade(phase.intensity),
-    resumo: phase.aiComplement?.aiResult?.structured?.resumo ?? null,
-    sintomas: phase.symptoms,
-    // 'nenhum' e opcao de interface para dizer que nao tomou nada, nao medicamento.
-    medicamentos: phase.medications.filter((m) => m !== 'nenhum'),
-    medicamentos_livres: phase.customMedications,
-    fatores: phase.triggers,
-    updated_at: new Date().toISOString(),
-  };
-}
-
-export const crisisRepository: CrisisRepository = {
+export const crisisRepository = {
   async list(filtro: CrisisFilter = {}): Promise<Crisis[]> {
     let query = supabase.from('crise_enxaqueca').select(SELECT);
 
@@ -132,20 +131,20 @@ export const crisisRepository: CrisisRepository = {
   },
 
   /**
-   * Uma unica chamada, atomica, feita pela funcao salvar_crise. A resolucao do usuario mora
-   * dentro dela, entao aqui nao ha consulta a usuarios. Ver a migration da #40.
+   * Envia uma crise e todas as suas fases numa unica chamada atomica. Issues #40 e #50.
+   *
+   * Recebe o payload pronto em vez de um CrisisRecord: desde a #50 a crise nasce no banco
+   * local com identificador proprio, e e a fila que a envia lendo as linhas de la. Se os
+   * identificadores fossem gerados aqui, cada reenvio criaria linha nova e a idempotencia da
+   * funcao salvar_crise nao serviria para nada.
+   *
+   * A resolucao do usuario mora dentro da funcao, por auth.uid(), entao o aparelho nao
+   * informa nem tem como informar o dono.
    */
-  async save(crisis: CrisisRecord, fases: CrisisRecord[] = []): Promise<void> {
-    const allPhases = [...fases, crisis];
-
+  async enviarCrise(crise: CrisePayload, fases: FasePayload[]): Promise<void> {
     const { error } = await supabase.rpc('salvar_crise', {
-      p_crise: {
-        id: randomUUID(),
-        inicio_crise: allPhases[0].startTime.toISOString(),
-        fim_crise: crisis.endTime?.toISOString() ?? null,
-        updated_at: new Date().toISOString(),
-      },
-      p_fases: allPhases.map(faseToPayload),
+      p_crise: crise,
+      p_fases: fases,
     });
 
     if (error) throw new Error(`Erro ao salvar crise: ${error.message}`);
