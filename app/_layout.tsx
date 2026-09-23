@@ -115,7 +115,12 @@ function AuthRefreshCoordinator() {
 }
 
 function RootLayoutNav() {
-  const { localSession, localSessionStatus, isSetupCompleted } = useAuth();
+  const {
+    localSession,
+    localSessionStatus,
+    isSetupCompleted,
+    offlineSessionStatus,
+  } = useAuth();
   const { status: connectivityStatus } = useConnectivity();
   const segments = useSegments();
   const router = useRouter();
@@ -127,7 +132,10 @@ function RootLayoutNav() {
     const inAuthGroup = String(segments[0]) === '(auth)';
     const inSetupGroup = String(segments[0]) === '(setup)';
 
-    if (!localSession) {
+    const offlineSessionAccepted =
+      connectivityStatus !== 'offline' || offlineSessionStatus === 'within_tolerance';
+
+    if (!localSession || !offlineSessionAccepted) {
       if (!inAuthGroup) {
         router.replace('/login' as any);
       }
@@ -148,7 +156,15 @@ function RootLayoutNav() {
         router.replace('/(tabs)' as any);
       }
     }
-  }, [localSession, localSessionStatus, connectivityStatus, segments, isSetupCompleted, navigationState?.key]);
+  }, [
+    localSession,
+    localSessionStatus,
+    connectivityStatus,
+    offlineSessionStatus,
+    segments,
+    isSetupCompleted,
+    navigationState?.key,
+  ]);
 
   return (
     <ThemeProvider value={LivoTheme}>
