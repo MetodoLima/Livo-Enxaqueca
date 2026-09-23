@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { UserRepository } from './types';
+import type { UserRepository } from '../types';
 
 /**
  * Traducao do usuario autenticado para a linha de public.usuarios. Issue #48.

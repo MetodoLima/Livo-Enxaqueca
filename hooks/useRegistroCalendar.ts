@@ -1,11 +1,13 @@
 import { useState, useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
 import { dailyRecordRepository, type DailyRecord } from '@/repositories';
+import { useSync } from '@/contexts/SyncContext';
 
 // A tela importa este nome. O formato e o do repositorio, sem nada derivado por cima.
 export type RegistroCalendarDay = DailyRecord;
 
 export function useRegistroCalendar(year: number, month: number) {
+  const { ultimaReplicacao } = useSync();
   const [registroByDay, setRegistroByDay] = useState<Record<number, RegistroCalendarDay[]>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -32,7 +34,7 @@ export function useRegistroCalendar(year: number, month: number) {
     } finally {
       setLoading(false);
     }
-  }, [year, month]);
+  }, [year, month, ultimaReplicacao]);
 
   useFocusEffect(
     useCallback(() => {

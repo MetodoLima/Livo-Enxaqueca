@@ -33,6 +33,7 @@ import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRegistroEvento } from '@/hooks/useRegistroEvento';
 import { crisisRepository } from '@/repositories';
+import { useSync } from '@/contexts/SyncContext';
 
 function toDateString(date: Date): string {
   return date.toISOString().split('T')[0];
@@ -72,6 +73,7 @@ export default function HomeScreen() {
   const [aguaLocal, setAguaLocal] = useState(0);
 
   // ── Home stats ──────────────────────────────────────────────────────
+  const { ultimaReplicacao } = useSync();
   const [streakInfo, setStreakInfo] = useState<{ number: string; label: string } | null>(null);
   const [crisesThisMonth, setCrisesThisMonth] = useState<number | null>(null);
   const [avgIntensity, setAvgIntensity] = useState<number | null>(null);
@@ -100,7 +102,7 @@ export default function HomeScreen() {
       } catch {}
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [ultimaReplicacao]);
 
   const today = toDateString(new Date());
   const { saving, saved, salvar } = useRegistroEvento(today);

@@ -1,7 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import { CrisisRecord } from '@/types/crisis';
 import { randomUUID } from 'expo-crypto';
-import type { Crisis, CrisisFilter, CrisisRepository, Phase } from './types';
+import type { Crisis, CrisisFilter, CrisisRepository, Phase } from '../types';
 
 /**
  * Implementacao contra o Supabase. Issue #48.

@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { AuthOutcome, SessionRepository, SignUpOutcome } from './types';
+import type { AuthOutcome, SessionRepository, SignUpOutcome } from '../types';
 
 /**
  * Entrada, cadastro e saida. Issue #48.

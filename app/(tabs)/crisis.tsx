@@ -9,6 +9,7 @@ import { Colors } from '@/constants/Colors';
 import { useCrisis } from '@/contexts/CrisisContext';
 import { complementCrisis } from '@/services/api';
 import { crisisRepository } from '@/repositories';
+import { useSync } from '@/contexts/SyncContext';
 import {
   INTENSITY_CONFIG,
   LOCATIONS,
@@ -285,6 +286,7 @@ function formatTimeSince(lastDate: Date): string {
 // ── Empty state ───────────────────────────────────────────────────────
 function EmptyState() {
   const router = useRouter();
+  const { ultimaReplicacao } = useSync();
   const [timeSinceLabel, setTimeSinceLabel] = useState<string | null>(null);
 
   useEffect(() => {
@@ -299,7 +301,7 @@ function EmptyState() {
       } catch {}
     })();
     return () => { cancelled = true; };
-  }, []);
+  }, [ultimaReplicacao]);
 
   return (
     <ScreenBackground>
