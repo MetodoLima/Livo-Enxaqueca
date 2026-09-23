@@ -7,7 +7,7 @@ import { useSync } from '@/contexts/SyncContext';
 export type RegistroCalendarDay = DailyRecord;
 
 export function useRegistroCalendar(year: number, month: number) {
-  const { ultimaReplicacao } = useSync();
+  const { ultimaAtualizacao } = useSync();
   const [registroByDay, setRegistroByDay] = useState<Record<number, RegistroCalendarDay[]>>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -34,7 +34,7 @@ export function useRegistroCalendar(year: number, month: number) {
     } finally {
       setLoading(false);
     }
-  }, [year, month, ultimaReplicacao]);
+  }, [year, month, ultimaAtualizacao]);
 
   useFocusEffect(
     useCallback(() => {

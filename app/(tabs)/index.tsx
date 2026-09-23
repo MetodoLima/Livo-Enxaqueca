@@ -73,7 +73,7 @@ export default function HomeScreen() {
   const [aguaLocal, setAguaLocal] = useState(0);
 
   // ── Home stats ──────────────────────────────────────────────────────
-  const { ultimaReplicacao } = useSync();
+  const { ultimaAtualizacao } = useSync();
   const [streakInfo, setStreakInfo] = useState<{ number: string; label: string } | null>(null);
   const [crisesThisMonth, setCrisesThisMonth] = useState<number | null>(null);
   const [avgIntensity, setAvgIntensity] = useState<number | null>(null);
@@ -102,10 +102,10 @@ export default function HomeScreen() {
       } catch {}
     })();
     return () => { cancelled = true; };
-  }, [ultimaReplicacao]);
+  }, [ultimaAtualizacao]);
 
   const today = toDateString(new Date());
-  const { saving, saved, salvar } = useRegistroEvento(today);
+  const { saving, saved, naFila, salvar } = useRegistroEvento(today);
 
   const now = new Date();
   const greeting =
@@ -306,7 +306,9 @@ export default function HomeScreen() {
                   ) : saved ? (
                     <>
                       <Check size={18} color="white" />
-                      <Text style={styles.registrarBtnText}>Registrado!</Text>
+                      <Text style={styles.registrarBtnText}>
+                        {naFila ? 'Salvo no aparelho' : 'Registrado!'}
+                      </Text>
                     </>
                   ) : (
                     <>

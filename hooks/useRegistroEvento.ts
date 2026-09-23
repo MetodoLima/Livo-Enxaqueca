@@ -17,12 +17,16 @@ export interface RegistroEvento {
 export function useRegistroEvento(data: string) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  // Gravou no aparelho mas ainda nao subiu. A tela mostra isso em vez de so "Registrado!",
+  // para nao afirmar que o dado esta no servidor quando nao esta. Issue #50.
+  const [naFila, setNaFila] = useState(false);
 
   const salvar = useCallback(async (patch: Omit<RegistroEvento, 'id' | 'data'>) => {
     setSaving(true);
     setSaved(false);
+    setNaFila(false);
     try {
-      await dailyRecordRepository.save({
+      const { enviado } = await dailyRecordRepository.save({
         data,
         relato: patch.relato,
         horasSono: patch.horasSono,
@@ -30,8 +34,12 @@ export function useRegistroEvento(data: string) {
         humor: patch.humor,
       });
 
+      setNaFila(!enviado);
       setSaved(true);
-      setTimeout(() => setSaved(false), 3000);
+      setTimeout(() => {
+        setSaved(false);
+        setNaFila(false);
+      }, 3000);
     } catch (err) {
       console.error('Erro ao salvar registro:', err);
     } finally {
@@ -39,5 +47,5 @@ export function useRegistroEvento(data: string) {
     }
   }, [data]);
 
-  return { saving, saved, salvar };
+  return { saving, saved, naFila, salvar };
 }

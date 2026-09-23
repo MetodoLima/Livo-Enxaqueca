@@ -3,6 +3,7 @@ import { getSyncValue, setSyncValue } from '@/db/syncState';
 import { crisisRepository as remoteCrisisRepository } from '@/repositories/remote/crisisRepository';
 import { dailyRecordRepository as remoteDailyRecordRepository } from '@/repositories/remote/dailyRecordRepository';
 import { userRepository } from '@/repositories/remote/userRepository';
+import { notificarDadosLocais } from './notify';
 
 /**
  * Replicacao do servidor para o banco local. Issue #49.
@@ -24,21 +25,114 @@ const DATA_MAXIMA = '9999-12-31';
 export type PullResult = { replicou: boolean; motivo?: 'sem-perfil' };
 
 /**
- * Quem replicou avisa; quem le, rele.
+ * Move para a quarentena tudo que o dono anterior escreveu e nao conseguiu enviar. Issue #50.
  *
- * A replicacao dispara de tres lugares — o boot, a volta da conexao e a gravacao, que ate a
- * #50 precisa replicar depois de subir. Sem um aviso central, cada um deles teria que
- * lembrar de atualizar a tela, e o de dentro do repositorio nem tem acesso ao contexto do
- * React. O SyncContext e o unico ouvinte hoje, e e ele que os hooks observam.
+ * A crise vai com as fases dentro do mesmo payload, porque separadas elas nao voltam para a
+ * fila como um pacote atomico — e a #40 existe justamente para crise e fases nunca se
+ * separarem.
  */
-type Ouvinte = () => void;
-const ouvintes = new Set<Ouvinte>();
+async function quarentenar(
+  db: Awaited<ReturnType<typeof getDb>>,
+  dono: string,
+): Promise<void> {
+  const agora = new Date().toISOString();
 
-export function onReplicated(ouvinte: Ouvinte): () => void {
-  ouvintes.add(ouvinte);
-  return () => {
-    ouvintes.delete(ouvinte);
-  };
+  const crises = await db.getAllAsync<Record<string, unknown>>(
+    'select * from crise_enxaqueca where synced = 0',
+  );
+
+  for (const crise of crises) {
+    const fases = await db.getAllAsync<Record<string, unknown>>(
+      'select * from registro_crise where crise_id = ?',
+      [crise.id as string],
+    );
+    await db.runAsync(
+      `insert or replace into pendencias_orfas (id, dono, tabela, payload, criado_em)
+       values (?, ?, 'crise_enxaqueca', ?, ?)`,
+      [crise.id as string, dono, JSON.stringify({ crise, fases }), agora],
+    );
+  }
+
+  const registros = await db.getAllAsync<Record<string, unknown>>(
+    'select * from registro_diario where synced = 0',
+  );
+
+  for (const registro of registros) {
+    await db.runAsync(
+      `insert or replace into pendencias_orfas (id, dono, tabela, payload, criado_em)
+       values (?, ?, 'registro_diario', ?, ?)`,
+      [registro.id as string, dono, JSON.stringify(registro), agora],
+    );
+  }
+}
+
+/**
+ * Devolve para a fila o que ficou na quarentena deste dono. Issue #50.
+ *
+ * Roda antes de replicar: se a pessoa voltou ao aparelho, o que ela escreveu e nao enviou
+ * precisa estar na fila antes de qualquer coisa apagar ou reescrever tabela.
+ */
+async function restaurarQuarentena(
+  db: Awaited<ReturnType<typeof getDb>>,
+  dono: string,
+): Promise<void> {
+  const orfas = await db.getAllAsync<{ id: string; tabela: string; payload: string }>(
+    'select id, tabela, payload from pendencias_orfas where dono = ?',
+    [dono],
+  );
+  if (orfas.length === 0) return;
+
+  for (const orfa of orfas) {
+    let dados: any;
+    try {
+      dados = JSON.parse(orfa.payload);
+    } catch {
+      // Payload corrompido nao pode travar a sincronizacao de tudo o mais. A linha fica na
+      // quarentena para inspecao em vez de ser apagada.
+      continue;
+    }
+
+    if (orfa.tabela === 'crise_enxaqueca') {
+      await inserirLinha(db, 'crise_enxaqueca', dados.crise);
+      for (const fase of dados.fases ?? []) {
+        await inserirLinha(db, 'registro_crise', fase);
+      }
+    } else {
+      await inserirLinha(db, 'registro_diario', dados);
+    }
+
+    await db.runAsync('delete from pendencias_orfas where id = ? and dono = ?', [
+      orfa.id,
+      dono,
+    ]);
+  }
+}
+
+// Nome de tabela e de coluna nao podem ir como parametro ligado em SQL, entao entram
+// interpolados. A lista fechada e o que garante que so estes nomes chegam la, mesmo que o
+// payload guardado esteja corrompido ou tenha vindo de uma versao futura do schema.
+const TABELAS_RESTAURAVEIS = ['crise_enxaqueca', 'registro_crise', 'registro_diario'] as const;
+type TabelaRestauravel = (typeof TABELAS_RESTAURAVEIS)[number];
+
+const COLUNA_VALIDA = /^[a-z_]+$/;
+
+/**
+ * Reinsere uma linha guardada como objeto. As colunas vem do proprio payload, entao uma
+ * migracao futura que adicione coluna nao invalida quarentena antiga.
+ */
+async function inserirLinha(
+  db: Awaited<ReturnType<typeof getDb>>,
+  tabela: TabelaRestauravel,
+  linha: Record<string, unknown>,
+): Promise<void> {
+  const colunas = Object.keys(linha).filter((c) => COLUNA_VALIDA.test(c));
+  if (colunas.length === 0) return;
+
+  const marcadores = colunas.map(() => '?').join(', ');
+  await db.runAsync(
+    `insert or ignore into ${tabela} (${colunas.join(', ')}) values (${marcadores})`,
+    colunas.map((c) => linha[c] as any),
+  );
 }
 
 export async function pullFromServer(): Promise<PullResult> {
@@ -58,14 +152,24 @@ export async function pullFromServer(): Promise<PullResult> {
   const donoAnterior = await getSyncValue('owner', db);
   const trocouUsuario = donoAnterior !== null && donoAnterior !== String(usuarioId);
 
+  // Se esta pessoa deixou pendencia num uso anterior deste aparelho, ela volta para a fila
+  // antes de qualquer coisa reescrever tabela. Issue #50.
+  await restaurarQuarentena(db, String(usuarioId));
+
   await db.withTransactionAsync(async () => {
     if (trocouUsuario) {
-      // A replica e de outra pessoa e nao pode ficar no aparelho, entao sai inteira.
+      // A replica e de outra pessoa e nao pode ficar servindo como historico desta sessao.
       //
-      // ATENCAO PARA A #50: quando a fila existir, uma linha com synced = 0 aqui seria
-      // registro nao enviado sendo apagado. Hoje nao existe nenhuma, porque so a #50 cria.
-      // O que fazer nesse caso e uma das perguntas da issue da fila x fim de sessao, e
-      // precisa ser respondida antes de a fila entrar.
+      // Mas registro NAO ENVIADO do dono anterior nao pode ser apagado: e dado clinico que
+      // so existe aqui. Ele vai para a quarentena, chaveado por dono, e volta para a fila
+      // quando aquela pessoa entrar de novo neste aparelho. Issue #50.
+      //
+      // As alternativas foram descartadas com motivo: enviar antes de trocar nao funciona,
+      // porque se esta trocando e provavel que nao haja rede; bloquear a troca prende o
+      // segundo usuario por causa do dado do primeiro; e apagar avisando transfere a decisao
+      // para quem esta na tela de login e nao tem contexto para decidir.
+      await quarentenar(db, donoAnterior!);
+
       await db.execAsync(
         'delete from registro_crise; delete from crise_enxaqueca; delete from registro_diario;',
       );
@@ -140,7 +244,7 @@ export async function pullFromServer(): Promise<PullResult> {
   await setSyncValue('owner', String(usuarioId), db);
   await setSyncValue('lastPulledAt', new Date().toISOString(), db);
 
-  for (const ouvinte of ouvintes) ouvinte();
+  notificarDadosLocais();
 
   return { replicou: true };
 }

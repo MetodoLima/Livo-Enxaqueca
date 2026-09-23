@@ -1,10 +1,12 @@
 import { supabase } from '@/lib/supabase';
-import { randomUUID } from 'expo-crypto';
-import type { DailyRecord, DailyRecordRepository, HumorId, NewDailyRecord } from '../types';
+import type { DailyRecord, HumorId } from '../types';
 import { userRepository } from './userRepository';
 
 /**
- * Registro diario de sono, agua, humor e relato. Issue #48.
+ * Registro diario de sono, agua, humor e relato. Issues #48 e #50.
+ *
+ * `listBetween` continua consultando o servidor: e usado pela replicacao da #49, que so roda
+ * com rede. A leitura offline vive em repositories/local.
  */
 
 function toDailyRecord(row: any): DailyRecord {
@@ -19,7 +21,7 @@ function toDailyRecord(row: any): DailyRecord {
   };
 }
 
-export const dailyRecordRepository: DailyRecordRepository = {
+export const dailyRecordRepository = {
   async listBetween(de: string, ate: string): Promise<DailyRecord[]> {
     const usuarioId = await userRepository.currentUsuarioId();
     if (usuarioId === null) return [];
@@ -36,26 +38,37 @@ export const dailyRecordRepository: DailyRecordRepository = {
     return (data ?? []).map(toDailyRecord);
   },
 
-  async save(registro: NewDailyRecord): Promise<void> {
-    const usuarioId = await userRepository.currentUsuarioId();
-    if (usuarioId === null) {
-      throw new Error('Perfil do usuario nao encontrado');
-    }
-
-    const { error } = await supabase.from('registro_diario').insert({
-      // O id vem do aparelho, nao do banco: sem isso a criacao offline e impossivel. #44
-      id: randomUUID(),
-      user_id: usuarioId,
-      data: registro.data,
-      relato: registro.relato,
-      horas_sono: registro.horasSono,
-      ml_agua: registro.mlAgua,
-      humor: registro.humor,
-      // Escrito pelo app, nao por trigger: no modelo offline o momento que importa e o da
-      // edicao no aparelho. Ver a #46 e a ressalva registrada na #50 sobre o trigger de
-      // UPDATE que ainda existe nesta tabela.
-      updated_at: new Date().toISOString(),
-    });
+  /**
+   * Envia um registro diario ja formado. Issue #50.
+   *
+   * Recebe `usuarioId` de fora em vez de perguntar ao servidor: quem chama e a fila, que le
+   * o dono de sync_state e funciona sem rede ate a hora do envio. Era essa consulta que
+   * produzia "Perfil do usuario nao encontrado" ao salvar em modo aviao.
+   *
+   * O aparelho informar o dono nao e brecha: a politica de INSERT da tabela confere
+   * `user_id` contra `auth.uid()` dentro do banco, entao valor errado e recusado.
+   *
+   * `upsert` com `ignoreDuplicates` vira `on conflict do nothing` no PostgREST, o que da
+   * idempotencia no reenvio sem migration nova. E como nao acontece UPDATE, o gatilho
+   * trg_registro_diario_updated_at nao dispara e nao sobrescreve o horario do aparelho.
+   */
+  async enviarRegistroDiario(
+    registro: DailyRecord & { updatedAt: string },
+    usuarioId: number,
+  ): Promise<void> {
+    const { error } = await supabase.from('registro_diario').upsert(
+      {
+        id: registro.id,
+        user_id: usuarioId,
+        data: registro.data,
+        relato: registro.relato,
+        horas_sono: registro.horasSono,
+        ml_agua: registro.mlAgua,
+        humor: registro.humor,
+        updated_at: registro.updatedAt,
+      },
+      { onConflict: 'id', ignoreDuplicates: true },
+    );
 
     if (error) throw error;
   },

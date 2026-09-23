@@ -286,7 +286,7 @@ function formatTimeSince(lastDate: Date): string {
 // ── Empty state ───────────────────────────────────────────────────────
 function EmptyState() {
   const router = useRouter();
-  const { ultimaReplicacao } = useSync();
+  const { ultimaAtualizacao } = useSync();
   const [timeSinceLabel, setTimeSinceLabel] = useState<string | null>(null);
 
   useEffect(() => {
@@ -301,7 +301,7 @@ function EmptyState() {
       } catch {}
     })();
     return () => { cancelled = true; };
-  }, [ultimaReplicacao]);
+  }, [ultimaAtualizacao]);
 
   return (
     <ScreenBackground>
@@ -372,15 +372,21 @@ export default function CrisisDetailScreen() {
 
   // ── Finalize ────────────────────────────────────────────────────────
   const [savedIntensity, setSavedIntensity] = useState<number | null>(null);
+  // Null enquanto não se sabe. Depois, se o registro ficou na fila do aparelho, a tela diz
+  // isso em vez de afirmar só "registrada" — a #51 lembra que erro invisível é pior que
+  // erro visível.
+  const [ficouNaFila, setFicouNaFila] = useState(false);
 
   const handleFinish = async () => {
     setFinishing(true);
     setSavedIntensity(activeCrisis?.intensity ?? null);
+    setFicouNaFila(false);
     try {
       const crisisToSave = activeCrisis!.endTime
         ? activeCrisis!
         : { ...activeCrisis!, endTime: new Date() };
-      await crisisRepository.save(crisisToSave, phases);
+      const { enviado } = await crisisRepository.save(crisisToSave, phases);
+      setFicouNaFila(!enviado);
       clearCrisis();
     } catch (e) {
       setFinishing(false);
@@ -406,7 +412,9 @@ export default function CrisisDetailScreen() {
         </Animated.View>
         <Text style={styles.successTitle}>Crise registrada!</Text>
         <Text style={styles.successSub}>
-          {savedIntensity != null
+          {ficouNaFila
+            ? 'Salva no aparelho. Será enviada quando houver internet.'
+            : savedIntensity != null
             ? `Intensidade ${savedIntensity}/10`
             : 'Registro salvo com sucesso.'}
         </Text>

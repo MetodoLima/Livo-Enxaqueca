@@ -62,6 +62,17 @@ export interface CrisisFilter {
   ordem?: 'asc' | 'desc';
 }
 
+/**
+ * O que aconteceu com uma gravacao. Issue #50.
+ *
+ * `enviado` e fato, nao palpite: e falso quando o registro ficou na fila do aparelho, seja
+ * por falta de rede, seja por falha do servidor. A tela usa isso para nao afirmar "salvo" sem
+ * ressalva — a #51 diz que erro invisivel e pior que erro visivel.
+ */
+export interface SaveOutcome {
+  enviado: boolean;
+}
+
 export interface CrisisRepository {
   list(filtro?: CrisisFilter): Promise<Crisis[]>;
   /** fim_crise da crise encerrada mais recente, ou null se nenhuma foi encerrada. */
@@ -73,7 +84,7 @@ export interface CrisisRepository {
    * Grava a crise e todas as fases. Os identificadores sao gerados aqui, no aparelho,
    * como a #44 exige, e a gravacao e atomica, como a #40 exige.
    */
-  save(crisis: CrisisRecord, fases: CrisisRecord[]): Promise<void>;
+  save(crisis: CrisisRecord, fases: CrisisRecord[]): Promise<SaveOutcome>;
 }
 
 // ─── Registro diario ──────────────────────────────────────────────────────────
@@ -102,7 +113,7 @@ export interface NewDailyRecord {
 export interface DailyRecordRepository {
   /** Intervalo fechado, nos dois extremos, em YYYY-MM-DD. */
   listBetween(de: string, ate: string): Promise<DailyRecord[]>;
-  save(registro: NewDailyRecord): Promise<void>;
+  save(registro: NewDailyRecord): Promise<SaveOutcome>;
 }
 
 // ─── Setup ────────────────────────────────────────────────────────────────────

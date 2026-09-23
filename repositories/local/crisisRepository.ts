@@ -1,4 +1,6 @@
 import { getDb } from '@/db';
+import type { CrisisRecord } from '@/types/crisis';
+import { randomUUID } from 'expo-crypto';
 import type { Crisis, CrisisFilter, Phase } from '../types';
 
 /**
@@ -55,6 +57,14 @@ function toPhase(row: FaseRow): Phase {
     medicamentosLivres: parseArray(row.medicamentos_livres),
     fatores: parseArray(row.fatores),
   };
+}
+
+// Derivado da intensidade, nao escolhido pelo usuario. Vinha do save remoto antes da #50.
+function nivelIncapacidade(intensidade: number | null): string | null {
+  if (intensidade === null) return null;
+  if (intensidade <= 3) return 'leve';
+  if (intensidade <= 6) return 'moderado';
+  return 'severo';
 }
 
 const COLUNAS_FASE = `
@@ -149,5 +159,62 @@ export const crisisRepository = {
       'select intensidade_dor from registro_crise where intensidade_dor is not null',
     );
     return linhas.map((l) => l.intensidade_dor);
+  },
+
+  /**
+   * Grava a crise e as fases no aparelho, com `synced = 0`. Issue #50.
+   *
+   * Os identificadores nascem AQUI, e e o ponto central da fila: a linha ja tem identidade
+   * antes de existir rede. Reenviar o mesmo pacote encontra `on conflict (id) do nothing` no
+   * servidor e completa o que faltou em vez de duplicar. Se o id nascesse na hora do envio,
+   * cada tentativa criaria um registro novo.
+   *
+   * Tudo numa transacao: uma crise sem as fases seria pior do que nenhuma crise. E a mesma
+   * garantia que a #40 deu no servidor, agora tambem no aparelho.
+   */
+  async save(crisis: CrisisRecord, fases: CrisisRecord[] = []): Promise<string> {
+    const db = await getDb();
+    const todasAsFases = [...fases, crisis];
+    const criseId = randomUUID();
+    const agora = new Date().toISOString();
+
+    await db.withTransactionAsync(async () => {
+      await db.runAsync(
+        `insert into crise_enxaqueca (id, inicio_crise, fim_crise, updated_at, synced)
+         values (?, ?, ?, ?, 0)`,
+        [
+          criseId,
+          todasAsFases[0].startTime.toISOString(),
+          crisis.endTime ? crisis.endTime.toISOString() : null,
+          agora,
+        ],
+      );
+
+      for (const fase of todasAsFases) {
+        await db.runAsync(
+          `insert into registro_crise
+             (id, crise_id, intensidade_dor, regiao_dor, lado, nivel_incapacidade, resumo,
+              sintomas, medicamentos, medicamentos_livres, fatores, updated_at, synced)
+           values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
+          [
+            randomUUID(),
+            criseId,
+            fase.intensity,
+            fase.location,
+            fase.side,
+            nivelIncapacidade(fase.intensity),
+            fase.aiComplement?.aiResult?.structured?.resumo ?? null,
+            JSON.stringify(fase.symptoms),
+            // 'nenhum' e opcao de interface para dizer que nao tomou nada, nao medicamento.
+            JSON.stringify(fase.medications.filter((m) => m !== 'nenhum')),
+            JSON.stringify(fase.customMedications),
+            JSON.stringify(fase.triggers),
+            agora,
+          ],
+        );
+      }
+    });
+
+    return criseId;
   },
 };
