@@ -3,7 +3,7 @@ import { Link, router } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Colors } from '../../constants/Colors';
-import { supabase } from '../../lib/supabase';
+import { sessionRepository } from '@/repositories';
 
 export default function Register() {
   const [name, setName] = useState('');
@@ -103,22 +103,13 @@ export default function Register() {
     }
 
     setLoading(true);
-    const { error, data } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: {
-          name,
-          setupCompleted: false, // Define status do setup inicial
-        },
-      },
-    });
+    const { error, signedIn } = await sessionRepository.signUp({ email, senha: password, nome: name });
 
     setLoading(false);
 
     if (error) {
-      Alert.alert('Erro de Cadastro', error.message);
-    } else if (data.session) {
+      Alert.alert('Erro de Cadastro', error);
+    } else if (signedIn) {
       // Login automático e redirecionamento tratados pelo AuthProvider
       Alert.alert('Sucesso', 'Sua conta foi criada!');
     } else {

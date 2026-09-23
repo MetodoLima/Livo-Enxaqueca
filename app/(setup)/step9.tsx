@@ -8,7 +8,13 @@ import {
 } from 'react-native';
 import { useAuth } from '../../contexts/AuthContext';
 import { useSetup } from '../../contexts/SetupContext';
-import { supabase } from '../../lib/supabase';
+import {
+    sessionRepository,
+    setupRepository,
+    userRepository,
+    type SetupAnswer,
+    type SetupQuestion,
+} from '@/repositories';
 
 // ─── Tipos ────────────────────────────────────────────────────────────────────
 
@@ -102,31 +108,12 @@ const FIELD_META: Record<string, { passo: number; tipo: string }> = {
     activityStop: { passo: 9, tipo: 'single_choice' },
 };
 
-type DBOpcao = { id: number; texto: string };
-type DBPergunta = {
-    id: number;
-    texto: string;
-    tipo: string;
-    passo_setup: number;
-    opcoes_pergunta: DBOpcao[];
-};
-
-async function getUsuarioId(authUserId: string): Promise<number | null> {
-    const { data, error } = await supabase
-        .from('usuarios')
-        .select('id')
-        .eq('user_id', authUserId)
-        .single();
-    if (error || !data) return null;
-    return data.id;
-}
-
 async function saveSetupAnswers(
     finalData: Record<string, any>,
     usuarioId: number,
-    perguntas: DBPergunta[]
+    perguntas: SetupQuestion[]
 ): Promise<void> {
-    const rows: Record<string, any>[] = [];
+    const rows: SetupAnswer[] = [];
 
     for (const [key, value] of Object.entries(finalData)) {
         if (value === undefined || value === null) continue;
@@ -144,17 +131,17 @@ async function saveSetupAnswers(
 
             if (metadados.tipo === 'range') {
                 const pergunta = perguntas.find(
-                    (p) => p.passo_setup === metadados.passo && p.tipo === 'range'
+                    (p) => p.passoSetup === metadados.passo && p.tipo === 'range'
                 );
                 if (pergunta) {
                     const numVal = Number(val);
                     const acimaMax = metadados.passo === 4 && numVal > 12;
                     const abaixoMin = metadados.passo === 4 && numVal < 4;
                     rows.push({
-                        user_id: usuarioId,
-                        pergunta_id: pergunta.id,
-                        valor_numero: acimaMax ? 12 : abaixoMin ? 4 : numVal,
-                        ...(metadados.passo === 4 ? { valor_acima_max: acimaMax, valor_abaixo_min: abaixoMin } : {}),
+                        usuarioId,
+                        perguntaId: pergunta.id,
+                        valorNumero: acimaMax ? 12 : abaixoMin ? 4 : numVal,
+                        ...(metadados.passo === 4 ? { valorAcimaMax: acimaMax, valorAbaixoMin: abaixoMin } : {}),
                     });
                 }
                 continue;
@@ -162,13 +149,13 @@ async function saveSetupAnswers(
 
             if (metadados.tipo === 'boolean') {
                 const pergunta = perguntas.find(
-                    (p) => p.passo_setup === metadados.passo && p.tipo === 'boolean'
+                    (p) => p.passoSetup === metadados.passo && p.tipo === 'boolean'
                 );
                 if (pergunta) {
                     rows.push({
-                        user_id: usuarioId,
-                        pergunta_id: pergunta.id,
-                        valor_booleano: val === true || val === 'true',
+                        usuarioId,
+                        perguntaId: pergunta.id,
+                        valorBooleano: val === true || val === 'true',
                     });
                 }
                 continue;
@@ -176,13 +163,13 @@ async function saveSetupAnswers(
 
             if (metadados.tipo === 'text') {
                 const pergunta = perguntas.find(
-                    (p) => p.passo_setup === metadados.passo && p.tipo === 'text'
+                    (p) => p.passoSetup === metadados.passo && p.tipo === 'text'
                 );
                 if (pergunta) {
                     rows.push({
-                        user_id: usuarioId,
-                        pergunta_id: pergunta.id,
-                        valor_texto: String(val),
+                        usuarioId,
+                        perguntaId: pergunta.id,
+                        valorTexto: String(val),
                     });
                 }
                 continue;
@@ -191,15 +178,15 @@ async function saveSetupAnswers(
             const valNorm = String(val).toLowerCase().trim();
             let matched = false;
             for (const pergunta of perguntas) {
-                if (pergunta.passo_setup !== metadados.passo) continue;
-                const opcao = pergunta.opcoes_pergunta.find(
+                if (pergunta.passoSetup !== metadados.passo) continue;
+                const opcao = pergunta.opcoes.find(
                     (o) => o.texto.toLowerCase().trim() === valNorm
                 );
                 if (opcao) {
                     rows.push({
-                        user_id: usuarioId,
-                        pergunta_id: pergunta.id,
-                        opcao_id: opcao.id,
+                        usuarioId,
+                        perguntaId: pergunta.id,
+                        opcaoId: opcao.id,
                     });
                     matched = true;
                     break;
@@ -212,12 +199,7 @@ async function saveSetupAnswers(
         }
     }
 
-    if (rows.length === 0) return;
-
-    console.log(rows);
-
-    const { error } = await supabase.from('respostas_setup').insert(rows);
-    if (error) throw error;
+    await setupRepository.saveAnswers(rows);
 }
 
 // ─── Componente Principal ─────────────────────────────────────────────────────
@@ -252,23 +234,15 @@ export default function Step9Impacto() {
 
         setIsSubmitting(true);
         try {
-            const { data: authData } = await supabase.auth.getUser();
-            if (!authData?.user) throw new Error('Usuário não autenticado.');
-
-            const usuarioId = await getUsuarioId(authData.user.id);
+            const usuarioId = await userRepository.currentUsuarioId();
             if (!usuarioId) throw new Error('Perfil do usuário não encontrado na tabela usuarios.');
 
-            const { data: perguntas, error: pErr } = await supabase
-                .from('perguntas_setup')
-                .select('id, texto, tipo, passo_setup, opcoes_pergunta(id, texto)');
-            if (pErr || !perguntas) throw pErr ?? new Error('Falha ao buscar perguntas.');
+            const perguntas = await setupRepository.listQuestions();
 
-            await saveSetupAnswers(finalData, usuarioId, perguntas as DBPergunta[]);
+            await saveSetupAnswers(finalData, usuarioId, perguntas);
 
-            const { error: updateErr } = await supabase.auth.updateUser({
-                data: { setupCompleted: true }
-            });
-            if (updateErr) throw updateErr;
+            const { error: updateErr } = await sessionRepository.markSetupCompleted();
+            if (updateErr) throw new Error(updateErr);
 
             clearSetupData();
             await checkSetupStatus();

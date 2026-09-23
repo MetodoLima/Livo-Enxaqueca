@@ -10,7 +10,7 @@ const PERSIST_DEBOUNCE_MS = 500;
 
 // ── Persistência ──────────────────────────────────────────────────────
 // JSON não tem tipo de data: o stringify vira ISO e o parse devolve string.
-// Sem reviver, crisisService quebra ao chamar toISOString na hora de gravar.
+// Sem reviver, o repositorio de crise quebra ao chamar toISOString na hora de gravar.
 type SerializedCrisis = Omit<CrisisRecord, 'startTime' | 'endTime'> & {
   startTime: string;
   endTime: string | null;

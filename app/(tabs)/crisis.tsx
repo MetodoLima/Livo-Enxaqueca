@@ -8,7 +8,7 @@ import {
 import { Colors } from '@/constants/Colors';
 import { useCrisis } from '@/contexts/CrisisContext';
 import { complementCrisis } from '@/services/api';
-import { saveCrisisToSupabase } from '@/services/crisisService';
+import { crisisRepository } from '@/repositories';
 import {
   INTENSITY_CONFIG,
   LOCATIONS,
@@ -48,7 +48,6 @@ import {
 } from 'react-native';
 import ScreenBackground from '@/components/ScreenBackground';
 import Animated, { FadeInUp, ZoomIn } from 'react-native-reanimated';
-import { supabase } from '@/lib/supabase';
 
 
 // ── Past phase card (collapsible) ─────────────────────────────────────
@@ -292,18 +291,10 @@ function EmptyState() {
     let cancelled = false;
     (async () => {
       try {
-        const { data: authData } = await supabase.auth.getUser();
-        if (!authData?.user || cancelled) return;
-        const { data } = await supabase
-          .from('crise_enxaqueca')
-          .select('fim_crise')
-          .not('fim_crise', 'is', null)
-          .order('fim_crise', { ascending: false })
-          .limit(1)
-          .maybeSingle();
+        const lastEnd = await crisisRepository.lastEndedAt();
         if (cancelled) return;
-        if (data?.fim_crise) {
-          setTimeSinceLabel(formatTimeSince(new Date(data.fim_crise)));
+        if (lastEnd) {
+          setTimeSinceLabel(formatTimeSince(lastEnd));
         }
       } catch {}
     })();
@@ -387,7 +378,7 @@ export default function CrisisDetailScreen() {
       const crisisToSave = activeCrisis!.endTime
         ? activeCrisis!
         : { ...activeCrisis!, endTime: new Date() };
-      await saveCrisisToSupabase(crisisToSave, phases);
+      await crisisRepository.save(crisisToSave, phases);
       clearCrisis();
     } catch (e) {
       setFinishing(false);

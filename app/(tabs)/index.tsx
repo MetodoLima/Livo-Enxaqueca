@@ -32,7 +32,7 @@ import ScreenBackground from '@/components/ScreenBackground';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRegistroEvento } from '@/hooks/useRegistroEvento';
-import { supabase } from '@/lib/supabase';
+import { crisisRepository } from '@/repositories';
 
 function toDateString(date: Date): string {
   return date.toISOString().split('T')[0];
@@ -80,38 +80,22 @@ export default function HomeScreen() {
     let cancelled = false;
     (async () => {
       try {
-        const { data: authData } = await supabase.auth.getUser();
-        if (!authData?.user || cancelled) return;
-
         // Last crisis end time
-        const { data: lastCrisis } = await supabase
-          .from('crise_enxaqueca')
-          .select('fim_crise')
-          .not('fim_crise', 'is', null)
-          .order('fim_crise', { ascending: false })
-          .limit(1)
-          .maybeSingle();
-        if (!cancelled && lastCrisis?.fim_crise) {
-          setStreakInfo(formatTimeSinceHome(new Date(lastCrisis.fim_crise)));
-        }
+        const lastEnd = await crisisRepository.lastEndedAt();
+        if (cancelled) return;
+        if (lastEnd) setStreakInfo(formatTimeSinceHome(lastEnd));
 
         // Crises this month
         const now = new Date();
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1).toISOString();
-        const { count } = await supabase
-          .from('crise_enxaqueca')
-          .select('id', { count: 'exact', head: true })
-          .gte('inicio_crise', monthStart);
-        if (!cancelled) setCrisesThisMonth(count ?? 0);
+        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+        const count = await crisisRepository.countSince(monthStart);
+        if (!cancelled) setCrisesThisMonth(count);
 
         // Average intensity (all-time via registro_crise)
-        const { data: intensidades } = await supabase
-          .from('registro_crise')
-          .select('intensidade_dor')
-          .not('intensidade_dor', 'is', null);
-        if (!cancelled && intensidades && intensidades.length > 0) {
-          const vals = intensidades.map((r: any) => r.intensidade_dor as number);
-          setAvgIntensity(Math.round((vals.reduce((a, b) => a + b, 0) / vals.length) * 10) / 10);
+        const intensidades = await crisisRepository.intensities();
+        if (!cancelled && intensidades.length > 0) {
+          const soma = intensidades.reduce((a, b) => a + b, 0);
+          setAvgIntensity(Math.round((soma / intensidades.length) * 10) / 10);
         }
       } catch {}
     })();

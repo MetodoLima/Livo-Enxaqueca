@@ -1,34 +1,17 @@
 import { useState, useCallback } from 'react';
-import { supabase } from '@/lib/supabase';
-import { randomUUID } from 'expo-crypto';
+import { dailyRecordRepository, type HumorId } from '@/repositories';
 
-export type HumorId = 'terrible' | 'bad' | 'so-so' | 'okay' | 'great';
+// O tipo nasceu aqui e varios arquivos ainda o importam deste caminho.
+export type { HumorId };
 
 export interface RegistroEvento {
-  id?: number;
+  /** Uuid gerado no aparelho desde a #44. Era bigint do banco antes disso. */
+  id?: string;
   data: string;
   relato: string | null;
   horasSono: number | null;
   mlAgua: number | null;
   humor: HumorId | null;
-}
-
-async function getUserId(): Promise<number | null> {
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return null;
-
-  const { data, error } = await supabase
-    .from('usuarios')
-    .select('id')
-    .eq('user_id', user.id)
-    .maybeSingle();
-
-  if (error || !data) {
-    console.error('Erro ao buscar usuário:', error);
-    return null;
-  }
-
-  return data.id;
 }
 
 export function useRegistroEvento(data: string) {
@@ -39,32 +22,13 @@ export function useRegistroEvento(data: string) {
     setSaving(true);
     setSaved(false);
     try {
-      const userId = await getUserId();
-      if (!userId) {
-        console.error('Usuário não encontrado em public.usuarios');
-        return;
-      }
-
-      const payload = {
-        // O id vem do aparelho, nao do banco: sem isso a criacao offline e impossivel.
-        id: randomUUID(),
-        user_id: userId,
+      await dailyRecordRepository.save({
         data,
         relato: patch.relato,
-        horas_sono: patch.horasSono,
-        ml_agua: patch.mlAgua,
+        horasSono: patch.horasSono,
+        mlAgua: patch.mlAgua,
         humor: patch.humor,
-        updated_at: new Date().toISOString(),
-      };
-
-      const { error } = await supabase
-        .from('registro_diario')
-        .insert(payload);
-
-      if (error) {
-        console.error('Supabase error:', error);
-        return;
-      }
+      });
 
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);

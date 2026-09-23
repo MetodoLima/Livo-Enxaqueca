@@ -4,7 +4,7 @@ import ScreenBackground from '@/components/ScreenBackground';
 import { Colors } from '@/constants/Colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePdfExport } from '@/hooks/usePdfExport';
-import { supabase } from '@/lib/supabase';
+import { sessionRepository } from '@/repositories';
 import { Bell as BellIcon, ChevronRight, FileText, LogOut, Moon as MoonIcon, Shield, User } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Alert, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -43,12 +43,12 @@ export default function ProfileScreen() {
     if (Platform.OS === 'web') {
       const confirmed = window.confirm('Tem certeza que deseja sair?');
       if (confirmed) {
-        await supabase.auth.signOut();
+        await sessionRepository.signOut();
       }
     } else {
       Alert.alert('Sair da conta', 'Tem certeza que deseja sair?', [
         { text: 'Cancelar', style: 'cancel' },
-        { text: 'Sair', style: 'destructive', onPress: async () => await supabase.auth.signOut() },
+        { text: 'Sair', style: 'destructive', onPress: async () => await sessionRepository.signOut() },
       ]);
     }
   };
