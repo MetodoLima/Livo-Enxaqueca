@@ -1,6 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import { randomUUID } from 'expo-crypto';
-import type { DailyRecord, DailyRecordRepository, HumorId, NewDailyRecord } from './types';
+import type { DailyRecord, DailyRecordRepository, HumorId, NewDailyRecord } from '../types';
 import { userRepository } from './userRepository';
 
 /**

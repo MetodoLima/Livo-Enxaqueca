@@ -10,6 +10,7 @@ import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
 import { CrisisProvider } from '@/contexts/CrisisContext';
+import { SyncProvider } from '@/contexts/SyncContext';
 import { ConnectivityProvider } from '@/contexts/ConnectivityContext';
 import { useConnectivity } from '@/hooks/useConnectivity';
 import { supabase } from '@/lib/supabase';
@@ -209,9 +210,11 @@ export default function RootLayout() {
       <ConnectivityProvider>
         <AuthRefreshCoordinator />
         <AuthProvider>
-          <CrisisProvider>
-            <RootLayoutNav />
-          </CrisisProvider>
+          <SyncProvider>
+            <CrisisProvider>
+              <RootLayoutNav />
+            </CrisisProvider>
+          </SyncProvider>
         </AuthProvider>
       </ConnectivityProvider>
     </GestureHandlerRootView>

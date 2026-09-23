@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { SetupAnswer, SetupQuestion, SetupRepository } from './types';
+import type { SetupAnswer, SetupQuestion, SetupRepository } from '../types';
 
 /**
  * Perguntas e respostas do cadastro inicial de nove passos. Issue #48.

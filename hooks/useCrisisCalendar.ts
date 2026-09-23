@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { crisisRepository, type Crisis } from '@/repositories';
+import { useSync } from '@/contexts/SyncContext';
 import { medicationLabel, symptomLabel } from '@/types/crisis';
 
 export interface CrisisPhase {
@@ -59,6 +60,7 @@ function toCrisisDay(crise: Crisis & { inicioCrise: Date }): CrisisDay {
 }
 
 export function useCrisisCalendar(year: number, month: number) {
+  const { ultimaReplicacao } = useSync();
   const [crisisByDay, setCrisisByDay] = useState<CrisisByDay>({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -126,7 +128,7 @@ export function useCrisisCalendar(year: number, month: number) {
     } finally {
       setLoading(false);
     }
-  }, [year, month]);
+  }, [year, month, ultimaReplicacao]);
 
   useEffect(() => {
     fetchCrises();
