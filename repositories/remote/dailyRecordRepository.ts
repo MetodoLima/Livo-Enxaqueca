@@ -9,6 +9,23 @@ import { userRepository } from './userRepository';
  * com rede. A leitura offline vive em repositories/local.
  */
 
+/**
+ * O que o insert precisa, e nada mais. Issue #51.
+ *
+ * Nao reutiliza `DailyRecord`: aquele tipo descreve um registro LIDO, e carrega `createdAt` e
+ * `enviado`, que nao existem antes de a linha chegar ao servidor. Enviar um tipo de leitura
+ * obrigaria a fila a inventar valor para campo que ela nao tem.
+ */
+export type RegistroDiarioPayload = {
+  id: string;
+  data: string;
+  relato: string | null;
+  horasSono: number | null;
+  mlAgua: number | null;
+  humor: HumorId | null;
+  updatedAt: string;
+};
+
 function toDailyRecord(row: any): DailyRecord {
   return {
     id: row.id,
@@ -18,6 +35,8 @@ function toDailyRecord(row: any): DailyRecord {
     mlAgua: row.ml_agua ?? null,
     humor: (row.humor ?? null) as HumorId | null,
     createdAt: row.created_at,
+    // O que veio do servidor esta enviado por definicao. Issue #51.
+    enviado: true,
   };
 }
 
@@ -53,7 +72,7 @@ export const dailyRecordRepository = {
    * trg_registro_diario_updated_at nao dispara e nao sobrescreve o horario do aparelho.
    */
   async enviarRegistroDiario(
-    registro: DailyRecord & { updatedAt: string },
+    registro: RegistroDiarioPayload,
     usuarioId: number,
   ): Promise<void> {
     const { error } = await supabase.from('registro_diario').upsert(

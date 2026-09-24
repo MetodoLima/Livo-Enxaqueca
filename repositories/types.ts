@@ -43,6 +43,16 @@ export interface Crisis {
   inicioCrise: Date | null;
   fimCrise: Date | null;
   fases: Phase[];
+  /**
+   * Falso enquanto a crise existe so no aparelho. Issue #51.
+   *
+   * O historico marca essas com um relogio, do jeito que aplicativos de mensagem marcam
+   * mensagem nao entregue. Faz parte do contrato, e nao de uma consulta a parte, para nao
+   * existir uma segunda fonte de verdade que possa divergir da lista desenhada na tela. A
+   * implementacao remota devolve sempre true: o que esta no servidor esta enviado por
+   * definicao.
+   */
+  enviado: boolean;
 }
 
 /**
@@ -100,6 +110,13 @@ export interface DailyRecord {
   mlAgua: number | null;
   humor: HumorId | null;
   createdAt: string;
+  /**
+   * Falso enquanto o registro existe so no aparelho. Issue #51.
+   *
+   * Existe aqui pelo mesmo motivo que em `Crisis`: o registro diario tambem entra na fila, e
+   * sem marca-lo uma pendencia ficaria invisivel enquanto a crise ao lado aparece marcada.
+   */
+  enviado: boolean;
 }
 
 export interface NewDailyRecord {

@@ -19,6 +19,8 @@ type RegistroRow = {
   ml_agua: number | null;
   humor: string | null;
   created_at: string | null;
+  /** 0 enquanto o registro existe so no aparelho. Issue #51. */
+  synced: number;
 };
 
 export const dailyRecordRepository = {
@@ -26,7 +28,7 @@ export const dailyRecordRepository = {
     const db = await getDb();
 
     const linhas = await db.getAllAsync<RegistroRow>(
-      `select id, data, relato, horas_sono, ml_agua, humor, created_at
+      `select id, data, relato, horas_sono, ml_agua, humor, created_at, synced
          from registro_diario
         where data >= ? and data <= ?
         order by created_at asc`,
@@ -41,6 +43,7 @@ export const dailyRecordRepository = {
       mlAgua: l.ml_agua,
       humor: (l.humor ?? null) as HumorId | null,
       createdAt: l.created_at ?? '',
+      enviado: l.synced === 1,
     }));
   },
 

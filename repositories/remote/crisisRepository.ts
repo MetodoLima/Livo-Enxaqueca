@@ -73,6 +73,8 @@ function toCrisis(row: any): Crisis {
     inicioCrise: row.inicio_crise ? new Date(row.inicio_crise) : null,
     fimCrise: row.fim_crise ? new Date(row.fim_crise) : null,
     fases: (Array.isArray(row.registro_crise) ? row.registro_crise : []).map(toPhase),
+    // O que veio do servidor esta enviado por definicao. Issue #51.
+    enviado: true,
   };
 }
 

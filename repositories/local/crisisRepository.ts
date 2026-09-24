@@ -15,6 +15,8 @@ type CriseRow = {
   id: string;
   inicio_crise: string | null;
   fim_crise: string | null;
+  /** 0 enquanto a crise existe so no aparelho. Issue #51. */
+  synced: number;
 };
 
 type FaseRow = {
@@ -108,7 +110,7 @@ export const crisisRepository = {
         : 'order by inicio_crise asc nulls last';
 
     const crises = await db.getAllAsync<CriseRow>(
-      `select id, inicio_crise, fim_crise from crise_enxaqueca ${where} ${ordem}`,
+      `select id, inicio_crise, fim_crise, synced from crise_enxaqueca ${where} ${ordem}`,
       params,
     );
 
@@ -133,6 +135,7 @@ export const crisisRepository = {
       inicioCrise: c.inicio_crise ? new Date(c.inicio_crise) : null,
       fimCrise: c.fim_crise ? new Date(c.fim_crise) : null,
       fases: porCrise.get(c.id) ?? [],
+      enviado: c.synced === 1,
     }));
   },
 

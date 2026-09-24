@@ -16,6 +16,7 @@ import {
   ChevronRight as ArrowRight,
   Moon,
   Droplets,
+  Clock,
 } from 'lucide-react-native';
 import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
@@ -25,6 +26,7 @@ import ScreenBackground from '@/components/ScreenBackground';
 import { useCrisisCalendar, CrisisDay } from '@/hooks/useCrisisCalendar';
 import { useRegistroCalendar, RegistroCalendarDay } from '@/hooks/useRegistroCalendar';
 import { INTENSITY_CONFIG } from '@/types/crisis';
+import { useSync } from '@/contexts/SyncContext';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -82,6 +84,57 @@ function formatAgua(ml: number): string {
   return `${ml}ml`;
 }
 
+// ── Aviso de pendência travada ────────────────────────────────────────
+
+/**
+ * O único texto que a #51 mostra, e só quando a fila deixou de ser transitória.
+ *
+ * Abaixo de três dias o relógio em cada crise basta: a fila esvazia sozinha e não há nada a
+ * fazer. Passados três dias, a causa provável não se resolve sozinha — projeto do Supabase
+ * pausado, cota esgotada, servidor recusando o dado — e nenhuma delas o paciente conserta.
+ *
+ * Então o texto informa ONDE o dado está, não pede ação técnica nem fala de servidor. O risco
+ * real é o registro existir em um lugar só: trocar de celular, reinstalar ou limpar os dados
+ * apaga o que ainda não subiu. O relatório em PDF sai completo, porque é gerado do banco do
+ * aparelho desde a T3.6 — a perda é de cópia, não de conteúdo.
+ */
+function PendenciaTravadaAviso() {
+  const { fila } = useSync();
+
+  if (!fila.travado) return null;
+
+  return (
+    <View
+      style={{
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+        marginBottom: 20,
+        paddingVertical: 12,
+        paddingHorizontal: 14,
+        borderRadius: 14,
+        backgroundColor: 'rgba(232, 144, 79, 0.10)',
+        borderLeftWidth: 3,
+        borderLeftColor: Colors.orange,
+      }}
+    >
+      <Clock size={16} color={Colors.orange} />
+      <Text
+        style={{
+          flex: 1,
+          color: Colors.soft,
+          fontFamily: 'Epilogue_400Regular',
+          fontSize: 13,
+          lineHeight: 18,
+        }}
+      >
+        Alguns registros estão só neste celular. Mantenha o aplicativo instalado até eles
+        aparecerem sem o relógio.
+      </Text>
+    </View>
+  );
+}
+
 // ── CrisisListItem ────────────────────────────────────────────────────
 
 function CrisisListItem({ crisis, index }: { crisis: CrisisDay; index: number }) {
@@ -129,6 +182,16 @@ function CrisisListItem({ crisis, index }: { crisis: CrisisDay; index: number })
             {crisis.sintomas.length > 0 && ` · ${crisis.sintomas.length} sintoma${crisis.sintomas.length > 1 ? 's' : ''}`}
           </Text>
         </View>
+        {/* Crise que existe só no aparelho. Mesmo gesto dos aplicativos de mensagem: o
+            relógio some quando sobe, e não há nada para o usuário fazer. Issue #51. */}
+        {!crisis.enviado && (
+          <Clock
+            size={14}
+            color={Colors.muted}
+            style={{ marginRight: 8 }}
+            accessibilityLabel="Ainda não enviado, guardado neste aparelho"
+          />
+        )}
         <ArrowRight size={16} color={Colors.muted} />
       </TouchableOpacity>
     </Animated.View>
@@ -191,6 +254,16 @@ function RegistroListItem({ registro, index }: { registro: RegistroCalendarDay; 
           </Text>
         </View>
 
+        {/* Mesma marca da crise: o registro diário também entra na fila, e sem marcá-lo uma
+            pendência ficaria invisível ao lado de uma crise marcada. Issue #51. */}
+        {!registro.enviado && (
+          <Clock
+            size={14}
+            color={Colors.muted}
+            style={{ marginRight: 8 }}
+            accessibilityLabel="Ainda não enviado, guardado neste aparelho"
+          />
+        )}
         <ArrowRight size={16} color={Colors.muted} />
       </TouchableOpacity>
     </Animated.View>
@@ -330,6 +403,8 @@ export default function CalendarScreen() {
           <Text style={{ fontSize: 28, color: 'white', fontFamily: 'Epilogue_300Light', marginBottom: 24 }}>
             Seu <Text style={{ fontFamily: 'Epilogue_700Bold' }}>Histórico</Text>
           </Text>
+
+          <PendenciaTravadaAviso />
 
           {/* Calendário */}
           <Card style={{ marginBottom: 24 }}>
