@@ -1,30 +1,31 @@
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useConnectivity } from '@/hooks/useConnectivity';
-import { contarPendentes, onDadosLocaisMudaram, sincronizar } from '@/sync';
+import { onDadosLocaisMudaram, sincronizar } from '@/sync';
+import { FILA_VAZIA, lerEstadoDaFila, type EstadoDaFila } from '@/sync/status';
 
 /**
- * Sincronizacao: envia a fila e replica do servidor. Issues #49 e #50.
+ * Sincronizacao: envia a fila e replica do servidor. Issues #49, #50 e #51.
  *
- * Roda ao entrar com sessao e de novo quando a conexao volta. O estado exposto aqui e o que a
- * #51 vai mostrar na interface — especialmente `pendentes`, que e o numero de registros
- * gravados no aparelho e ainda nao enviados.
+ * Roda ao entrar com sessao e de novo quando a conexao volta. NAO existe acao manual de
+ * sincronizar exposta a interface, e isso e decisao da #51: o envio recua ate seis horas mas
+ * nunca desiste, entao um botao de "tentar de novo" nao mudaria o resultado. Gerenciar
+ * sincronizacao nao e tarefa do paciente.
  */
 
 type SyncContextType = {
   sincronizando: boolean;
   ultimaAtualizacao: Date | null;
-  pendentes: number;
+  /** O que a interface le para marcar o historico e para avisar quando algo travou. */
+  fila: EstadoDaFila;
   erro: string | null;
-  sincronizarAgora: () => Promise<void>;
 };
 
 const SyncContext = createContext<SyncContextType>({
   sincronizando: false,
   ultimaAtualizacao: null,
-  pendentes: 0,
+  fila: FILA_VAZIA,
   erro: null,
-  sincronizarAgora: async () => {},
 });
 
 export const useSync = () => useContext(SyncContext);
@@ -35,7 +36,7 @@ export const SyncProvider = ({ children }: { children: React.ReactNode }) => {
 
   const [sincronizando, setSincronizando] = useState(false);
   const [ultimaAtualizacao, setUltimaAtualizacao] = useState<Date | null>(null);
-  const [pendentes, setPendentes] = useState(0);
+  const [fila, setFila] = useState<EstadoDaFila>(FILA_VAZIA);
   const [erro, setErro] = useState<string | null>(null);
 
   const montado = useRef(true);
@@ -53,8 +54,7 @@ export const SyncProvider = ({ children }: { children: React.ReactNode }) => {
       // A trava contra concorrencia vive no modulo de sincronizacao, nao aqui: a gravacao
       // dispara envio de dentro do repositorio, fora do React, e um guarda de componente nao
       // veria aquela chamada.
-      const resultado = await sincronizar();
-      if (montado.current) setPendentes(resultado.pendentes);
+      await sincronizar();
     } catch (e: any) {
       if (montado.current) setErro(e?.message ?? 'Erro ao sincronizar com o servidor');
     } finally {
@@ -65,12 +65,12 @@ export const SyncProvider = ({ children }: { children: React.ReactNode }) => {
   // Qualquer replicacao, venha de onde vier, atualiza a data e com ela as telas que leem.
   useEffect(() => onDadosLocaisMudaram(() => setUltimaAtualizacao(new Date())), []);
 
-  // O contador precisa estar certo antes da primeira sincronizacao: se o app abriu offline
-  // com fila cheia, o numero tem que aparecer sem esperar rede.
+  // O estado da fila e lido do banco local, nao deduzido do resultado da sincronizacao: se o
+  // app abriu offline com fila cheia, o historico tem que marcar as pendentes sem esperar rede.
   useEffect(() => {
-    contarPendentes()
-      .then((total) => {
-        if (montado.current) setPendentes(total);
+    lerEstadoDaFila()
+      .then((estado) => {
+        if (montado.current) setFila(estado);
       })
       .catch(() => undefined);
   }, [ultimaAtualizacao]);
@@ -84,9 +84,7 @@ export const SyncProvider = ({ children }: { children: React.ReactNode }) => {
   }, [user, isOnline, sincronizarAgora]);
 
   return (
-    <SyncContext.Provider
-      value={{ sincronizando, ultimaAtualizacao, pendentes, erro, sincronizarAgora }}
-    >
+    <SyncContext.Provider value={{ sincronizando, ultimaAtualizacao, fila, erro }}>
       {children}
     </SyncContext.Provider>
   );

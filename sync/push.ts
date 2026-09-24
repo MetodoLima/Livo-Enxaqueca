@@ -10,6 +10,7 @@ import { dailyRecordRepository as remoteDailyRecordRepository } from '@/reposito
 import { userRepository } from '@/repositories/remote/userRepository';
 import type { HumorId } from '@/repositories/types';
 import { notificarDadosLocais } from './notify';
+import { lerEstadoDaFila } from './status';
 
 /**
  * Envio da fila para o servidor. Issue #50.
@@ -24,21 +25,34 @@ import { notificarDadosLocais } from './notify';
  */
 
 /**
- * Recuo entre tentativas, por numero de tentativas ja feitas.
+ * Recuo entre tentativas, crescente ate um limite. Issues #50 e #51.
  *
- * Sem isso, uma linha que falha por motivo permanente — validacao, ou RLS recusando — seria
- * reenviada em toda sincronizacao, gastando bateria e rede sem chance de sucesso. Passado o
- * teto, o envio automatico desiste e so a tentativa manual da #51 volta a tentar.
+ * O QUE E LIMITADO E O INTERVALO, NAO O NUMERO DE TENTATIVAS. A #50 tinha um teto que
+ * desistia depois da sexta tentativa, e isso criava perda silenciosa de dado: passado o teto,
+ * o registro ficava parado para sempre no aparelho e so um botao manual o tiraria de la.
+ *
+ * Agora o recuo cresce ate seis horas e continua indefinidamente. Uma linha que o servidor
+ * recusa por motivo permanente vai custar uma requisicao a cada seis horas, o que e barato, e
+ * sobe sozinha no dia em que a causa passar — Supabase despausado, cota renovada, schema
+ * corrigido. Nada disso exige acao do usuario, e por isso a #51 nao tem botao de tentar de
+ * novo.
+ *
+ * Nao existe tarefa em segundo plano: o envio roda quando o app abre e quando a conexao volta.
+ * Entao "nunca desiste" na pratica significa "tenta sempre que o app for usado", e nao ha nada
+ * consumindo bateria com o app fechado.
  */
 const RECUO_MINUTOS = [0, 1, 5, 15, 60, 360];
-const TETO_DE_TENTATIVAS = RECUO_MINUTOS.length;
+
+function esperaEmMinutos(tentativas: number): number {
+  const indice = Math.min(tentativas, RECUO_MINUTOS.length - 1);
+  return RECUO_MINUTOS[indice];
+}
 
 function podeTentar(tentativas: number, ultimaTentativaEm: string | null): boolean {
   if (tentativas === 0) return true;
-  if (tentativas >= TETO_DE_TENTATIVAS) return false;
   if (!ultimaTentativaEm) return true;
 
-  const esperaMs = RECUO_MINUTOS[tentativas] * 60 * 1000;
+  const esperaMs = esperaEmMinutos(tentativas) * 60 * 1000;
   return Date.now() - new Date(ultimaTentativaEm).getTime() >= esperaMs;
 }
 
@@ -241,7 +255,6 @@ async function enviarRegistrosDiarios(
           horasSono: registro.horas_sono,
           mlAgua: registro.ml_agua,
           humor: (registro.humor ?? null) as HumorId | null,
-          createdAt: '',
           updatedAt: registro.updated_at,
         },
         usuarioId,
@@ -278,12 +291,11 @@ async function registrarFalha(
   );
 }
 
+/**
+ * Deriva de `lerEstadoDaFila` em vez de repetir a consulta. Uma contagem escrita duas vezes
+ * daria dois numeros diferentes no dia em que o criterio mudar — e o criterio tem uma decisao
+ * dentro dele: fase nao e contada separada da crise.
+ */
 export async function contarPendentes(): Promise<number> {
-  const db = await getDb();
-  const linha = await db.getFirstAsync<{ total: number }>(
-    `select
-       (select count(*) from crise_enxaqueca where synced = 0) +
-       (select count(*) from registro_diario where synced = 0) as total`,
-  );
-  return linha?.total ?? 0;
+  return (await lerEstadoDaFila()).pendentes;
 }

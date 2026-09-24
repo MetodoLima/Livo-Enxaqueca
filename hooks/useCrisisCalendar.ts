@@ -23,6 +23,8 @@ export interface CrisisDay {
   intensidadeDor: number | null;
   sintomas: string[];
   medicamentos: string[];
+  /** Falso enquanto a crise existe só no aparelho. O histórico marca com um relógio. #51 */
+  enviado: boolean;
 }
 
 export interface CrisisByDay {
@@ -56,6 +58,7 @@ function toCrisisDay(crise: Crisis & { inicioCrise: Date }): CrisisDay {
     intensidadeDor: maxIntensidadeFase?.intensidadeDor ?? null,
     sintomas: [...new Set(fases.flatMap((f) => f.sintomas))],
     medicamentos: [...new Set(fases.flatMap((f) => f.medicamentos))],
+    enviado: crise.enviado,
   };
 }
 
