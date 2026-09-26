@@ -4,10 +4,11 @@ import ScreenBackground from '@/components/ScreenBackground';
 import { Colors } from '@/constants/Colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { usePdfExport } from '@/hooks/usePdfExport';
+import AppLockScreen from '@/components/AppLockScreen';
 import { sessionRepository } from '@/repositories';
 import { Bell as BellIcon, ChevronRight, FileText, LogOut, Moon as MoonIcon, Shield, User } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { Alert, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Modal, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
 const menuItems = [
@@ -15,11 +16,13 @@ const menuItems = [
   { icon: MoonIcon, label: 'Preferências', desc: 'Tema, notificações, idioma' },
   { icon: BellIcon, label: 'Lembretes', desc: 'Medicações e hidratação' },
   { icon: FileText, label: 'Exportar dados', desc: 'PDF para seu médico' },
+  { icon: Shield, label: 'Segurança', desc: 'PIN e biometria' },
 ];
 
 export default function ProfileScreen() {
   const { user } = useAuth();
   const [exportModalVisible, setExportModalVisible] = useState(false);
+  const [appLockModalVisible, setAppLockModalVisible] = useState(false);
   const { exportPdf, loading: pdfLoading } = usePdfExport();
 
   const handleExport = async (months: number) => {
@@ -36,6 +39,8 @@ export default function ProfileScreen() {
   const handleMenuPress = (label: string) => {
     if (label === 'Exportar dados') {
       setExportModalVisible(true);
+    } else if (label === 'Segurança') {
+      setAppLockModalVisible(true);
     }
   };
 
@@ -115,6 +120,9 @@ export default function ProfileScreen() {
         onClose={() => setExportModalVisible(false)}
         onSelect={handleExport}
       />
+      <Modal visible={appLockModalVisible} animationType="slide" onRequestClose={() => setAppLockModalVisible(false)}>
+        <AppLockScreen mode="setup" onClose={() => setAppLockModalVisible(false)} />
+      </Modal>
     </ScreenBackground>
   );
 }

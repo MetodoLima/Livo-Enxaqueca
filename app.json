@@ -45,6 +45,12 @@
           "useSQLCipher": true
         }
       ],
+      [
+        "expo-local-authentication",
+        {
+          "faceIDPermission": "Permitir que o Livo use o Face ID para desbloquear seus dados."
+        }
+      ],
       "expo-secure-store"
     ],
     "experiments": {

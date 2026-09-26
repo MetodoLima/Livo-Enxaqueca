@@ -9,6 +9,8 @@ import { useCallback, useEffect, useRef } from 'react';
 import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
+import { AppLockGate } from '@/components/AppLockGate';
+import { AppLockProvider } from '@/contexts/AppLockContext';
 import { CrisisProvider } from '@/contexts/CrisisContext';
 import { SyncProvider } from '@/contexts/SyncContext';
 import { ConnectivityProvider } from '@/contexts/ConnectivityContext';
@@ -181,6 +183,22 @@ function RootLayoutNav() {
   );
 }
 
+function ProtectedAppProviders() {
+  const { localSession } = useAuth();
+
+  // A navegação de autenticação continua disponível após logout, mas os providers que leem
+  // dados locais não devem ser montados sem uma sessão local ativa.
+  if (!localSession) return <RootLayoutNav />;
+
+  return (
+    <SyncProvider>
+      <CrisisProvider>
+        <RootLayoutNav />
+      </CrisisProvider>
+    </SyncProvider>
+  );
+}
+
 export default function RootLayout() {
   const [loaded, error] = useFonts({
     Epilogue_300Light,
@@ -210,11 +228,11 @@ export default function RootLayout() {
       <ConnectivityProvider>
         <AuthRefreshCoordinator />
         <AuthProvider>
-          <SyncProvider>
-            <CrisisProvider>
-              <RootLayoutNav />
-            </CrisisProvider>
-          </SyncProvider>
+          <AppLockProvider>
+            <AppLockGate>
+              <ProtectedAppProviders />
+            </AppLockGate>
+          </AppLockProvider>
         </AuthProvider>
       </ConnectivityProvider>
     </GestureHandlerRootView>
