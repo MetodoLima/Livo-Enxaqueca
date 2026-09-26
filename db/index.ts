@@ -1,5 +1,6 @@
 import * as SQLite from 'expo-sqlite';
 import { MIGRACOES } from './schema';
+import { getDatabaseEncryptionKey } from './encryptionKey';
 
 /**
  * Abertura e migracao do banco local. Issues #49 e #50.
@@ -36,12 +37,89 @@ async function migrar(db: SQLite.SQLiteDatabase): Promise<void> {
 }
 
 async function open(): Promise<SQLite.SQLiteDatabase> {
+  const encryptionKey = await getDatabaseEncryptionKey();
   const db = await SQLite.openDatabaseAsync(DATABASE_NAME);
-  // Fora das migracoes de proposito: journal_mode e ajuste de conexao e nao roda dentro de
-  // transacao.
-  await db.execAsync('pragma journal_mode = WAL');
-  await migrar(db);
+
+  try {
+    // A chave precisa ser aplicada antes de qualquer leitura, inclusive PRAGMA user_version.
+    // A chave é um valor hexadecimal gerado internamente, mas a aspa é escapada para manter a
+    // fronteira segura caso a origem da chave mude no futuro.
+    const escapedKey = encryptionKey.replaceAll("'", "''");
+    await db.execAsync(`pragma key = '${escapedKey}'`);
+
+    const estado = await validarBancoCriptografado(db);
+    if (estado === 'legacy-plaintext') {
+      throw new Error(
+        'Banco local antigo sem SQLCipher detectado; a migração ainda não foi implementada.',
+      );
+    }
+    if (estado === 'sqlcipher-unavailable') {
+      throw new Error(
+        'SQLCipher não está ativo nesta build nativa; uma development build é necessária.',
+      );
+    }
+
+    // Fora das migracoes de proposito: journal_mode e ajuste de conexao e nao roda dentro de
+    // transacao.
+    await db.execAsync('pragma journal_mode = WAL');
+    await migrar(db);
+  } catch (error) {
+    if (
+      error instanceof Error &&
+      (error.message.includes('migração ainda não foi implementada') ||
+        error.message.includes('SQLCipher não está ativo'))
+    ) {
+      throw error;
+    }
+
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(
+      `Não foi possível validar o banco local com SQLCipher. ` +
+        `O arquivo pode ser legado sem criptografia ou estar corrompido; migração não executada. ` +
+        `Detalhe: ${detail}`,
+    );
+  }
+
   return db;
+}
+
+type DatabaseState =
+  | 'new-encrypted'
+  | 'encrypted'
+  | 'legacy-plaintext'
+  | 'sqlcipher-unavailable';
+
+/**
+ * Valida a chave antes de migrations. Um banco novo não tem tabelas nem versão; um banco
+ * SQLCipher existente permite ler sqlite_master; um banco plaintext falha ao ser lido depois de
+ * PRAGMA key. O estado legado é recusado explicitamente nesta etapa, sem conversão de dados.
+ */
+async function validarBancoCriptografado(db: SQLite.SQLiteDatabase): Promise<DatabaseState> {
+  try {
+    const cipher = await db.getFirstAsync<{ cipher_version: string }>('pragma cipher_version');
+    if (!cipher?.cipher_version) return 'sqlcipher-unavailable';
+
+    const version = await db.getFirstAsync<{ user_version: number }>('pragma user_version');
+    const tabelas = await db.getAllAsync<{ name: string }>(
+      "select name from sqlite_master where type = 'table'",
+    );
+
+    if ((version?.user_version ?? 0) === 0 && tabelas.length === 0) {
+      return 'new-encrypted';
+    }
+
+    return 'encrypted';
+  } catch (error) {
+    const detail = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+    if (
+      detail.includes('not a database') ||
+      detail.includes('file is encrypted') ||
+      detail.includes('malformed')
+    ) {
+      return 'legacy-plaintext';
+    }
+    throw error;
+  }
 }
 
 export function getDb(): Promise<SQLite.SQLiteDatabase> {
