@@ -27,6 +27,7 @@ export type PlaintextMigrationResult =
   | {
       status: 'migrated';
       sourceDatabasePath: string;
+      destinationDatabaseName: string;
       destinationDatabasePath: string;
       tables: Record<string, { rows: number; digest: string }>;
     }
@@ -291,6 +292,7 @@ export async function migratePlaintextDatabase(
     return {
       status: 'migrated',
       sourceDatabasePath: sourcePath,
+      destinationDatabaseName: temporaryName,
       destinationDatabasePath: temporaryPath,
       tables: resultTables,
     };

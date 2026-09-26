@@ -1,6 +1,8 @@
 import * as SQLite from 'expo-sqlite';
+import * as SecureStore from 'expo-secure-store';
 import { MIGRACOES } from './schema';
 import { getDatabaseEncryptionKey } from './encryptionKey';
+import { migratePlaintextDatabase } from './plaintextMigration';
 
 /**
  * Abertura e migracao do banco local. Issues #49 e #50.
@@ -10,6 +12,14 @@ import { getDatabaseEncryptionKey } from './encryptionKey';
  */
 
 const DATABASE_NAME = 'livo.db';
+const PLAINTEXT_MIGRATION_MARKER = 'livo.db.plaintext-migration.v1';
+
+type PlaintextMigrationMarker = {
+  version: 1;
+  sourceDatabasePath: string;
+  destinationDatabaseName: string;
+  destinationDatabasePath: string;
+};
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
@@ -38,49 +48,122 @@ async function migrar(db: SQLite.SQLiteDatabase): Promise<void> {
 
 async function open(): Promise<SQLite.SQLiteDatabase> {
   const encryptionKey = await getDatabaseEncryptionKey();
-  const db = await SQLite.openDatabaseAsync(DATABASE_NAME);
+  const marker = await readPlaintextMigrationMarker();
 
-  try {
-    // A chave precisa ser aplicada antes de qualquer leitura, inclusive PRAGMA user_version.
-    // A chave é um valor hexadecimal gerado internamente, mas a aspa é escapada para manter a
-    // fronteira segura caso a origem da chave mude no futuro.
-    const escapedKey = encryptionKey.replaceAll("'", "''");
-    await db.execAsync(`pragma key = '${escapedKey}'`);
-
-    const estado = await validarBancoCriptografado(db);
-    if (estado === 'legacy-plaintext') {
+  if (marker) {
+    const migratedDb = await openEncryptedDatabase(marker.destinationDatabaseName, encryptionKey);
+    if (migratedDb.state !== 'encrypted') {
+      await migratedDb.db.closeAsync().catch(() => undefined);
       throw new Error(
-        'Banco local antigo sem SQLCipher detectado; a migração ainda não foi implementada.',
+        'O marcador de migração existe, mas o banco SQLCipher migrado não foi encontrado ou é inválido.',
       );
     }
-    if (estado === 'sqlcipher-unavailable') {
-      throw new Error(
-        'SQLCipher não está ativo nesta build nativa; uma development build é necessária.',
-      );
-    }
+    await prepararBanco(migratedDb.db);
+    return migratedDb.db;
+  }
 
-    // Fora das migracoes de proposito: journal_mode e ajuste de conexao e nao roda dentro de
-    // transacao.
-    await db.execAsync('pragma journal_mode = WAL');
-    await migrar(db);
-  } catch (error) {
-    if (
-      error instanceof Error &&
-      (error.message.includes('migração ainda não foi implementada') ||
-        error.message.includes('SQLCipher não está ativo'))
-    ) {
-      throw error;
-    }
-
-    const detail = error instanceof Error ? error.message : String(error);
+  const currentDb = await openEncryptedDatabase(DATABASE_NAME, encryptionKey);
+  if (currentDb.state === 'sqlcipher-unavailable') {
+    await currentDb.db.closeAsync().catch(() => undefined);
     throw new Error(
-      `Não foi possível validar o banco local com SQLCipher. ` +
-        `O arquivo pode ser legado sem criptografia ou estar corrompido; migração não executada. ` +
-        `Detalhe: ${detail}`,
+      'SQLCipher não está ativo nesta build nativa; uma development build é necessária.',
     );
   }
 
-  return db;
+  if (currentDb.state !== 'legacy-plaintext') {
+    await prepararBanco(currentDb.db);
+    return currentDb.db;
+  }
+
+  await currentDb.db.closeAsync();
+
+  const migration = await migratePlaintextDatabase(DATABASE_NAME, encryptionKey);
+  if (migration.status !== 'migrated') {
+    throw new Error(
+      'O banco local não pôde ser confirmado como plaintext; a migração não foi executada.',
+    );
+  }
+
+  const migratedDb = await openEncryptedDatabase(
+    migration.destinationDatabaseName,
+    encryptionKey,
+  );
+  if (migratedDb.state !== 'encrypted') {
+    await migratedDb.db.closeAsync().catch(() => undefined);
+    throw new Error('O banco SQLCipher migrado não passou na validação final.');
+  }
+
+  try {
+    await prepararBanco(migratedDb.db);
+    await savePlaintextMigrationMarker({
+      version: 1,
+      sourceDatabasePath: migration.sourceDatabasePath,
+      destinationDatabaseName: migration.destinationDatabaseName,
+      destinationDatabasePath: migration.destinationDatabasePath,
+    });
+  } catch (error) {
+    await migratedDb.db.closeAsync().catch(() => undefined);
+    throw error;
+  }
+
+  return migratedDb.db;
+}
+
+async function openEncryptedDatabase(
+  databaseName: string,
+  encryptionKey: string,
+): Promise<{ db: SQLite.SQLiteDatabase; state: DatabaseState }> {
+  const db = await SQLite.openDatabaseAsync(databaseName);
+
+  try {
+    // A chave precisa ser aplicada antes de qualquer leitura, inclusive PRAGMA user_version.
+    const escapedKey = encryptionKey.replaceAll("'", "''");
+    await db.execAsync(`pragma key = '${escapedKey}'`);
+    const state = await validarBancoCriptografado(db);
+    return { db, state };
+  } catch (error) {
+    await db.closeAsync().catch(() => undefined);
+    throw error;
+  }
+}
+
+async function prepararBanco(db: SQLite.SQLiteDatabase): Promise<void> {
+  // Fora das migracoes de proposito: journal_mode e ajuste de conexao e nao roda dentro de
+  // transacao.
+  await db.execAsync('pragma journal_mode = WAL');
+  await migrar(db);
+}
+
+async function readPlaintextMigrationMarker(): Promise<PlaintextMigrationMarker | null> {
+  const rawMarker = await SecureStore.getItemAsync(PLAINTEXT_MIGRATION_MARKER);
+  if (!rawMarker) return null;
+
+  try {
+    const marker = JSON.parse(rawMarker) as Partial<PlaintextMigrationMarker>;
+    if (
+      marker.version !== 1 ||
+      typeof marker.sourceDatabasePath !== 'string' ||
+      typeof marker.destinationDatabaseName !== 'string' ||
+      typeof marker.destinationDatabasePath !== 'string'
+    ) {
+      throw new Error('formato inválido');
+    }
+    return marker as PlaintextMigrationMarker;
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`O marcador de migração do banco local é inválido. Detalhe: ${detail}`);
+  }
+}
+
+async function savePlaintextMigrationMarker(
+  marker: PlaintextMigrationMarker,
+): Promise<void> {
+  try {
+    await SecureStore.setItemAsync(PLAINTEXT_MIGRATION_MARKER, JSON.stringify(marker));
+  } catch (error) {
+    const detail = error instanceof Error ? error.message : String(error);
+    throw new Error(`Não foi possível persistir o marcador de migração. Detalhe: ${detail}`);
+  }
 }
 
 type DatabaseState =
