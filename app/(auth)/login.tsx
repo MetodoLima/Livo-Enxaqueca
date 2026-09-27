@@ -1,7 +1,7 @@
 import { Link } from 'expo-router';
 import React, { useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { Colors } from '../../constants/Colors';
+import { Colors } from '@/constants/Colors';
 import { sessionRepository } from '@/repositories';
 
 export default function Login() {
@@ -77,7 +77,7 @@ export default function Login() {
 
         <View className="flex-row justify-center mt-8">
           <Text className="text-muted font-epilogue">Ainda não tem uma conta? </Text>
-          <Link href={"/register" as any} asChild>
+          <Link href="/register" asChild>
             <TouchableOpacity>
               <Text className="text-accent font-epilogue-bold">Cadastre-se</Text>
             </TouchableOpacity>

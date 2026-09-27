@@ -6,8 +6,8 @@ import {
     TouchableOpacity,
     View,
 } from 'react-native';
-import { useAuth } from '../../contexts/AuthContext';
-import { useSetup } from '../../contexts/SetupContext';
+import { useAuth } from '@/contexts/AuthContext';
+import { useSetup } from '@/contexts/SetupContext';
 import {
     sessionRepository,
     setupRepository,

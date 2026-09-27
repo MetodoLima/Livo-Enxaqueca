@@ -40,7 +40,7 @@ export default function RecordCrisisScreen() {
   const handleConfirm = useCallback(() => {
     saveCrisis(crisis);
     router.dismiss();
-    router.push('/(tabs)/crisis' as any);
+    router.push('/(tabs)/crisis');
   }, [crisis, router, saveCrisis]);
 
   // ── Navigation ──────────────────────────────────────────────────────
