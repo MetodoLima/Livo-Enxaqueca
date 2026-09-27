@@ -2,6 +2,14 @@ import * as Crypto from 'expo-crypto';
 import * as SecureStore from 'expo-secure-store';
 
 const STORAGE_PREFIX = 'livo.app-lock.';
+const ATTEMPTS_PREFIX = 'livo.app-lock-attempts.';
+
+// Um PIN de 4 dígitos tem 10 mil combinações. Sem limite, dá para testar todas à mão numa
+// tarde. As primeiras erradas são livres, porque errar o PIN é comum; depois disso cada erro
+// dobra a espera, até uma hora.
+const FREE_PIN_ATTEMPTS = 5;
+const BASE_PIN_DELAY_MS = 30 * 1000;
+const MAX_PIN_DELAY_MS = 60 * 60 * 1000;
 
 export type AppLockConfig = {
   version: 1;
@@ -74,6 +82,7 @@ export async function createAppLockConfig(
   };
 
   await SecureStore.setItemAsync(storageKey(userId), JSON.stringify(config));
+  await clearPinAttempts(userId);
   return config;
 }
 
@@ -98,4 +107,55 @@ export async function setBiometricEnabled(
 
 export async function removeAppLockConfig(userId: string): Promise<void> {
   await SecureStore.deleteItemAsync(storageKey(userId));
+  await clearPinAttempts(userId);
+}
+
+// ── Tentativas de PIN ──────────────────────────────────────────────────
+// Ficam no SecureStore, e não em memória, para que fechar e abrir o app não zere a contagem.
+
+export type PinAttempts = {
+  failures: number;
+  lockedUntil: number | null;
+};
+
+export const NO_PIN_ATTEMPTS: PinAttempts = { failures: 0, lockedUntil: null };
+
+function attemptsKey(userId: string): string {
+  return `${ATTEMPTS_PREFIX}${userId}`;
+}
+
+export async function getPinAttempts(userId: string): Promise<PinAttempts> {
+  const raw = await SecureStore.getItemAsync(attemptsKey(userId));
+  if (!raw) return NO_PIN_ATTEMPTS;
+
+  try {
+    const stored = JSON.parse(raw) as Partial<PinAttempts>;
+    if (
+      typeof stored.failures !== 'number' ||
+      (stored.lockedUntil !== null && typeof stored.lockedUntil !== 'number')
+    ) {
+      throw new Error('formato inválido');
+    }
+    return { failures: stored.failures, lockedUntil: stored.lockedUntil };
+  } catch {
+    // Registro ilegível não pode virar contagem zerada, senão corromper o valor seria um jeito
+    // de ganhar tentativas livres. Volta no limite: o próximo erro já impõe espera.
+    return { failures: FREE_PIN_ATTEMPTS, lockedUntil: null };
+  }
+}
+
+/** Grava o erro antes de devolver, para que matar o app logo depois não apague a tentativa. */
+export async function recordPinFailure(userId: string, current: PinAttempts): Promise<PinAttempts> {
+  const failures = current.failures + 1;
+  const delay = failures < FREE_PIN_ATTEMPTS
+    ? 0
+    : Math.min(BASE_PIN_DELAY_MS * 2 ** (failures - FREE_PIN_ATTEMPTS), MAX_PIN_DELAY_MS);
+  const next: PinAttempts = { failures, lockedUntil: delay > 0 ? Date.now() + delay : null };
+
+  await SecureStore.setItemAsync(attemptsKey(userId), JSON.stringify(next));
+  return next;
+}
+
+export async function clearPinAttempts(userId: string): Promise<void> {
+  await SecureStore.deleteItemAsync(attemptsKey(userId));
 }

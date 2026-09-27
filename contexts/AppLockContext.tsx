@@ -1,15 +1,23 @@
-import * as LocalAuthentication from 'expo-local-authentication';
-import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
-import { AppState, AppStateStatus } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import {
+  NO_PIN_ATTEMPTS,
+  clearPinAttempts,
   createAppLockConfig,
   getAppLockConfig,
+  getPinAttempts,
+  recordPinFailure,
   removeAppLockConfig,
   setBiometricEnabled,
   validateAppLockPin,
   type AppLockConfig,
+  type PinAttempts,
 } from '@/services/appLockStore';
+import * as LocalAuthentication from 'expo-local-authentication';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { AppState } from 'react-native';
+
+// Sair para responder uma mensagem e voltar não deve pedir PIN. Decidido pelo time.
+const LOCK_GRACE_MS = 60 * 1000;
 
 export type AppLockStatus = 'loading' | 'configured' | 'locked' | 'unlocked';
 
@@ -17,6 +25,13 @@ type AppLockContextValue = {
   status: AppLockStatus;
   config: AppLockConfig | null;
   biometricAvailable: boolean;
+  /**
+   * Verdadeiro enquanto o app está fora de primeiro plano. Com a tolerância, o bloqueio não
+   * dispara na hora, e sem essa capa a miniatura no seletor de tarefas mostraria o histórico.
+   */
+  privacyCover: boolean;
+  /** Até quando o PIN está recusado por excesso de erros. A biometria continua valendo. */
+  pinLockedUntil: number | null;
   configure: (pin: string, biometricEnabled: boolean) => Promise<void>;
   unlockWithPin: (pin: string) => Promise<boolean>;
   unlockWithBiometric: () => Promise<boolean>;
@@ -28,6 +43,8 @@ const AppLockContext = createContext<AppLockContextValue>({
   status: 'loading',
   config: null,
   biometricAvailable: false,
+  privacyCover: false,
+  pinLockedUntil: null,
   configure: async () => {},
   unlockWithPin: async () => false,
   unlockWithBiometric: async () => false,
@@ -45,15 +62,20 @@ export function AppLockProvider({ children }: { children: React.ReactNode }) {
   const [status, setStatus] = useState<AppLockStatus>('loading');
   const [config, setConfig] = useState<AppLockConfig | null>(null);
   const [biometricAvailable, setBiometricAvailable] = useState(false);
+  const [privacyCover, setPrivacyCover] = useState(false);
+  const [pinLockedUntil, setPinLockedUntil] = useState<number | null>(null);
   const configRef = useRef<AppLockConfig | null>(null);
+  const attemptsRef = useRef<PinAttempts>(NO_PIN_ATTEMPTS);
   const userIdRef = useRef<string | null>(null);
-  const appStateRef = useRef<AppStateStatus>(AppState.currentState);
+  const leftForegroundAtRef = useRef<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     userIdRef.current = userId;
     configRef.current = null;
+    attemptsRef.current = NO_PIN_ATTEMPTS;
     setConfig(null);
+    setPinLockedUntil(null);
     setBiometricAvailable(false);
     setStatus('loading');
 
@@ -64,12 +86,14 @@ export function AppLockProvider({ children }: { children: React.ReactNode }) {
       };
     }
 
-    void getAppLockConfig(userId)
-      .then(async (storedConfig) => {
+    void Promise.all([getAppLockConfig(userId), getPinAttempts(userId)])
+      .then(async ([storedConfig, storedAttempts]) => {
         if (cancelled || userIdRef.current !== userId) return;
 
         configRef.current = storedConfig;
+        attemptsRef.current = storedAttempts;
         setConfig(storedConfig);
+        setPinLockedUntil(storedAttempts.lockedUntil);
         if (!storedConfig) {
           setStatus('configured');
           return;
@@ -95,15 +119,38 @@ export function AppLockProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
-      const wasActive = appStateRef.current === 'active';
-      appStateRef.current = nextState;
-
-      if (wasActive && nextState !== 'active' && configRef.current) {
-        setStatus('locked');
+      if (nextState !== 'active') {
+        // 'inactive' no iOS já é o momento da miniatura, então a capa entra no primeiro sinal.
+        if (leftForegroundAtRef.current === null) leftForegroundAtRef.current = Date.now();
+        setPrivacyCover(true);
+        return;
       }
+
+      const leftAt = leftForegroundAtRef.current;
+      leftForegroundAtRef.current = null;
+      if (leftAt !== null && configRef.current) {
+        const elapsed = Date.now() - leftAt;
+        // Tempo negativo é relógio atrasado de propósito ou não; nos dois casos, bloqueia.
+        if (elapsed < 0 || elapsed >= LOCK_GRACE_MS) setStatus('locked');
+      }
+      setPrivacyCover(false);
     });
 
     return () => subscription.remove();
+  }, []);
+
+  const resetAttempts = useCallback(async () => {
+    const currentUserId = userIdRef.current;
+    if (!currentUserId || attemptsRef.current.failures === 0) return;
+
+    attemptsRef.current = NO_PIN_ATTEMPTS;
+    setPinLockedUntil(null);
+    try {
+      await clearPinAttempts(currentUserId);
+    } catch (error) {
+      // Não impede o desbloqueio: a pessoa provou quem é. A contagem velha só pesa no próximo erro.
+      console.error('Não foi possível zerar as tentativas de PIN:', error);
+    }
   }, []);
 
   const configure = useCallback(async (pin: string, biometricEnabled: boolean) => {
@@ -115,16 +162,33 @@ export function AppLockProvider({ children }: { children: React.ReactNode }) {
       biometricEnabled && biometricAvailable,
     );
     configRef.current = nextConfig;
+    attemptsRef.current = NO_PIN_ATTEMPTS;
     setConfig(nextConfig);
+    setPinLockedUntil(null);
     setStatus('unlocked');
   }, [biometricAvailable]);
 
   const unlockWithPin = useCallback(async (pin: string): Promise<boolean> => {
     if (!configRef.current) return true;
+    const currentUserId = userIdRef.current;
+    if (!currentUserId) return false;
+
+    // A tela já desabilita o botão durante a espera. Esta checagem é a que vale.
+    const { lockedUntil } = attemptsRef.current;
+    if (lockedUntil !== null && lockedUntil > Date.now()) return false;
+
     const valid = await validateAppLockPin(configRef.current, pin);
-    if (valid) setStatus('unlocked');
-    return valid;
-  }, []);
+    if (valid) {
+      await resetAttempts();
+      setStatus('unlocked');
+      return true;
+    }
+
+    const nextAttempts = await recordPinFailure(currentUserId, attemptsRef.current);
+    attemptsRef.current = nextAttempts;
+    setPinLockedUntil(nextAttempts.lockedUntil);
+    return false;
+  }, [resetAttempts]);
 
   const unlockWithBiometric = useCallback(async (): Promise<boolean> => {
     if (!configRef.current?.biometricEnabled || !biometricAvailable) return false;
@@ -134,9 +198,12 @@ export function AppLockProvider({ children }: { children: React.ReactNode }) {
       fallbackLabel: 'Usar PIN',
       disableDeviceFallback: true,
     });
-    if (result.success) setStatus('unlocked');
+    if (result.success) {
+      await resetAttempts();
+      setStatus('unlocked');
+    }
     return result.success;
-  }, [biometricAvailable]);
+  }, [biometricAvailable, resetAttempts]);
 
   const setBiometric = useCallback(async (enabled: boolean) => {
     if (!userIdRef.current || !configRef.current) return;
@@ -149,7 +216,9 @@ export function AppLockProvider({ children }: { children: React.ReactNode }) {
     if (!userIdRef.current) return;
     await removeAppLockConfig(userIdRef.current);
     configRef.current = null;
+    attemptsRef.current = NO_PIN_ATTEMPTS;
     setConfig(null);
+    setPinLockedUntil(null);
     setStatus('configured');
   }, []);
 
@@ -159,6 +228,8 @@ export function AppLockProvider({ children }: { children: React.ReactNode }) {
         status,
         config,
         biometricAvailable,
+        privacyCover,
+        pinLockedUntil,
         configure,
         unlockWithPin,
         unlockWithBiometric,
