@@ -1,4 +1,4 @@
-import { getDb } from '@/db';
+import { bancoDoUsuario } from '@/db/owner';
 import type { PacoteCrise } from '../crisisPackage';
 import type { Crisis, CrisisFilter, Phase } from '../types';
 
@@ -67,7 +67,7 @@ const COLUNAS_FASE = `
 
 export const crisisRepository = {
   async list(filtro: CrisisFilter = {}): Promise<Crisis[]> {
-    const db = await getDb();
+    const db = await bancoDoUsuario();
 
     const condicoes: string[] = [];
     const params: string[] = [];
@@ -131,7 +131,7 @@ export const crisisRepository = {
   },
 
   async lastEndedAt(): Promise<Date | null> {
-    const db = await getDb();
+    const db = await bancoDoUsuario();
     const linha = await db.getFirstAsync<{ fim_crise: string }>(
       'select fim_crise from crise_enxaqueca where fim_crise is not null order by fim_crise desc limit 1',
     );
@@ -139,7 +139,7 @@ export const crisisRepository = {
   },
 
   async countSince(data: Date): Promise<number> {
-    const db = await getDb();
+    const db = await bancoDoUsuario();
     const linha = await db.getFirstAsync<{ total: number }>(
       'select count(*) as total from crise_enxaqueca where inicio_crise >= ?',
       [data.toISOString()],
@@ -148,7 +148,7 @@ export const crisisRepository = {
   },
 
   async intensities(): Promise<number[]> {
-    const db = await getDb();
+    const db = await bancoDoUsuario();
     const linhas = await db.getAllAsync<{ intensidade_dor: number }>(
       'select intensidade_dor from registro_crise where intensidade_dor is not null',
     );
@@ -167,7 +167,7 @@ export const crisisRepository = {
    * garantia que a #40 deu no servidor, agora tambem no aparelho.
    */
   async save(pacote: PacoteCrise): Promise<string> {
-    const db = await getDb();
+    const db = await bancoDoUsuario();
     const { crise, fases } = pacote;
 
     await db.withTransactionAsync(async () => {

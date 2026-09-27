@@ -1,6 +1,6 @@
 import NetInfo from '@react-native-community/netinfo';
 import { normalizeConnectivityState } from '@/contexts/ConnectivityContext';
-import { getDb } from '@/db';
+import { bancoDoUsuario } from '@/db/owner';
 import { enviarPendentes } from '@/sync';
 import { notificarDadosLocais } from '@/sync/notify';
 import type { CrisisRecord } from '@/types/crisis';
@@ -118,7 +118,7 @@ export function ehBancoLocalIndisponivel(erro: unknown): boolean {
 }
 
 async function estaPendente(id: string): Promise<boolean> {
-  const db = await getDb();
+  const db = await bancoDoUsuario();
   const linha = await db.getFirstAsync<{ total: number }>(
     `select
        (select count(*) from crise_enxaqueca where id = ? and synced = 0) +
