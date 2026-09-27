@@ -1,6 +1,6 @@
 import { bancoDoUsuario } from '@/db/owner';
-import type { PacoteCrise } from '../crisisPackage';
-import type { Crisis, CrisisFilter, Phase } from '../types';
+import type { PacoteCrise } from '@/repositories/crisisPackage';
+import type { Crisis, CrisisFilter, Phase } from '@/repositories/types';
 
 /**
  * Leitura de crise contra o banco local. Issue #49.

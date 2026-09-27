@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { Crisis, CrisisFilter, Phase } from '../types';
+import type { Crisis, CrisisFilter, Phase } from '@/repositories/types';
 
 /**
  * O formato que a funcao salvar_crise espera. Nomes de coluna, nao de dominio, porque este e
@@ -52,7 +52,27 @@ const SELECT = `
   )
 `;
 
-function toPhase(row: any): Phase {
+type FaseRow = {
+  id: string;
+  intensidade_dor: number | null;
+  regiao_dor: string | null;
+  lado: string | null;
+  nivel_incapacidade: string | null;
+  resumo: string | null;
+  sintomas: string[] | null;
+  medicamentos: string[] | null;
+  medicamentos_livres: string[] | null;
+  fatores: string[] | null;
+};
+
+type CriseRow = {
+  id: string;
+  inicio_crise: string | null;
+  fim_crise: string | null;
+  registro_crise: FaseRow[] | null;
+};
+
+function toPhase(row: FaseRow): Phase {
   return {
     id: row.id,
     intensidadeDor: row.intensidade_dor ?? null,
@@ -60,14 +80,14 @@ function toPhase(row: any): Phase {
     lado: row.lado ?? null,
     nivelIncapacidade: row.nivel_incapacidade ?? null,
     resumo: row.resumo ?? null,
-    sintomas: (row.sintomas ?? []) as string[],
-    medicamentos: (row.medicamentos ?? []) as string[],
-    medicamentosLivres: (row.medicamentos_livres ?? []) as string[],
-    fatores: (row.fatores ?? []) as string[],
+    sintomas: row.sintomas ?? [],
+    medicamentos: row.medicamentos ?? [],
+    medicamentosLivres: row.medicamentos_livres ?? [],
+    fatores: row.fatores ?? [],
   };
 }
 
-function toCrisis(row: any): Crisis {
+function toCrisis(row: CriseRow): Crisis {
   return {
     id: row.id,
     inicioCrise: row.inicio_crise ? new Date(row.inicio_crise) : null,
@@ -94,7 +114,7 @@ export const crisisRepository = {
     });
 
     if (error) throw error;
-    return (data ?? []).map(toCrisis);
+    return ((data ?? []) as CriseRow[]).map(toCrisis);
   },
 
   async lastEndedAt(): Promise<Date | null> {

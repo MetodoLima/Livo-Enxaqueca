@@ -1,6 +1,6 @@
 import { bancoDoUsuario } from '@/db/owner';
-import type { RegistroDiarioPayload } from '../remote/dailyRecordRepository';
-import type { DailyRecord, HumorId } from '../types';
+import type { RegistroDiarioPayload } from '@/repositories/remote/dailyRecordRepository';
+import type { DailyRecord, HumorId } from '@/repositories/types';
 
 /**
  * Leitura de registro diario contra o banco local. Issue #49.

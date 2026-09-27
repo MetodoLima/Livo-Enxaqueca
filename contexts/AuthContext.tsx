@@ -1,15 +1,15 @@
 import { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
-import { supabase } from '../lib/supabase';
-import { definirUsuarioDaSessao } from '../db/owner';
-import { useConnectivity } from '../hooks/useConnectivity';
+import { supabase } from '@/lib/supabase';
+import { definirUsuarioDaSessao } from '@/db/owner';
+import { useConnectivity } from '@/hooks/useConnectivity';
 import {
   getLastValidatedAt,
   getOfflineSessionStatus,
   removeLastValidatedAt,
   setLastValidatedAt,
   type OfflineSessionStatus,
-} from '../util/offlineTolerance';
+} from '@/util/offlineTolerance';
 
 export type LocalSessionStatus = 'loading' | 'available' | 'absent';
 
