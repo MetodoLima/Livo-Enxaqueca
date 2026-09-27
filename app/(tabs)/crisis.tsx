@@ -361,7 +361,9 @@ export default function CrisisDetailScreen() {
   const [editingField, setEditingField] = useState<
     'intensity' | 'location' | 'symptoms' | 'medications' | null
   >(null);
-  const [finishing, setFinishing] = useState(false);
+  const [salvando, setSalvando] = useState(false);
+  const [registrada, setRegistrada] = useState(false);
+  const [erroAoFinalizar, setErroAoFinalizar] = useState<string | null>(null);
 
   const [showVoice, setShowVoice] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -370,51 +372,42 @@ export default function CrisisDetailScreen() {
 
   const { isRecording, recordSecs, error: micError, startRecording, stopRecording } = useAudioRecorder();
 
-  // ── Finalize ────────────────────────────────────────────────────────
   const [savedIntensity, setSavedIntensity] = useState<number | null>(null);
-  // Null enquanto não se sabe. Depois, se o registro ficou na fila do aparelho, a tela diz
-  // isso em vez de afirmar só "registrada" — a #51 lembra que erro invisível é pior que
-  // erro visível.
   const [ficouNaFila, setFicouNaFila] = useState(false);
 
   const handleFinish = async () => {
-    setFinishing(true);
-    setSavedIntensity(activeCrisis?.intensity ?? null);
-    setFicouNaFila(false);
+    if (salvando || !activeCrisis) return;
+    setSalvando(true);
+    setErroAoFinalizar(null);
     try {
-      const crisisToSave = activeCrisis!.endTime
-        ? activeCrisis!
-        : { ...activeCrisis!, endTime: new Date() };
+      const crisisToSave = activeCrisis.endTime
+        ? activeCrisis
+        : { ...activeCrisis, endTime: new Date() };
       const { enviado } = await crisisRepository.save(crisisToSave, phases);
+      setSavedIntensity(activeCrisis.intensity ?? null);
       setFicouNaFila(!enviado);
+      setRegistrada(true);
       clearCrisis();
     } catch (e) {
-      setFinishing(false);
-      // A crise não foi descartada: clearCrisis só roda quando a gravação dá certo, e a crise
-      // em andamento vive fora do banco do aparelho. Dizer isso é o que importa para quem está
-      // no meio de uma crise — não o motivo técnico.
-      if (ehBancoLocalIndisponivel(e)) {
-        Alert.alert(
-          'Não foi possível salvar agora',
-          'Sua crise continua guardada neste aparelho. Você pode finalizá-la quando tiver internet.',
-        );
-        return;
-      }
-      Alert.alert('Erro ao salvar', e instanceof Error ? e.message : String(e));
+      setErroAoFinalizar(
+        ehBancoLocalIndisponivel(e)
+          ? 'Não foi possível salvar agora. Sua crise continua guardada neste aparelho e você pode finalizá-la quando tiver internet.'
+          : 'Não foi possível salvar a crise. Ela continua guardada neste aparelho. Tente de novo.',
+      );
+    } finally {
+      setSalvando(false);
     }
   };
 
-  // Auto-dismiss success screen after 1.5s
   useEffect(() => {
-    if (!finishing) return;
+    if (!registrada) return;
     const timer = setTimeout(() => {
-      setFinishing(false);
+      setRegistrada(false);
     }, 1500);
     return () => clearTimeout(timer);
-  }, [finishing]);
+  }, [registrada]);
 
-  // ── Success screen ──────────────────────────────────────────────────
-  if (finishing) {
+  if (registrada) {
     return (
       <View style={styles.successContainer}>
         <Animated.View entering={ZoomIn} style={styles.successIcon}>
@@ -517,10 +510,20 @@ export default function CrisisDetailScreen() {
         {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Resumo da crise</Text>
-          <TouchableOpacity onPress={handleFinish} style={styles.finishBtn}>
-            <Text style={styles.finishBtnText}>Finalizar</Text>
+          <TouchableOpacity
+            onPress={handleFinish}
+            disabled={salvando}
+            style={[styles.finishBtn, salvando && { opacity: 0.6 }]}
+          >
+            {salvando
+              ? <ActivityIndicator size="small" color={Colors.accent} />
+              : <Text style={styles.finishBtnText}>Finalizar</Text>}
           </TouchableOpacity>
         </View>
+
+        {erroAoFinalizar && (
+          <Text style={[styles.errorText, { marginBottom: 16 }]}>{erroAoFinalizar}</Text>
+        )}
 
         {/* ── Past phases ── */}
         {phases.length > 0 && (
