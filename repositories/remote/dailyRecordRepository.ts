@@ -1,5 +1,5 @@
 import { supabase } from '@/lib/supabase';
-import type { DailyRecord, HumorId } from '../types';
+import type { DailyRecord, HumorId } from '@/repositories/types';
 import { userRepository } from './userRepository';
 
 /**
@@ -26,7 +26,17 @@ export type RegistroDiarioPayload = {
   updatedAt: string;
 };
 
-function toDailyRecord(row: any): DailyRecord {
+type RegistroDiarioRow = {
+  id: string;
+  data: string;
+  relato: string | null;
+  horas_sono: number | null;
+  ml_agua: number | null;
+  humor: string | null;
+  created_at: string;
+};
+
+function toDailyRecord(row: RegistroDiarioRow): DailyRecord {
   return {
     id: row.id,
     data: row.data,

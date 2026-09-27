@@ -1,17 +1,25 @@
 import { supabase } from '@/lib/supabase';
-import type { SetupAnswer, SetupQuestion, SetupRepository } from '../types';
+import type { SetupAnswer, SetupQuestion, SetupRepository } from '@/repositories/types';
 
 /**
  * Perguntas e respostas do cadastro inicial de nove passos. Issue #48.
  */
 
-function toQuestion(row: any): SetupQuestion {
+type PerguntaRow = {
+  id: number;
+  texto: string;
+  tipo: string;
+  passo_setup: number;
+  opcoes_pergunta: { id: number; texto: string }[] | null;
+};
+
+function toQuestion(row: PerguntaRow): SetupQuestion {
   return {
     id: row.id,
     texto: row.texto,
     tipo: row.tipo,
     passoSetup: row.passo_setup,
-    opcoes: (Array.isArray(row.opcoes_pergunta) ? row.opcoes_pergunta : []).map((o: any) => ({
+    opcoes: (Array.isArray(row.opcoes_pergunta) ? row.opcoes_pergunta : []).map((o) => ({
       id: o.id,
       texto: o.texto,
     })),
@@ -47,7 +55,7 @@ export const setupRepository: SetupRepository = {
 
     if (error) throw error;
     if (!data) throw new Error('Falha ao buscar perguntas.');
-    return data.map(toQuestion);
+    return (data as PerguntaRow[]).map(toQuestion);
   },
 
   async saveAnswers(respostas: SetupAnswer[]): Promise<void> {
