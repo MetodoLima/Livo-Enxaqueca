@@ -1,6 +1,7 @@
 import { AuthChangeEvent, Session, User } from '@supabase/supabase-js';
 import React, { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { supabase } from '../lib/supabase';
+import { definirUsuarioDaSessao } from '../db/owner';
 import { useConnectivity } from '../hooks/useConnectivity';
 import {
   getLastValidatedAt,
@@ -103,6 +104,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       const previousUserId = lastKnownUserId.current;
       const nextUserId = nextSession?.user?.id ?? null;
       lastKnownUserId.current = nextUserId;
+      definirUsuarioDaSessao(nextUserId);
       validationLoadId.current += 1;
 
       setLocalSession(nextSession);

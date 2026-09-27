@@ -1,4 +1,4 @@
-import { getDb } from '@/db';
+import { bancoDoUsuario } from '@/db/owner';
 import type { RegistroDiarioPayload } from '../remote/dailyRecordRepository';
 import type { DailyRecord, HumorId } from '../types';
 
@@ -25,7 +25,7 @@ type RegistroRow = {
 
 export const dailyRecordRepository = {
   async listBetween(de: string, ate: string): Promise<DailyRecord[]> {
-    const db = await getDb();
+    const db = await bancoDoUsuario();
 
     const linhas = await db.getAllAsync<RegistroRow>(
       `select id, data, relato, horas_sono, ml_agua, humor, created_at, synced
@@ -58,7 +58,7 @@ export const dailyRecordRepository = {
    * servidor, quando este banco nao abre, usa o MESMO id, e o reenvio nao duplica.
    */
   async save(registro: RegistroDiarioPayload): Promise<string> {
-    const db = await getDb();
+    const db = await bancoDoUsuario();
 
     await db.runAsync(
       `insert into registro_diario

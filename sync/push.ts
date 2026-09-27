@@ -1,7 +1,7 @@
 import NetInfo from '@react-native-community/netinfo';
 import { normalizeConnectivityState } from '@/contexts/ConnectivityContext';
-import { getDb } from '@/db';
-import { getSyncValue } from '@/db/syncState';
+import type { SQLiteDatabase } from 'expo-sqlite';
+import { abrirBancoDoUsuario, usuarioAtual } from '@/db/owner';
 import {
   crisisRepository as remoteCrisisRepository,
   type FasePayload,
@@ -117,12 +117,10 @@ type PendenteRegistro = {
 export type PushResult = {
   enviados: number;
   pendentes: number;
-  /** Verdadeiro quando nada podia ser enviado porque o dono da replica nao e o da sessao. */
-  donoDivergente?: boolean;
 };
 
 export async function pushToServer(): Promise<PushResult> {
-  const db = await getDb();
+  const { db, dono } = await abrirBancoDoUsuario();
 
   // Sai antes de tentar quando a rede esta comprovadamente ausente. Sem isso, salvar uma
   // crise em modo aviao esperaria o tempo de espera da requisicao antes de mostrar a tela de
@@ -137,18 +135,10 @@ export async function pushToServer(): Promise<PushResult> {
   const usuarioId = await userRepository.currentUsuarioId();
   if (usuarioId === null) return { enviados: 0, pendentes: await contarPendentes() };
 
-  // O dono da replica tem que ser o da sessao. Se divergir, nao se tenta enviar: a politica
-  // de RLS recusaria e a linha entraria em loop de 403 com o recuo escondendo o problema. A
-  // replicacao e que trata a divergencia, movendo o nao enviado para a quarentena.
-  const dono = await getSyncValue('owner', db);
-  if (dono !== null && dono !== String(usuarioId)) {
-    return { enviados: 0, pendentes: await contarPendentes(), donoDivergente: true };
-  }
-
   let enviados = 0;
 
-  enviados += await enviarCrises(db);
-  enviados += await enviarRegistrosDiarios(db, usuarioId);
+  enviados += await enviarCrises(db, dono);
+  enviados += await enviarRegistrosDiarios(db, dono, usuarioId);
 
   // O contador de pendentes muda quando algo sobe, e a #51 mostra esse numero. Avisar aqui
   // tambem cobre a falha: tentativas e ultimo erro entram no estado que a interface le.
@@ -161,7 +151,7 @@ export async function pushToServer(): Promise<PushResult> {
  * Nao recebe usuarioId: a funcao salvar_crise resolve o dono por auth.uid() dentro do banco,
  * entao o aparelho nao informa nem tem como informar quem e.
  */
-async function enviarCrises(db: Awaited<ReturnType<typeof getDb>>): Promise<number> {
+async function enviarCrises(db: SQLiteDatabase, dono: string): Promise<number> {
   const pendentes = await db.getAllAsync<PendenteCrise>(
     `select id, inicio_crise, fim_crise, updated_at, tentativas, ultima_tentativa_em
        from crise_enxaqueca
@@ -172,6 +162,7 @@ async function enviarCrises(db: Awaited<ReturnType<typeof getDb>>): Promise<numb
   let enviados = 0;
 
   for (const crise of pendentes) {
+    if (usuarioAtual() !== dono) break;
     if (!podeTentar(crise.tentativas, crise.ultima_tentativa_em)) continue;
 
     // Manda o pacote inteiro, inclusive fase que ja subiu: `on conflict (id) do nothing`
@@ -230,7 +221,8 @@ async function enviarCrises(db: Awaited<ReturnType<typeof getDb>>): Promise<numb
 }
 
 async function enviarRegistrosDiarios(
-  db: Awaited<ReturnType<typeof getDb>>,
+  db: SQLiteDatabase,
+  dono: string,
   usuarioId: number,
 ): Promise<number> {
   const pendentes = await db.getAllAsync<PendenteRegistro>(
@@ -244,6 +236,7 @@ async function enviarRegistrosDiarios(
   let enviados = 0;
 
   for (const registro of pendentes) {
+    if (usuarioAtual() !== dono) break;
     if (!podeTentar(registro.tentativas, registro.ultima_tentativa_em)) continue;
 
     try {
@@ -274,7 +267,7 @@ async function enviarRegistrosDiarios(
 }
 
 async function registrarFalha(
-  db: Awaited<ReturnType<typeof getDb>>,
+  db: SQLiteDatabase,
   tabela: 'crise_enxaqueca' | 'registro_diario',
   id: string,
   erro: unknown,

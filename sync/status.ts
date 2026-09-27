@@ -1,4 +1,4 @@
-import { getDb } from '@/db';
+import { bancoDoUsuario } from '@/db/owner';
 
 /**
  * Estado da fila de envio, para a interface. Issue #51.
@@ -35,7 +35,7 @@ export const FILA_VAZIA: EstadoDaFila = {
 };
 
 export async function lerEstadoDaFila(): Promise<EstadoDaFila> {
-  const db = await getDb();
+  const db = await bancoDoUsuario();
 
   const linha = await db.getFirstAsync<{ total: number; mais_antigo: string | null }>(
     `select count(*) as total, min(updated_at) as mais_antigo
