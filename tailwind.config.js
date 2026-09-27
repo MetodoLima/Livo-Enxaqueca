@@ -1,4 +1,6 @@
 /** @type {import('tailwindcss').Config} */
+const palette = require('./constants/colors.json');
+
 module.exports = {
   content: [
     "./app/**/*.{js,jsx,ts,tsx}",
@@ -8,15 +10,9 @@ module.exports = {
   presets: [require("nativewind/preset")],
   theme: {
     extend: {
-      colors: {
-        accent: "rgb(37, 183, 187)",
-        "bg-dark": "#112F3D",
-        "card-dark": "rgb(30, 41, 59)",
-        muted: "#8BA3A7",
-        soft: "#E7EAE8",
-        purple: "#8B6FC0",
-        orange: "#E8904F",
-      },
+      colors: Object.fromEntries(
+        Object.entries(palette).map(([nome, cor]) => [nome.replace(/[A-Z]/g, (l) => `-${l.toLowerCase()}`), cor]),
+      ),
       fontFamily: {
         epilogue: ["Epilogue_400Regular"],
         "epilogue-light": ["Epilogue_300Light"],
