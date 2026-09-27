@@ -9,10 +9,17 @@ type AppLockScreenProps = {
   onClose?: () => void;
 };
 
+function formatWait(ms: number): string {
+  const seconds = Math.ceil(ms / 1000);
+  if (seconds < 60) return `${seconds} s`;
+  return `${Math.ceil(seconds / 60)} min`;
+}
+
 export default function AppLockScreen({ mode = 'unlock', onClose }: AppLockScreenProps) {
   const {
     config,
     biometricAvailable,
+    pinLockedUntil,
     unlockWithPin,
     unlockWithBiometric,
     configure,
@@ -22,6 +29,18 @@ export default function AppLockScreen({ mode = 'unlock', onClose }: AppLockScree
   const [useBiometric, setUseBiometric] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
+
+  // Relógio só para a contagem regressiva, e só enquanto há espera.
+  useEffect(() => {
+    if (pinLockedUntil === null) return;
+    setNow(Date.now());
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, [pinLockedUntil]);
+
+  const pinWaitMs = pinLockedUntil !== null ? pinLockedUntil - now : 0;
+  const pinWaiting = mode === 'unlock' && pinWaitMs > 0;
 
   useEffect(() => {
     if (mode !== 'unlock' || !config?.biometricEnabled || !biometricAvailable) return;
@@ -119,12 +138,24 @@ export default function AppLockScreen({ mode = 'unlock', onClose }: AppLockScree
           </View>
         )}
 
-        {error && <Text style={{ color: '#EF7777', marginBottom: 14 }}>{error}</Text>}
+        {pinWaiting ? (
+          <Text style={{ color: '#EF7777', marginBottom: 14 }}>
+            Muitas tentativas erradas. Tente o PIN de novo em {formatWait(pinWaitMs)}.
+          </Text>
+        ) : (
+          error && <Text style={{ color: '#EF7777', marginBottom: 14 }}>{error}</Text>
+        )}
 
         <TouchableOpacity
           onPress={setupMode ? handleSetup : handleUnlock}
-          disabled={busy}
-          style={{ backgroundColor: Colors.accent, borderRadius: 12, padding: 16, alignItems: 'center' }}
+          disabled={busy || pinWaiting}
+          style={{
+            backgroundColor: Colors.accent,
+            borderRadius: 12,
+            padding: 16,
+            alignItems: 'center',
+            opacity: pinWaiting ? 0.5 : 1,
+          }}
         >
           {busy ? <ActivityIndicator color="white" /> : <Text style={{ color: 'white', fontWeight: '700' }}>{setupMode ? 'Salvar PIN' : 'Desbloquear'}</Text>}
         </TouchableOpacity>

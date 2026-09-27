@@ -67,13 +67,19 @@ export const SyncProvider = ({ children }: { children: React.ReactNode }) => {
 
   // O estado da fila e lido do banco local, nao deduzido do resultado da sincronizacao: se o
   // app abriu offline com fila cheia, o historico tem que marcar as pendentes sem esperar rede.
+  // Sem sessao o provider fica montado mas nao le nada: ele nao e mais desmontado no logout.
+  const usuarioId = user?.id ?? null;
   useEffect(() => {
+    if (!usuarioId) {
+      setFila(FILA_VAZIA);
+      return;
+    }
     lerEstadoDaFila()
       .then((estado) => {
         if (montado.current) setFila(estado);
       })
       .catch(() => undefined);
-  }, [ultimaAtualizacao]);
+  }, [ultimaAtualizacao, usuarioId]);
 
   // `isOnline` e falso enquanto a conectividade esta sendo determinada, entao esperar por ele
   // ja cobre o boot: nao se tenta sincronizar antes de saber se ha rede. Quando a conexao

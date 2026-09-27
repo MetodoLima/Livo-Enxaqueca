@@ -183,13 +183,10 @@ function RootLayoutNav() {
   );
 }
 
+// Os providers que leem dados locais ficam sempre montados e não fazem nada sem sessão. Antes
+// eles só existiam com sessão, e trocar a árvore no login recriava o navegador no meio do
+// redirecionamento: "The action 'REPLACE' ... was not handled by any navigator".
 function ProtectedAppProviders() {
-  const { localSession } = useAuth();
-
-  // A navegação de autenticação continua disponível após logout, mas os providers que leem
-  // dados locais não devem ser montados sem uma sessão local ativa.
-  if (!localSession) return <RootLayoutNav />;
-
   return (
     <SyncProvider>
       <CrisisProvider>
