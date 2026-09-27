@@ -1,12 +1,7 @@
 import Constants from 'expo-constants';
-import { Platform } from 'react-native';
 
-// Web sempre usa localhost. No Expo Go, hostUri aponta para o IP do dev server.
-// Fallback: 10.0.2.2 (emulador Android → host).
 const devHost =
-  Platform.OS === 'web'
-    ? 'localhost'
-    : typeof Constants.expoConfig?.hostUri === 'string'
+  typeof Constants.expoConfig?.hostUri === 'string'
     ? Constants.expoConfig.hostUri.split(':')[0]
     : '10.0.2.2';
 

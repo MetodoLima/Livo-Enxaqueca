@@ -8,7 +8,7 @@ import AppLockScreen from '@/components/AppLockScreen';
 import { sessionRepository } from '@/repositories';
 import { Bell as BellIcon, ChevronRight, FileText, LogOut, Moon as MoonIcon, Shield, User } from 'lucide-react-native';
 import React, { useState } from 'react';
-import { Alert, Modal, Platform, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
 
 const menuItems = [
@@ -45,17 +45,10 @@ export default function ProfileScreen() {
   };
 
   const handleLogout = async () => {
-    if (Platform.OS === 'web') {
-      const confirmed = window.confirm('Tem certeza que deseja sair?');
-      if (confirmed) {
-        await sessionRepository.signOut();
-      }
-    } else {
-      Alert.alert('Sair da conta', 'Tem certeza que deseja sair?', [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Sair', style: 'destructive', onPress: async () => await sessionRepository.signOut() },
-      ]);
-    }
+    Alert.alert('Sair da conta', 'Tem certeza que deseja sair?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Sair', style: 'destructive', onPress: async () => await sessionRepository.signOut() },
+    ]);
   };
 
   return (
