@@ -3,7 +3,6 @@ import { medicationLabel, symptomLabel } from '@/types/crisis';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { useState } from 'react';
-import { Platform } from 'react-native';
 
 const REGION_LABELS: Record<string, string> = {
   frontal: 'Frontal',
@@ -289,16 +288,12 @@ export function usePdfExport() {
       const crises = await fetchCrises(months);
       const html = buildHtml(crises, userName, months);
 
-      if (Platform.OS === 'web') {
-        await Print.printAsync({ html });
-      } else {
-        const { uri } = await Print.printToFileAsync({ html, base64: false });
-        await Sharing.shareAsync(uri, {
-          mimeType: 'application/pdf',
-          dialogTitle: 'Exportar relatório de crises',
-          UTI: 'com.adobe.pdf',
-        });
-      }
+      const { uri } = await Print.printToFileAsync({ html, base64: false });
+      await Sharing.shareAsync(uri, {
+        mimeType: 'application/pdf',
+        dialogTitle: 'Exportar relatório de crises',
+        UTI: 'com.adobe.pdf',
+      });
     } catch (err: any) {
       setError(err?.message ?? 'Erro ao gerar PDF');
       throw err;
