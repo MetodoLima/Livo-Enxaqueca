@@ -21,7 +21,12 @@ export function useRegistroEvento(data: string) {
   // para nao afirmar que o dado esta no servidor quando nao esta. Issue #50.
   const [naFila, setNaFila] = useState(false);
 
-  const salvar = useCallback(async (patch: Omit<RegistroEvento, 'id' | 'data'>) => {
+  /**
+   * Devolve se gravou. A tela usa isso para limpar o formulario SO depois de gravar: antes o
+   * formulario era limpo sem esperar, e se a gravacao falhasse o que a pessoa digitou sumia
+   * sem aviso. O registro diario nao tem a rede de seguranca que a crise tem no AsyncStorage.
+   */
+  const salvar = useCallback(async (patch: Omit<RegistroEvento, 'id' | 'data'>): Promise<boolean> => {
     setSaving(true);
     setSaved(false);
     setNaFila(false);
@@ -40,8 +45,10 @@ export function useRegistroEvento(data: string) {
         setSaved(false);
         setNaFila(false);
       }, 3000);
+      return true;
     } catch (err) {
       console.error('Erro ao salvar registro:', err);
+      return false;
     } finally {
       setSaving(false);
     }

@@ -8,6 +8,7 @@ import {
   Image,
   StyleSheet,
   ActivityIndicator,
+  Alert,
 } from 'react-native';
 import Slider from '@react-native-community/slider';
 import {
@@ -111,13 +112,24 @@ export default function HomeScreen() {
   const greeting =
     now.getHours() < 12 ? 'Bom dia' : now.getHours() < 18 ? 'Boa tarde' : 'Boa noite';
 
-  const handleRegistrar = () => {
-    salvar({
+  const handleRegistrar = async () => {
+    const gravou = await salvar({
       relato: relato.trim() || null,
       horasSono: sonoLocal > 0 ? sonoLocal : null,
       mlAgua: aguaLocal > 0 ? aguaLocal : null,
       humor: selectedMood,
     });
+
+    // Só limpa depois de gravar. Antes o formulário era zerado sem esperar, e uma falha levava
+    // embora o que a pessoa tinha digitado, sem aviso.
+    if (!gravou) {
+      Alert.alert(
+        'Não foi possível salvar agora',
+        'O que você preencheu continua aqui. Tente de novo quando tiver internet.',
+      );
+      return;
+    }
+
     setRelato('');
     setSonoLocal(0);
     setAguaLocal(0);

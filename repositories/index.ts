@@ -1,9 +1,19 @@
+import NetInfo from '@react-native-community/netinfo';
+import { normalizeConnectivityState } from '@/contexts/ConnectivityContext';
 import { getDb } from '@/db';
 import { enviarPendentes } from '@/sync';
 import { notificarDadosLocais } from '@/sync/notify';
 import type { CrisisRecord } from '@/types/crisis';
+import { randomUUID } from 'expo-crypto';
+import { montarPacoteCrise } from './crisisPackage';
 import { crisisRepository as localCrisis } from './local/crisisRepository';
 import { dailyRecordRepository as localDailyRecord } from './local/dailyRecordRepository';
+import { crisisRepository as remoteCrisis } from './remote/crisisRepository';
+import {
+  dailyRecordRepository as remoteDailyRecord,
+  type RegistroDiarioPayload,
+} from './remote/dailyRecordRepository';
+import { userRepository } from './remote/userRepository';
 import type {
   CrisisRepository,
   DailyRecordRepository,
@@ -30,8 +40,16 @@ import type {
  * Se o envio falhar, a gravacao continua valida. Perder o registro por falta de rede e
  * exatamente o que esta frente existe para impedir.
  */
-async function gravarEEnviar(gravarLocal: () => Promise<string>): Promise<SaveOutcome> {
-  const id = await gravarLocal();
+async function gravarEEnviar(
+  gravarLocal: () => Promise<string>,
+  enviarDireto: () => Promise<void>,
+): Promise<SaveOutcome> {
+  let id: string;
+  try {
+    id = await gravarLocal();
+  } catch {
+    return gravarSemBancoLocal(enviarDireto);
+  }
 
   // A tela le do banco local, entao o registro ja pode aparecer antes de qualquer rede.
   notificarDadosLocais();
@@ -46,6 +64,57 @@ async function gravarEEnviar(gravarLocal: () => Promise<string>): Promise<SaveOu
   } catch {
     return { enviado: false };
   }
+}
+
+/**
+ * O banco local nao abriu, ou recusou a gravacao.
+ *
+ * Caso raro no build certo — chave perdida numa restauracao de backup do Android, arquivo
+ * corrompido — mas quando acontece, sem este caminho, aquele aparelho nao registra crise
+ * nenhuma, nem com internet. E o registro da crise e o momento em que o app mais precisa
+ * funcionar.
+ *
+ * Com rede, o registro vai direto ao servidor pela funcao atomica da #40, como antes da #50.
+ * Nada e gravado em texto puro no aparelho, entao a criptografia da #58 nao e enfraquecida.
+ *
+ * Sem rede, nao ha para onde ir, e a tela recebe um erro proprio. A crise em andamento nao se
+ * perde: ela mora no AsyncStorage pela #79, fora do banco cifrado, e a tela so a descarta
+ * quando a gravacao da certo.
+ */
+async function gravarSemBancoLocal(enviarDireto: () => Promise<void>): Promise<SaveOutcome> {
+  const rede = normalizeConnectivityState(await NetInfo.fetch());
+  if (rede.isOffline) throw new BancoLocalIndisponivel();
+
+  try {
+    await enviarDireto();
+  } catch {
+    throw new BancoLocalIndisponivel();
+  }
+
+  return { enviado: true };
+}
+
+/**
+ * Nao da para gravar agora: o banco do aparelho nao abriu e o servidor nao esta alcancavel.
+ *
+ * Identificado por `codigo` e nao por `instanceof`: subclasse de Error transpilada perde a
+ * cadeia de prototipo em alguns ambientes do React Native, e o `instanceof` falharia em
+ * silencio justamente no caso que ele existe para reconhecer.
+ */
+export class BancoLocalIndisponivel extends Error {
+  readonly codigo = 'banco-local-indisponivel';
+
+  constructor() {
+    super('Nao foi possivel gravar no aparelho nem enviar ao servidor.');
+  }
+}
+
+export function ehBancoLocalIndisponivel(erro: unknown): boolean {
+  return (
+    typeof erro === 'object' &&
+    erro !== null &&
+    (erro as { codigo?: unknown }).codigo === 'banco-local-indisponivel'
+  );
 }
 
 async function estaPendente(id: string): Promise<boolean> {
@@ -64,13 +133,38 @@ export const crisisRepository: CrisisRepository = {
   lastEndedAt: localCrisis.lastEndedAt,
   countSince: localCrisis.countSince,
   intensities: localCrisis.intensities,
-  save: (crisis: CrisisRecord, fases: CrisisRecord[] = []) =>
-    gravarEEnviar(() => localCrisis.save(crisis, fases)),
+  save: (crisis: CrisisRecord, fases: CrisisRecord[] = []) => {
+    // Montado uma vez so: os dois caminhos gravam os MESMOS ids.
+    const pacote = montarPacoteCrise(crisis, fases);
+    return gravarEEnviar(
+      () => localCrisis.save(pacote),
+      () => remoteCrisis.enviarCrise(pacote.crise, pacote.fases),
+    );
+  },
 };
 
 export const dailyRecordRepository: DailyRecordRepository = {
   listBetween: localDailyRecord.listBetween,
-  save: (registro: NewDailyRecord) => gravarEEnviar(() => localDailyRecord.save(registro)),
+  save: (novo: NewDailyRecord) => {
+    const registro: RegistroDiarioPayload = {
+      id: randomUUID(),
+      data: novo.data,
+      relato: novo.relato,
+      horasSono: novo.horasSono,
+      mlAgua: novo.mlAgua,
+      humor: novo.humor,
+      updatedAt: new Date().toISOString(),
+    };
+    return gravarEEnviar(
+      () => localDailyRecord.save(registro),
+      async () => {
+        // Com o banco local fora, o dono vem do servidor: so se chega aqui com rede.
+        const usuarioId = await userRepository.currentUsuarioId();
+        if (usuarioId === null) throw new Error('Perfil do usuario nao encontrado');
+        await remoteDailyRecord.enviarRegistroDiario(registro, usuarioId);
+      },
+    );
+  },
 };
 
 // Sem equivalente local, e de proposito. Setup acontece uma vez, com conexao. Sessao e

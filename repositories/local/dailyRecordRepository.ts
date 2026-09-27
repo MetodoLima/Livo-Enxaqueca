@@ -1,6 +1,6 @@
 import { getDb } from '@/db';
-import { randomUUID } from 'expo-crypto';
-import type { DailyRecord, HumorId, NewDailyRecord } from '../types';
+import type { RegistroDiarioPayload } from '../remote/dailyRecordRepository';
+import type { DailyRecord, HumorId } from '../types';
 
 /**
  * Leitura de registro diario contra o banco local. Issue #49.
@@ -53,28 +53,29 @@ export const dailyRecordRepository = {
    * Nao consulta o servidor para descobrir o usuario — era isso que produzia "Perfil do
    * usuario nao encontrado" ao salvar em modo aviao. O dono e resolvido na hora do envio,
    * lendo sync_state, e conferido pela politica de INSERT dentro do banco.
+   *
+   * Recebe o registro com id ja gerado, pelo mesmo motivo da crise: o envio direto ao
+   * servidor, quando este banco nao abre, usa o MESMO id, e o reenvio nao duplica.
    */
-  async save(registro: NewDailyRecord): Promise<string> {
+  async save(registro: RegistroDiarioPayload): Promise<string> {
     const db = await getDb();
-    const id = randomUUID();
-    const agora = new Date().toISOString();
 
     await db.runAsync(
       `insert into registro_diario
          (id, data, relato, horas_sono, ml_agua, humor, created_at, updated_at, synced)
        values (?, ?, ?, ?, ?, ?, ?, ?, 0)`,
       [
-        id,
+        registro.id,
         registro.data,
         registro.relato,
         registro.horasSono,
         registro.mlAgua,
         registro.humor,
-        agora,
-        agora,
+        registro.updatedAt,
+        registro.updatedAt,
       ],
     );
 
-    return id;
+    return registro.id;
   },
 };

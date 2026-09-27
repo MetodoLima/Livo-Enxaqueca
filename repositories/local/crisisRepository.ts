@@ -1,6 +1,5 @@
 import { getDb } from '@/db';
-import type { CrisisRecord } from '@/types/crisis';
-import { randomUUID } from 'expo-crypto';
+import type { PacoteCrise } from '../crisisPackage';
 import type { Crisis, CrisisFilter, Phase } from '../types';
 
 /**
@@ -59,14 +58,6 @@ function toPhase(row: FaseRow): Phase {
     medicamentosLivres: parseArray(row.medicamentos_livres),
     fatores: parseArray(row.fatores),
   };
-}
-
-// Derivado da intensidade, nao escolhido pelo usuario. Vinha do save remoto antes da #50.
-function nivelIncapacidade(intensidade: number | null): string | null {
-  if (intensidade === null) return null;
-  if (intensidade <= 3) return 'leve';
-  if (intensidade <= 6) return 'moderado';
-  return 'severo';
 }
 
 const COLUNAS_FASE = `
@@ -167,57 +158,49 @@ export const crisisRepository = {
   /**
    * Grava a crise e as fases no aparelho, com `synced = 0`. Issue #50.
    *
-   * Os identificadores nascem AQUI, e e o ponto central da fila: a linha ja tem identidade
-   * antes de existir rede. Reenviar o mesmo pacote encontra `on conflict (id) do nothing` no
-   * servidor e completa o que faltou em vez de duplicar. Se o id nascesse na hora do envio,
-   * cada tentativa criaria um registro novo.
+   * Recebe o pacote ja montado, com os identificadores gerados, em vez de montar o seu. E o
+   * que permite o envio direto ao servidor — quando este banco nao abre — usar os MESMOS ids:
+   * se por algum motivo os dois caminhos gravarem, o `on conflict (id) do nothing` do servidor
+   * reconhece a mesma crise em vez de criar duas. A montagem mora em repositories/crisisPackage.
    *
    * Tudo numa transacao: uma crise sem as fases seria pior do que nenhuma crise. E a mesma
    * garantia que a #40 deu no servidor, agora tambem no aparelho.
    */
-  async save(crisis: CrisisRecord, fases: CrisisRecord[] = []): Promise<string> {
+  async save(pacote: PacoteCrise): Promise<string> {
     const db = await getDb();
-    const todasAsFases = [...fases, crisis];
-    const criseId = randomUUID();
-    const agora = new Date().toISOString();
+    const { crise, fases } = pacote;
 
     await db.withTransactionAsync(async () => {
       await db.runAsync(
         `insert into crise_enxaqueca (id, inicio_crise, fim_crise, updated_at, synced)
          values (?, ?, ?, ?, 0)`,
-        [
-          criseId,
-          todasAsFases[0].startTime.toISOString(),
-          crisis.endTime ? crisis.endTime.toISOString() : null,
-          agora,
-        ],
+        [crise.id, crise.inicio_crise, crise.fim_crise, crise.updated_at],
       );
 
-      for (const fase of todasAsFases) {
+      for (const fase of fases) {
         await db.runAsync(
           `insert into registro_crise
              (id, crise_id, intensidade_dor, regiao_dor, lado, nivel_incapacidade, resumo,
               sintomas, medicamentos, medicamentos_livres, fatores, updated_at, synced)
            values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0)`,
           [
-            randomUUID(),
-            criseId,
-            fase.intensity,
-            fase.location,
-            fase.side,
-            nivelIncapacidade(fase.intensity),
-            fase.aiComplement?.aiResult?.structured?.resumo ?? null,
-            JSON.stringify(fase.symptoms),
-            // 'nenhum' e opcao de interface para dizer que nao tomou nada, nao medicamento.
-            JSON.stringify(fase.medications.filter((m) => m !== 'nenhum')),
-            JSON.stringify(fase.customMedications),
-            JSON.stringify(fase.triggers),
-            agora,
+            fase.id,
+            crise.id,
+            fase.intensidade_dor,
+            fase.regiao_dor,
+            fase.lado,
+            fase.nivel_incapacidade,
+            fase.resumo,
+            JSON.stringify(fase.sintomas),
+            JSON.stringify(fase.medicamentos),
+            JSON.stringify(fase.medicamentos_livres),
+            JSON.stringify(fase.fatores),
+            fase.updated_at,
           ],
         );
       }
     });
 
-    return criseId;
+    return crise.id;
   },
 };

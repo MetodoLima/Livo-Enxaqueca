@@ -8,7 +8,7 @@ import {
 import { Colors } from '@/constants/Colors';
 import { useCrisis } from '@/contexts/CrisisContext';
 import { complementCrisis } from '@/services/api';
-import { crisisRepository } from '@/repositories';
+import { crisisRepository, ehBancoLocalIndisponivel } from '@/repositories';
 import { useSync } from '@/contexts/SyncContext';
 import {
   INTENSITY_CONFIG,
@@ -390,6 +390,16 @@ export default function CrisisDetailScreen() {
       clearCrisis();
     } catch (e) {
       setFinishing(false);
+      // A crise não foi descartada: clearCrisis só roda quando a gravação dá certo, e a crise
+      // em andamento vive fora do banco do aparelho. Dizer isso é o que importa para quem está
+      // no meio de uma crise — não o motivo técnico.
+      if (ehBancoLocalIndisponivel(e)) {
+        Alert.alert(
+          'Não foi possível salvar agora',
+          'Sua crise continua guardada neste aparelho. Você pode finalizá-la quando tiver internet.',
+        );
+        return;
+      }
       Alert.alert('Erro ao salvar', e instanceof Error ? e.message : String(e));
     }
   };
