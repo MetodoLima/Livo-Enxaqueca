@@ -1,5 +1,5 @@
 import { Stack } from 'expo-router';
-import { SetupProvider } from '../../contexts/SetupContext';
+import { SetupProvider } from '@/contexts/SetupContext';
 
 export default function SetupLayout() {
   return (

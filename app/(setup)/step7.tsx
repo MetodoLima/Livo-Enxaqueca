@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import React, { useEffect, useRef, useState } from 'react';
-import { useSetup } from '../../contexts/SetupContext';
+import { useSetup } from '@/contexts/SetupContext';
 import {
     ActivityIndicator,
     ScrollView,

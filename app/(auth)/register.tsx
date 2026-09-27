@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Link, router } from 'expo-router';
 import React, { useCallback, useEffect, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { Colors } from '../../constants/Colors';
+import { Colors } from '@/constants/Colors';
 import { sessionRepository } from '@/repositories';
 
 export default function Register() {
@@ -114,7 +114,7 @@ export default function Register() {
       Alert.alert('Sucesso', 'Sua conta foi criada!');
     } else {
       Alert.alert('Verificação necessária', 'Verifique seu e-mail para confirmar a conta.');
-      router.replace('/login' as any);
+      router.replace('/login');
     }
   };
 
@@ -228,7 +228,7 @@ export default function Register() {
 
           <View className="flex-row justify-center mt-8">
             <Text className="text-muted font-epilogue">Já tem uma conta? </Text>
-            <Link href={"/login" as any} asChild>
+            <Link href="/login" asChild>
               <TouchableOpacity>
                 <Text className="text-accent font-epilogue-bold">Entrar</Text>
               </TouchableOpacity>

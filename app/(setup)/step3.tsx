@@ -10,7 +10,7 @@ import {
   UIManager,
   View,
 } from 'react-native';
-import { useSetup } from '../../contexts/SetupContext';
+import { useSetup } from '@/contexts/SetupContext';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);

@@ -140,7 +140,7 @@ function RootLayoutNav() {
 
     if (!localSession || !offlineSessionAccepted) {
       if (!inAuthGroup) {
-        router.replace('/login' as any);
+        router.replace('/login');
       }
     } else {
       // Wait for connectivity before deciding setup status for a local session.
@@ -149,14 +149,14 @@ function RootLayoutNav() {
 
       if (inAuthGroup) {
         if (!isSetupCompleted) {
-          router.replace('/(setup)/step1' as any);
+          router.replace('/(setup)/step1');
         } else {
-          router.replace('/(tabs)' as any);
+          router.replace('/(tabs)');
         }
       } else if (!isSetupCompleted && !inSetupGroup) {
-        router.replace('/(setup)/step1' as any);
+        router.replace('/(setup)/step1');
       } else if (isSetupCompleted && inSetupGroup) {
-        router.replace('/(tabs)' as any);
+        router.replace('/(tabs)');
       }
     }
   }, [

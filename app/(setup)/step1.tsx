@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { useSetup } from '../../contexts/SetupContext';
+import { useSetup } from '@/contexts/SetupContext';
 
 
 
