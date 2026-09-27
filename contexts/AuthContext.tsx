@@ -85,8 +85,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
         recordOnlineValidation(data.user.id);
       }
     }
-    // Offline uses the local session metadata. Unknown is not offline: we only
-    // avoid a remote validation until connectivity has been determined.
   };
 
   useEffect(() => {

@@ -1,9 +1,6 @@
 import React, { createContext, useContext, useState } from 'react';
 
 export interface SetupData {
-  // Dados salvos pelas telas de setup.
-  // Preferencialmente armazena as 'labels' para facilitar cruzamento com a tabela opcoes_pergunta,
-  // ou valores diretos (valor_numero/valor_texto).
   [key: string]: any;
 }
 

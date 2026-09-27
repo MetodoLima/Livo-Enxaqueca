@@ -13,7 +13,6 @@ interface StepHeaderProps {
 export default function StepHeader({ currentStep, onBack, onClose }: StepHeaderProps) {
   return (
     <View style={styles.container}>
-      {/* Back / Close */}
       <TouchableOpacity
         onPress={currentStep === 1 ? onClose : onBack}
         style={styles.iconBtn}
@@ -26,10 +25,8 @@ export default function StepHeader({ currentStep, onBack, onClose }: StepHeaderP
         )}
       </TouchableOpacity>
 
-      {/* Step indicator */}
       <Text style={styles.stepText}>{currentStep}/{TOTAL_STEPS}</Text>
 
-      {/* Close (always available) */}
       {currentStep > 1 ? (
         <TouchableOpacity
           onPress={onClose}
@@ -45,7 +42,6 @@ export default function StepHeader({ currentStep, onBack, onClose }: StepHeaderP
   );
 }
 
-// ── Progress bar (separate for layout flexibility) ────────────────────
 export function ProgressBar({ currentStep }: { currentStep: number }) {
   return (
     <View style={styles.progressRow}>

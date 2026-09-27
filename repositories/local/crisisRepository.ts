@@ -2,19 +2,10 @@ import { bancoDoUsuario } from '@/db/owner';
 import type { PacoteCrise } from '@/repositories/crisisPackage';
 import type { Crisis, CrisisFilter, Phase } from '@/repositories/types';
 
-/**
- * Leitura de crise contra o banco local. Issue #49.
- *
- * Satisfaz a mesma parte de leitura do contrato `CrisisRepository` que a implementacao
- * remota. O `save` NAO esta aqui: ate a #50 a gravacao continua indo direto ao servidor.
- * A composicao acontece em repositories/index.ts.
- */
-
 type CriseRow = {
   id: string;
   inicio_crise: string | null;
   fim_crise: string | null;
-  /** 0 enquanto a crise existe so no aparelho. Issue #51. */
   synced: number;
 };
 
@@ -32,9 +23,6 @@ type FaseRow = {
   fatores: string;
 };
 
-// Os arrays chegam como texto JSON, porque o SQLite nao tem tipo de array. Linha corrompida
-// vira lista vazia em vez de derrubar a tela: perder um sintoma e melhor que perder o
-// historico inteiro.
 function parseArray(texto: string | null): string[] {
   if (!texto) return [];
   try {
@@ -91,10 +79,6 @@ export const crisisRepository = {
 
     const where = condicoes.length > 0 ? `where ${condicoes.join(' and ')}` : '';
 
-    // O `nulls last` / `nulls first` e explicito de proposito: inicio_crise aceita nulo, e
-    // os dois bancos discordam no padrao. Postgres poe nulo no fim em asc e no inicio em
-    // desc; o SQLite faz o contrario. Sem isso, a mesma consulta devolveria ordem diferente
-    // dependendo de haver rede, que e o tipo de divergencia impossivel de depurar depois.
     const ordem =
       filtro.ordem === 'desc'
         ? 'order by inicio_crise desc nulls first'
@@ -155,17 +139,6 @@ export const crisisRepository = {
     return linhas.map((l) => l.intensidade_dor);
   },
 
-  /**
-   * Grava a crise e as fases no aparelho, com `synced = 0`. Issue #50.
-   *
-   * Recebe o pacote ja montado, com os identificadores gerados, em vez de montar o seu. E o
-   * que permite o envio direto ao servidor — quando este banco nao abre — usar os MESMOS ids:
-   * se por algum motivo os dois caminhos gravarem, o `on conflict (id) do nothing` do servidor
-   * reconhece a mesma crise em vez de criar duas. A montagem mora em repositories/crisisPackage.
-   *
-   * Tudo numa transacao: uma crise sem as fases seria pior do que nenhuma crise. E a mesma
-   * garantia que a #40 deu no servidor, agora tambem no aparelho.
-   */
   async save(pacote: PacoteCrise): Promise<string> {
     const db = await bancoDoUsuario();
     const { crise, fases } = pacote;

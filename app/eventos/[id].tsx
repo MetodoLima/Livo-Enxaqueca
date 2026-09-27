@@ -11,8 +11,6 @@ import { ArrowLeft, Moon, Droplets, FileText, Smile } from 'lucide-react-native'
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Colors } from '@/constants/Colors';
 
-// ── Helpers ───────────────────────────────────────────────────────────
-
 const HUMOR_LABEL: Record<string, string> = {
   terrible: 'Péssimo', bad: 'Ruim', 'so-so': 'Regular', okay: 'Bem', great: 'Ótimo',
 };
@@ -40,8 +38,6 @@ function formatAgua(ml: number): string {
   if (ml >= 1000) return `${(ml / 1000).toFixed(1).replace('.0', '')}L`;
   return `${ml}ml`;
 }
-
-// ── Section ───────────────────────────────────────────────────────────
 
 function Section({ icon, label, children, delay = 0 }: {
   icon: React.ReactNode;
@@ -74,8 +70,6 @@ function Row({ label, value, valueColor }: { label: string; value: string; value
   );
 }
 
-// ── RegistroDetailScreen ──────────────────────────────────────────────
-
 export default function RegistroDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string; data: string }>();
@@ -102,7 +96,6 @@ export default function RegistroDetailScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bgDark }}>
 
-      {/* Header */}
       <View style={{
         flexDirection: 'row', alignItems: 'center',
         paddingHorizontal: 24, paddingTop: 16, paddingBottom: 12,
@@ -123,7 +116,6 @@ export default function RegistroDetailScreen() {
         contentContainerStyle={{ padding: 24, paddingBottom: 60 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero de humor */}
         {humor && (
           <Animated.View
             entering={FadeInDown.duration(350)}
@@ -144,7 +136,6 @@ export default function RegistroDetailScreen() {
           </Animated.View>
         )}
 
-        {/* Sem humor — mostra só a data */}
         {!humor && (
           <Animated.View
             entering={FadeInDown.duration(350)}
@@ -162,7 +153,6 @@ export default function RegistroDetailScreen() {
           </Animated.View>
         )}
 
-        {/* Sono + Água */}
         {(registro.horasSono !== null || registro.mlAgua !== null) && (
           <Section icon={<Moon size={14} color={Colors.muted} />} label="Rotina" delay={80}>
             <View style={{ gap: 10 }}>
@@ -187,7 +177,6 @@ export default function RegistroDetailScreen() {
           </Section>
         )}
 
-        {/* Relato */}
         {registro.relato && (
           <Section icon={<FileText size={14} color={Colors.muted} />} label="Relato" delay={160}>
             <Text style={{

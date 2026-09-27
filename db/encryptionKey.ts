@@ -14,12 +14,6 @@ function isValidKey(value: string | null): value is string {
   return value !== null && /^[0-9a-f]{64}$/.test(value);
 }
 
-/**
- * Retorna a chave estável do banco local.
- *
- * A chave só existe no SecureStore. Ela não é derivada de sessão, usuário, código-fonte ou
- * configuração do app, porque qualquer um desses valores poderia mudar sem que o banco mudasse.
- */
 export async function getDatabaseEncryptionKey(): Promise<string> {
   try {
     const storedKey = await SecureStore.getItemAsync(SECURE_STORE_KEY);

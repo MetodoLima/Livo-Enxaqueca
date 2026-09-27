@@ -4,9 +4,6 @@ import * as SecureStore from 'expo-secure-store';
 const STORAGE_PREFIX = 'livo.app-lock.';
 const ATTEMPTS_PREFIX = 'livo.app-lock-attempts.';
 
-// Um PIN de 4 dígitos tem 10 mil combinações. Sem limite, dá para testar todas à mão numa
-// tarde. As primeiras erradas são livres, porque errar o PIN é comum; depois disso cada erro
-// dobra a espera, até uma hora.
 const FREE_PIN_ATTEMPTS = 5;
 const BASE_PIN_DELAY_MS = 30 * 1000;
 const MAX_PIN_DELAY_MS = 60 * 60 * 1000;
@@ -110,9 +107,6 @@ export async function removeAppLockConfig(userId: string): Promise<void> {
   await clearPinAttempts(userId);
 }
 
-// ── Tentativas de PIN ──────────────────────────────────────────────────
-// Ficam no SecureStore, e não em memória, para que fechar e abrir o app não zere a contagem.
-
 export type PinAttempts = {
   failures: number;
   lockedUntil: number | null;
@@ -138,13 +132,10 @@ export async function getPinAttempts(userId: string): Promise<PinAttempts> {
     }
     return { failures: stored.failures, lockedUntil: stored.lockedUntil };
   } catch {
-    // Registro ilegível não pode virar contagem zerada, senão corromper o valor seria um jeito
-    // de ganhar tentativas livres. Volta no limite: o próximo erro já impõe espera.
     return { failures: FREE_PIN_ATTEMPTS, lockedUntil: null };
   }
 }
 
-/** Grava o erro antes de devolver, para que matar o app logo depois não apague a tentativa. */
 export async function recordPinFailure(userId: string, current: PinAttempts): Promise<PinAttempts> {
   const failures = current.failures + 1;
   const delay = failures < FREE_PIN_ATTEMPTS

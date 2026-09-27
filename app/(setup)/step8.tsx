@@ -9,12 +9,8 @@ import {
     View,
 } from 'react-native';
 
-
-
 type FrequencyOption = 'as_needed' | 'early' | 'daily' | 'avoid' | null;
 type EffectivenessOption = 'very_effective' | 'partial' | 'ineffective' | null;
-
-
 
 const TOTAL_STEPS = 9;
 const CURRENT_STEP = 8;
@@ -79,8 +75,6 @@ const EFFECTIVENESS_OPTIONS = [
     },
 ];
 
-
-
 export default function Step8Abortivos() {
     const { updateSetupData } = useSetup();
 
@@ -112,10 +106,8 @@ export default function Step8Abortivos() {
                 contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
                 showsVerticalScrollIndicator={false}
             >
-                {/* ── Cabeçalho ── */}
                 <View style={{ paddingHorizontal: 24, paddingTop: 56, paddingBottom: 8 }}>
 
-                    {/* Barra de progresso */}
                     <View style={{ flexDirection: 'row', gap: 6, marginBottom: 32 }}>
                         {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
                             <View
@@ -130,7 +122,6 @@ export default function Step8Abortivos() {
                         ))}
                     </View>
 
-                    {/* Rótulo */}
                     <Text
                         style={{
                             fontSize: 12,
@@ -144,7 +135,6 @@ export default function Step8Abortivos() {
                         Passo {CURRENT_STEP} de {TOTAL_STEPS} · Uso Abortivo
                     </Text>
 
-                    {/* Título */}
                     <Text
                         style={{
                             fontSize: 26,
@@ -157,13 +147,11 @@ export default function Step8Abortivos() {
                         Como você usa seus remédios durante uma crise?
                     </Text>
 
-                    {/* Subtítulo */}
                     <Text style={{ fontSize: 15, color: '#7A99B2', lineHeight: 22 }}>
                         O padrão de uso abortivo ajuda a identificar risco de dependência e orientar seu tratamento.
                     </Text>
                 </View>
 
-                {/* ── Badge de feedback ── */}
                 <View style={{ paddingHorizontal: 24, marginTop: 20, minHeight: 64 }}>
                     {selectedFrequency && (
                         <View
@@ -201,7 +189,6 @@ export default function Step8Abortivos() {
                     )}
                 </View>
 
-                {/* ── Frequência de uso ── */}
                 <View style={{ paddingHorizontal: 24, marginTop: 12, gap: 10 }}>
                     {FREQUENCY_OPTIONS.map((option) => {
                         const isSelected = frequency === option.value;
@@ -238,7 +225,6 @@ export default function Step8Abortivos() {
                                     </Text>
                                 </View>
 
-                                {/* Radio */}
                                 <View
                                     style={{
                                         width: 22,
@@ -267,7 +253,6 @@ export default function Step8Abortivos() {
                     })}
                 </View>
 
-                {/* ── Eficácia (aparece após selecionar frequência) ── */}
                 {frequency && (
                     <View style={{ paddingHorizontal: 24, marginTop: 28 }}>
                         <Text
@@ -321,7 +306,6 @@ export default function Step8Abortivos() {
                     </View>
                 )}
 
-                {/* ── Botão de avançar ── */}
                 <View style={{ paddingHorizontal: 24, marginTop: 32 }}>
                     <TouchableOpacity
                         onPress={handleNext}

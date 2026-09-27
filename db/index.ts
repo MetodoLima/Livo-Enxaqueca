@@ -4,13 +4,6 @@ import { MIGRACOES } from './schema';
 import { getDatabaseEncryptionKey } from './encryptionKey';
 import { migratePlaintextDatabase } from './plaintextMigration';
 
-/**
- * Abertura e migracao do banco local. Issues #49 e #50.
- *
- * A promessa e memoizada em vez do banco: se duas telas chamarem getDb() no mesmo tick,
- * as duas esperam a MESMA abertura. Memoizar o resultado abriria o arquivo duas vezes.
- */
-
 const DATABASE_NAME = 'livo.db';
 const PLAINTEXT_MIGRATION_MARKER = 'livo.db.plaintext-migration.v1';
 
@@ -23,16 +16,6 @@ type PlaintextMigrationMarker = {
 
 let dbPromise: Promise<SQLite.SQLiteDatabase> | null = null;
 
-/**
- * Aplica as migracoes que faltam, na ordem, usando `PRAGMA user_version` como marcador.
- *
- * Cada passo roda na sua propria transacao: se o passo 3 falhar, o 2 permanece aplicado e a
- * versao gravada reflete isso. Aplicar tudo numa transacao unica seria pior — uma falha
- * deixaria o banco na versao antiga com metade das alteracoes feitas.
- *
- * `user_version` nao aceita parametro ligado, entao o numero entra interpolado. E seguro:
- * vem de `MIGRACOES.length`, nunca de fora.
- */
 async function migrar(db: SQLite.SQLiteDatabase): Promise<void> {
   const linha = await db.getFirstAsync<{ user_version: number }>('pragma user_version');
   const versaoAtual = linha?.user_version ?? 0;
@@ -117,7 +100,6 @@ async function openEncryptedDatabase(
   const db = await SQLite.openDatabaseAsync(databaseName);
 
   try {
-    // A chave precisa ser aplicada antes de qualquer leitura, inclusive PRAGMA user_version.
     const escapedKey = encryptionKey.replaceAll("'", "''");
     await db.execAsync(`pragma key = '${escapedKey}'`);
     const state = await validarBancoCriptografado(db);
@@ -128,36 +110,16 @@ async function openEncryptedDatabase(
   }
 }
 
-/**
- * Apaga o banco antigo em texto puro depois que a copia cifrada provou funcionar.
- *
- * A migracao da #58 nunca apaga a origem, e com razao: se a primeira abertura do banco novo
- * falhasse, a origem seria a unica copia. Mas sem apagar em algum momento, o historico clinico
- * continuaria legivel em disco para sempre, que e justamente o que a #58 existe para impedir.
- *
- * Por isso apaga AQUI, na abertura pelo marcador: o marcador so e gravado depois da validacao
- * completa, e chegar a este ponto significa que o banco cifrado abriu de novo e as migracoes
- * rodaram. A origem ja nao tem funcao de reserva.
- *
- * Falha ao apagar nao derruba a abertura. O banco cifrado ja esta funcionando, e a limpeza e
- * tentada de novo na proxima vez. Depois da primeira limpeza bem-sucedida o arquivo nao existe
- * mais e a tentativa so falha em silencio.
- */
 async function apagarOrigemEmTextoPuro(marker: PlaintextMigrationMarker): Promise<void> {
-  // O destino tem nome proprio, gerado pela migracao. A checagem existe para que um marcador
-  // estranho nunca faca o app apagar o banco que acabou de abrir.
   if (marker.destinationDatabaseName === DATABASE_NAME) return;
 
   try {
     await SQLite.deleteDatabaseAsync(DATABASE_NAME);
   } catch {
-    // Arquivo ja apagado numa abertura anterior, ou em uso. Nos dois casos nao ha o que fazer.
   }
 }
 
 async function prepararBanco(db: SQLite.SQLiteDatabase): Promise<void> {
-  // Fora das migracoes de proposito: journal_mode e ajuste de conexao e nao roda dentro de
-  // transacao.
   await db.execAsync('pragma journal_mode = WAL');
   await migrar(db);
 }
@@ -200,11 +162,6 @@ type DatabaseState =
   | 'legacy-plaintext'
   | 'sqlcipher-unavailable';
 
-/**
- * Valida a chave antes de migrations. Um banco novo não tem tabelas nem versão; um banco
- * SQLCipher existente permite ler sqlite_master; um banco plaintext falha ao ser lido depois de
- * PRAGMA key. O estado legado é recusado explicitamente nesta etapa, sem conversão de dados.
- */
 async function validarBancoCriptografado(db: SQLite.SQLiteDatabase): Promise<DatabaseState> {
   try {
     const cipher = await db.getFirstAsync<{ cipher_version: string }>('pragma cipher_version');
@@ -236,8 +193,6 @@ async function validarBancoCriptografado(db: SQLite.SQLiteDatabase): Promise<Dat
 export function getDb(): Promise<SQLite.SQLiteDatabase> {
   if (!dbPromise) {
     dbPromise = open().catch((erro) => {
-      // Sem isso, uma falha na primeira abertura ficaria memoizada para sempre e nenhuma
-      // tentativa posterior funcionaria.
       dbPromise = null;
       throw erro;
     });

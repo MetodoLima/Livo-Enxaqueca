@@ -12,35 +12,6 @@ import type { HumorId } from '@/repositories/types';
 import { notificarDadosLocais } from './notify';
 import { lerEstadoDaFila } from './status';
 
-/**
- * Envio da fila para o servidor. Issue #50.
- *
- * A FILA SAO AS LINHAS COM `synced = 0`. Nao existe tabela de outbox: a coluna ja existe desde
- * a #46, a replicacao da #49 ja protege essas linhas, e uma outbox guardaria o payload em
- * paralelo com a linha real, podendo divergir. Sem estado duplicado, nao ha divergencia.
- *
- * Falha de envio nunca perde o registro: a linha continua com `synced = 0` e ganha contagem de
- * tentativa, horario e ultimo erro. Essas tres colunas existem so no aparelho e sao o que a
- * #51 vai ler para avisar que algo falha ha dias.
- */
-
-/**
- * Recuo entre tentativas, crescente ate um limite. Issues #50 e #51.
- *
- * O QUE E LIMITADO E O INTERVALO, NAO O NUMERO DE TENTATIVAS. A #50 tinha um teto que
- * desistia depois da sexta tentativa, e isso criava perda silenciosa de dado: passado o teto,
- * o registro ficava parado para sempre no aparelho e so um botao manual o tiraria de la.
- *
- * Agora o recuo cresce ate seis horas e continua indefinidamente. Uma linha que o servidor
- * recusa por motivo permanente vai custar uma requisicao a cada seis horas, o que e barato, e
- * sobe sozinha no dia em que a causa passar — Supabase despausado, cota renovada, schema
- * corrigido. Nada disso exige acao do usuario, e por isso a #51 nao tem botao de tentar de
- * novo.
- *
- * Nao existe tarefa em segundo plano: o envio roda quando o app abre e quando a conexao volta.
- * Entao "nunca desiste" na pratica significa "tenta sempre que o app for usado", e nao ha nada
- * consumindo bateria com o app fechado.
- */
 const RECUO_MINUTOS = [0, 1, 5, 15, 60, 360];
 
 function esperaEmMinutos(tentativas: number): number {
@@ -66,13 +37,6 @@ function parseArray(texto: string | null): string[] {
   }
 }
 
-/**
- * Mensagem de erro sem conteudo clinico.
- *
- * O erro do servidor pode citar valores da linha que falhou, e essa mensagem fica gravada no
- * banco local e vai aparecer na interface pela #51. Guardar o texto inteiro levaria dado de
- * paciente para um campo de diagnostico.
- */
 function mensagemCurta(erro: unknown): string {
   const texto = erro instanceof Error ? erro.message : String(erro);
   return texto.slice(0, 120);
@@ -122,13 +86,6 @@ export type PushResult = {
 export async function pushToServer(): Promise<PushResult> {
   const { db, dono } = await abrirBancoDoUsuario();
 
-  // Sai antes de tentar quando a rede esta comprovadamente ausente. Sem isso, salvar uma
-  // crise em modo aviao esperaria o tempo de espera da requisicao antes de mostrar a tela de
-  // sucesso — justo na crise, que e quando a pessoa menos pode esperar.
-  //
-  // A condicao e `isOffline`, nao `!isOnline`: enquanto a conectividade esta sendo
-  // determinada vale a pena tentar. A normalizacao vem da trilha de sessao, para nao existir
-  // uma segunda definicao de "online" no projeto.
   const rede = normalizeConnectivityState(await NetInfo.fetch());
   if (rede.isOffline) return { enviados: 0, pendentes: await contarPendentes() };
 
@@ -140,17 +97,11 @@ export async function pushToServer(): Promise<PushResult> {
   enviados += await enviarCrises(db, dono);
   enviados += await enviarRegistrosDiarios(db, dono, usuarioId);
 
-  // O contador de pendentes muda quando algo sobe, e a #51 mostra esse numero. Avisar aqui
-  // tambem cobre a falha: tentativas e ultimo erro entram no estado que a interface le.
   notificarDadosLocais();
 
   return { enviados, pendentes: await contarPendentes() };
 }
 
-/**
- * Nao recebe usuarioId: a funcao salvar_crise resolve o dono por auth.uid() dentro do banco,
- * entao o aparelho nao informa nem tem como informar quem e.
- */
 async function enviarCrises(db: SQLiteDatabase, dono: string): Promise<number> {
   const pendentes = await db.getAllAsync<PendenteCrise>(
     `select id, inicio_crise, fim_crise, updated_at, tentativas, ultima_tentativa_em
@@ -165,9 +116,6 @@ async function enviarCrises(db: SQLiteDatabase, dono: string): Promise<number> {
     if (usuarioAtual() !== dono) break;
     if (!podeTentar(crise.tentativas, crise.ultima_tentativa_em)) continue;
 
-    // Manda o pacote inteiro, inclusive fase que ja subiu: `on conflict (id) do nothing`
-    // ignora a repetida e insere a que faltou. Enviar so as fases nao sincronizadas daria o
-    // mesmo resultado com mais codigo e um caso a mais para errar.
     const fases = await db.getAllAsync<PendenteFase>(
       `select id, crise_id, intensidade_dor, regiao_dor, lado, nivel_incapacidade, resumo,
               sintomas, medicamentos, medicamentos_livres, fatores, updated_at
@@ -272,8 +220,6 @@ async function registrarFalha(
   id: string,
   erro: unknown,
 ): Promise<void> {
-  // `synced` continua 0 de proposito: falha de envio nao perde o registro, que e o quarto
-  // item da issue.
   await db.runAsync(
     `update ${tabela}
         set tentativas = tentativas + 1,
@@ -284,11 +230,6 @@ async function registrarFalha(
   );
 }
 
-/**
- * Deriva de `lerEstadoDaFila` em vez de repetir a consulta. Uma contagem escrita duas vezes
- * daria dois numeros diferentes no dia em que o criterio mudar — e o criterio tem uma decisao
- * dentro dele: fase nao e contada separada da crise.
- */
 export async function contarPendentes(): Promise<number> {
   return (await lerEstadoDaFila()).pendentes;
 }

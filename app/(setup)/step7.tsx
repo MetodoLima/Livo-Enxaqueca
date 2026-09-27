@@ -11,8 +11,6 @@ import {
     View,
 } from 'react-native';
 
-// ─── Tipos ────────────────────────────────────────────────────────────────────
-
 interface Medication {
     id: string;
     name: string;
@@ -20,13 +18,10 @@ interface Medication {
     category: 'triptan' | 'analgesic' | 'anti_inflammatory' | 'ergot' | 'combination' | 'preventive' | 'other';
 }
 
-// ─── Constantes ───────────────────────────────────────────────────────────────
-
 const TOTAL_STEPS = 9;
 const CURRENT_STEP = 7;
 
 const MEDICATION_DB: Medication[] = [
-  // ── Triptanos ──
   { id: 'sumatriptan', name: 'Sumatriptano', activeIngredient: 'Sumatriptana', category: 'triptan' },
   { id: 'imigran', name: 'Imigran', activeIngredient: 'Sumatriptana', category: 'triptan' },
   { id: 'sumax', name: 'Sumax', activeIngredient: 'Sumatriptana', category: 'triptan' },
@@ -38,7 +33,6 @@ const MEDICATION_DB: Medication[] = [
   { id: 'eletriptan', name: 'Eletriptano', activeIngredient: 'Eletriptana', category: 'triptan' },
   { id: 'relpax', name: 'Relpax', activeIngredient: 'Eletriptana', category: 'triptan' },
 
-  // ── Analgésicos ──
   { id: 'dipyrone', name: 'Dipirona', activeIngredient: 'Metamizol', category: 'analgesic' },
   { id: 'novalgina', name: 'Novalgina', activeIngredient: 'Metamizol', category: 'analgesic' },
   { id: 'anador', name: 'Anador', activeIngredient: 'Metamizol', category: 'analgesic' },
@@ -47,7 +41,6 @@ const MEDICATION_DB: Medication[] = [
   { id: 'aspirina', name: 'Aspirina', activeIngredient: 'Ácido Acetilsalicílico', category: 'analgesic' },
   { id: 'aas', name: 'AAS', activeIngredient: 'Ácido Acetilsalicílico', category: 'analgesic' },
 
-  // ── Anti-inflamatórios ──
   { id: 'ibuprofen', name: 'Ibuprofeno', activeIngredient: 'Ibuprofeno', category: 'anti_inflammatory' },
   { id: 'advil', name: 'Advil', activeIngredient: 'Ibuprofeno', category: 'anti_inflammatory' },
   { id: 'alivium', name: 'Alivium', activeIngredient: 'Ibuprofeno', category: 'anti_inflammatory' },
@@ -60,18 +53,15 @@ const MEDICATION_DB: Medication[] = [
   { id: 'cataflan', name: 'Cataflan', activeIngredient: 'Diclofenaco Potássico', category: 'anti_inflammatory' },
   { id: 'celebra', name: 'Celebra', activeIngredient: 'Celecoxibe', category: 'anti_inflammatory' },
 
-  // ── Ergotamínicos ──
   { id: 'ergotamine', name: 'Ergotamina', activeIngredient: 'Ergotamina', category: 'ergot' },
   { id: 'cafergot', name: 'Cafergot', activeIngredient: 'Ergotamina + Cafeína', category: 'ergot' },
   { id: 'enxak', name: 'Enxak', activeIngredient: 'Di-hidroergotamina + Dipirona + Cafeína', category: 'ergot' },
 
-  // ── Combinações ──
   { id: 'dorflex', name: 'Dorflex', activeIngredient: 'Dipirona + Orfenadrina + Cafeína', category: 'combination' },
   { id: 'excedrin', name: 'Excedrin', activeIngredient: 'Paracetamol + Aspirina + Cafeína', category: 'combination' },
   { id: 'neosaldina', name: 'Neosaldina', activeIngredient: 'Di-hidroergotamina + Dipirona + Cafeína', category: 'combination' },
   { id: 'saldatona', name: 'Saldatona', activeIngredient: 'Di-hidroergotamina + Dipirona + Cafeína', category: 'combination' },
 
-  // ── Preventivos ──
   { id: 'propranolol', name: 'Propranolol', activeIngredient: 'Propranolol', category: 'preventive' },
   { id: 'amitriptyline', name: 'Amitriptilina', activeIngredient: 'Amitriptilina', category: 'preventive' },
   { id: 'topamax', name: 'Topamax', activeIngredient: 'Topiramato', category: 'preventive' },
@@ -91,8 +81,6 @@ const CATEGORY_LABELS: Record<Medication['category'], { label: string; color: st
     preventive: { label: 'Preventivo', color: '#A78BFA' },
     other: { label: 'Outro', color: '#4A6A82' },
 };
-
-// ─── Componente Principal ─────────────────────────────────────────────────────
 
 export default function Step7Medicamentos() {
     const { updateSetupData } = useSetup();
@@ -187,7 +175,6 @@ export default function Step7Medicamentos() {
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
             >
-                {/* ── Cabeçalho ── */}
                 <View style={{ paddingHorizontal: 24, paddingTop: 56, paddingBottom: 8 }}>
                     <View style={{ flexDirection: 'row', gap: 6, marginBottom: 32 }}>
                         {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
@@ -216,7 +203,6 @@ export default function Step7Medicamentos() {
                     </Text>
                 </View>
 
-                {/* ── Campo de busca ── */}
                 <View style={{ paddingHorizontal: 24, marginTop: 24 }}>
                     <View
                         style={{
@@ -249,7 +235,6 @@ export default function Step7Medicamentos() {
                         )}
                     </View>
 
-                    {/* ── Dropdown ── */}
                     {showResults && results.length > 0 && (
                         <View
                             style={{
@@ -302,7 +287,6 @@ export default function Step7Medicamentos() {
                     )}
                 </View>
 
-                {/* ── Selecionados ── */}
                 {selected.length > 0 && (
                     <View style={{ paddingHorizontal: 24, marginTop: 20 }}>
                         <Text style={{ fontSize: 12, fontWeight: '600', color: '#4A6A82', letterSpacing: 1, textTransform: 'uppercase', marginBottom: 12 }}>
@@ -348,7 +332,6 @@ export default function Step7Medicamentos() {
                     </View>
                 )}
 
-                {/* ── Não uso medicamentos ── */}
                 <View style={{ paddingHorizontal: 24, marginTop: 20 }}>
                     <TouchableOpacity
                         onPress={handleNoMedication}
@@ -386,7 +369,6 @@ export default function Step7Medicamentos() {
                     </TouchableOpacity>
                 </View>
 
-                {/* ── Aviso de uso excessivo ── */}
                 {selected.length >= 3 && (
                     <View style={{ paddingHorizontal: 24, marginTop: 16 }}>
                         <View
@@ -409,7 +391,6 @@ export default function Step7Medicamentos() {
                     </View>
                 )}
 
-                {/* ── Botão de avançar ── */}
                 <View style={{ paddingHorizontal: 24, marginTop: 32 }}>
                     <TouchableOpacity
                         onPress={handleNext}

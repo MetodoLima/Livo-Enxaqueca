@@ -5,20 +5,6 @@ import { dailyRecordRepository as remoteDailyRecordRepository } from '@/reposito
 import { userRepository } from '@/repositories/remote/userRepository';
 import { notificarDadosLocais } from './notify';
 
-/**
- * Replicacao do servidor para o banco local. Issue #49.
- *
- * Nao escreve nenhuma consulta nova: usa as implementacoes remotas que a #48 ja criou. Era
- * esse o ponto de ter contratos em termos de dominio — a replicacao pede `Crisis[]` e nao
- * precisa saber como o PostgREST devolve.
- *
- * Reescreve as tabelas inteiras em vez de replicar incrementalmente. Com cerca de cem crises
- * o custo nao se mede, e reescrever e idempotente: nao existe estado parcial para consertar
- * se a replicacao for interrompida, porque tudo acontece numa transacao.
- */
-
-// `registro_diario.data` e um dia, nao um instante. Os extremos cobrem qualquer data que o
-// app consiga produzir sem precisar descobrir a mais antiga antes de consultar.
 const DATA_MINIMA = '0001-01-01';
 const DATA_MAXIMA = '9999-12-31';
 
@@ -29,8 +15,6 @@ export async function pullFromServer(): Promise<PullResult> {
 
   const usuarioId = await userRepository.currentUsuarioId();
   if (usuarioId === null) {
-    // Sem sessao ou sem perfil em public.usuarios nao ha o que replicar. Quem chama decide
-    // se isso e erro; aqui e so ausencia de trabalho.
     return { replicou: false, motivo: 'sem-perfil' };
   }
 
@@ -53,8 +37,6 @@ export async function pullFromServer(): Promise<PullResult> {
     const agora = new Date().toISOString();
 
     for (const crise of crises) {
-      // `or ignore` em vez de `or replace`: se sobrou linha local com synced = 0, a versao
-      // do aparelho vence ate ser enviada.
       await db.runAsync(
         `insert or ignore into crise_enxaqueca (id, inicio_crise, fim_crise, updated_at, synced)
          values (?, ?, ?, ?, 1)`,

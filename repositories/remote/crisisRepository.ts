@@ -1,10 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type { Crisis, CrisisFilter, Phase } from '@/repositories/types';
 
-/**
- * O formato que a funcao salvar_crise espera. Nomes de coluna, nao de dominio, porque este e
- * o contrato com o banco e nao com o app.
- */
 export type CrisePayload = {
   id: string;
   inicio_crise: string | null;
@@ -25,14 +21,6 @@ export type FasePayload = {
   fatores: string[];
   updated_at: string;
 };
-
-/**
- * Implementacao contra o Supabase. Issue #48.
- *
- * Quatro hooks faziam esta mesma consulta, cada um com um recorte diferente de colunas e o
- * mapeamento reescrito por cima de `any`. Aqui ela existe uma vez, com o superconjunto das
- * colunas, e quem chama usa o que precisa.
- */
 
 const SELECT = `
   id,
@@ -93,7 +81,6 @@ function toCrisis(row: CriseRow): Crisis {
     inicioCrise: row.inicio_crise ? new Date(row.inicio_crise) : null,
     fimCrise: row.fim_crise ? new Date(row.fim_crise) : null,
     fases: (Array.isArray(row.registro_crise) ? row.registro_crise : []).map(toPhase),
-    // O que veio do servidor esta enviado por definicao. Issue #51.
     enviado: true,
   };
 }
@@ -152,17 +139,6 @@ export const crisisRepository = {
       .filter((v): v is number => v != null);
   },
 
-  /**
-   * Envia uma crise e todas as suas fases numa unica chamada atomica. Issues #40 e #50.
-   *
-   * Recebe o payload pronto em vez de um CrisisRecord: desde a #50 a crise nasce no banco
-   * local com identificador proprio, e e a fila que a envia lendo as linhas de la. Se os
-   * identificadores fossem gerados aqui, cada reenvio criaria linha nova e a idempotencia da
-   * funcao salvar_crise nao serviria para nada.
-   *
-   * A resolucao do usuario mora dentro da funcao, por auth.uid(), entao o aparelho nao
-   * informa nem tem como informar o dono.
-   */
   async enviarCrise(crise: CrisePayload, fases: FasePayload[]): Promise<void> {
     const { error } = await supabase.rpc('salvar_crise', {
       p_crise: crise,

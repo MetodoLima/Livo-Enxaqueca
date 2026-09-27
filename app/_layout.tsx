@@ -71,7 +71,6 @@ function AuthRefreshCoordinator() {
             await supabase.auth.stopAutoRefresh();
           }
         } catch {
-          // Keep the coordinator alive without retrying this transition itself.
         }
 
         appliedRefreshRef.current = nextRefresh;
@@ -143,8 +142,6 @@ function RootLayoutNav() {
         router.replace('/login');
       }
     } else {
-      // Wait for connectivity before deciding setup status for a local session.
-      // Unknown is not offline; this only prevents a premature redirect.
       if (connectivityStatus === 'unknown') return;
 
       if (inAuthGroup) {
@@ -183,9 +180,6 @@ function RootLayoutNav() {
   );
 }
 
-// Os providers que leem dados locais ficam sempre montados e não fazem nada sem sessão. Antes
-// eles só existiam com sessão, e trocar a árvore no login recriava o navegador no meio do
-// redirecionamento: "The action 'REPLACE' ... was not handled by any navigator".
 function ProtectedAppProviders() {
   return (
     <SyncProvider>

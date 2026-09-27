@@ -3,7 +3,6 @@ import { useFocusEffect } from 'expo-router';
 import { dailyRecordRepository, type DailyRecord } from '@/repositories';
 import { useSync } from '@/contexts/SyncContext';
 
-// A tela importa este nome. O formato e o do repositorio, sem nada derivado por cima.
 export type RegistroCalendarDay = DailyRecord;
 
 export function useRegistroCalendar(year: number, month: number) {

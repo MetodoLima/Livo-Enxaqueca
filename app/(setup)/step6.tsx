@@ -10,16 +10,12 @@ import {
     View,
 } from 'react-native';
 
-
-
 interface Condition {
     id: string;
     label: string;
     emoji: string;
     note?: string;
 }
-
-
 
 const TOTAL_STEPS = 9;
 const CURRENT_STEP = 6;
@@ -35,8 +31,6 @@ const SUGGESTED_CONDITIONS: Condition[] = [
     { id: 'diabetes', label: 'Diabetes', emoji: '🩸', note: 'Variações de glicemia são gatilhos comuns' },
 ];
 
-
-
 export default function Step6Comorbidades() {
     const { updateSetupData } = useSetup();
 
@@ -47,7 +41,6 @@ export default function Step6Comorbidades() {
     const filtered = SUGGESTED_CONDITIONS.filter((c) =>
         c.label.toLowerCase().includes(search.toLowerCase())
     );
-
 
     const customItems = selected.filter(
         (id) => !SUGGESTED_CONDITIONS.find((c) => c.id === id)
@@ -82,7 +75,6 @@ export default function Step6Comorbidades() {
     function handleNext() {
         if (!isValid) return;
 
-        // Se o usuário marcou "Nenhuma condição", descartamos (regra de negócio)
         if (!noCondition) {
             const labels = selected.map((id) => {
                 const condition = SUGGESTED_CONDITIONS.find((c) => c.id === id);
@@ -109,10 +101,8 @@ export default function Step6Comorbidades() {
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
             >
-                {/* ── Cabeçalho ── */}
                 <View style={{ paddingHorizontal: 24, paddingTop: 56, paddingBottom: 8 }}>
 
-                    {/* Barra de progresso */}
                     <View style={{ flexDirection: 'row', gap: 6, marginBottom: 32 }}>
                         {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
                             <View
@@ -127,7 +117,6 @@ export default function Step6Comorbidades() {
                         ))}
                     </View>
 
-                    {/* Rótulo do passo */}
                     <Text
                         style={{
                             fontSize: 12,
@@ -141,7 +130,6 @@ export default function Step6Comorbidades() {
                         Passo {CURRENT_STEP} de {TOTAL_STEPS} · Comorbidades
                     </Text>
 
-                    {/* Título */}
                     <Text
                         style={{
                             fontSize: 26,
@@ -154,13 +142,11 @@ export default function Step6Comorbidades() {
                         Você tem diagnóstico de outras condições?
                     </Text>
 
-                    {/* Subtítulo */}
                     <Text style={{ fontSize: 15, color: '#7A99B2', lineHeight: 22 }}>
                         Isso ajuda o app a entender melhor sua saúde e sugerir estratégias mais adequadas.
                     </Text>
                 </View>
 
-                {/* ── Campo de busca ── */}
                 <View style={{ paddingHorizontal: 24, marginTop: 24 }}>
                     <View
                         style={{
@@ -205,7 +191,6 @@ export default function Step6Comorbidades() {
                     </View>
                 </View>
 
-                {/* ── Tags selecionadas ── */}
                 {selected.length > 0 && (
                     <View
                         style={{
@@ -247,7 +232,6 @@ export default function Step6Comorbidades() {
                     </View>
                 )}
 
-                {/* ── Lista de sugestões ── */}
                 <View style={{ paddingHorizontal: 24, marginTop: 20 }}>
                     <Text
                         style={{
@@ -301,7 +285,6 @@ export default function Step6Comorbidades() {
                                         )}
                                     </View>
 
-                                    {/* Checkbox quadrado */}
                                     <View
                                         style={{
                                             width: 22,
@@ -324,7 +307,6 @@ export default function Step6Comorbidades() {
                             );
                         })}
 
-                        {/* Nenhuma condição */}
                         <TouchableOpacity
                             onPress={handleNoCondition}
                             activeOpacity={0.8}
@@ -379,7 +361,6 @@ export default function Step6Comorbidades() {
                     </View>
                 </View>
 
-                {/* ── Botão de avançar ── */}
                 <View style={{ paddingHorizontal: 24, marginTop: 32 }}>
                     <TouchableOpacity
                         onPress={handleNext}

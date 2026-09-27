@@ -13,8 +13,8 @@ import {
 const TOTAL_STEPS = 9;
 const CURRENT_STEP = 4;
 
-const MIN_HOURS = 3; // 3 representa "4h-"
-const MAX_HOURS = 13; // 13 representa "12h+"
+const MIN_HOURS = 3;
+const MAX_HOURS = 13;
 
 function formatHours(value: number): string {
     if (value <= 3) return '4h-';
@@ -90,10 +90,8 @@ export default function Step4Sono() {
                 contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
                 showsVerticalScrollIndicator={false}
             >
-                {/* ── Cabeçalho ── */}
                 <View style={{ paddingHorizontal: 24, paddingTop: 56, paddingBottom: 8 }}>
 
-                    {/* Barra de progresso */}
                     <View style={{ flexDirection: 'row', gap: 6, marginBottom: 32 }}>
                         {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
                             <View
@@ -108,7 +106,6 @@ export default function Step4Sono() {
                         ))}
                     </View>
 
-                    {/* Rótulo do passo */}
                     <Text
                         style={{
                             fontSize: 12,
@@ -122,7 +119,6 @@ export default function Step4Sono() {
                         Passo {CURRENT_STEP} de {TOTAL_STEPS} · Sono
                     </Text>
 
-                    {/* Título */}
                     <Text
                         style={{
                             fontSize: 26,
@@ -135,13 +131,11 @@ export default function Step4Sono() {
                         Quantas horas você dorme em dias sem dor?
                     </Text>
 
-                    {/* Subtítulo */}
                     <Text style={{ fontSize: 15, color: '#7A99B2', lineHeight: 22 }}>
                         Esse valor vira sua linha de base. O app vai te alertar quando seu sono desviar muito disso.
                     </Text>
                 </View>
 
-                {/* ── Card do slider ── */}
                 <View style={{ paddingHorizontal: 24, marginTop: 32 }}>
                     <View
                         style={{
@@ -153,7 +147,6 @@ export default function Step4Sono() {
                             alignItems: 'center',
                         }}
                     >
-                        {/* Valor grande */}
                         <Text
                             style={{
                                 fontSize: 72,
@@ -169,7 +162,6 @@ export default function Step4Sono() {
                             por noite
                         </Text>
 
-                        {/* Slider */}
                         <Slider
                             style={{ width: '100%', height: 40 }}
                             minimumValue={MIN_HOURS}
@@ -185,7 +177,6 @@ export default function Step4Sono() {
                             thumbTintColor={feedback.color}
                         />
 
-                        {/* Labels min/max */}
                         <View
                             style={{
                                 width: '100%',
@@ -200,7 +191,6 @@ export default function Step4Sono() {
                     </View>
                 </View>
 
-                {/* ── Badge de feedback ── */}
                 <View style={{ paddingHorizontal: 24, marginTop: 16, minHeight: 56 }}>
                     {touched && (
                         <View
@@ -242,7 +232,6 @@ export default function Step4Sono() {
                     )}
                 </View>
 
-                {/* ── Marcadores de referência ── */}
                 <View style={{ paddingHorizontal: 24, marginTop: 8 }}>
                     <Text
                         style={{
@@ -288,7 +277,6 @@ export default function Step4Sono() {
                     </View>
                 </View>
 
-                {/* ── Botão de avançar ── */}
                 <View style={{ paddingHorizontal: 24, marginTop: 32 }}>
                     <TouchableOpacity
                         onPress={handleNext}

@@ -25,7 +25,6 @@ export default function StepMedication({ data, onChange, onNext }: StepMedicatio
   const toggleMedication = (id: MedicationId) => {
     const current = data.medications;
 
-    // If "nenhum" is tapped, clear everything
     if (id === 'nenhum') {
       if (current.includes('nenhum')) {
         onChange({ medications: [] });
@@ -35,7 +34,6 @@ export default function StepMedication({ data, onChange, onNext }: StepMedicatio
       return;
     }
 
-    // If toggling a real medication, remove "nenhum" if present
     const withoutNenhum = current.filter((m) => m !== 'nenhum');
     const next = withoutNenhum.includes(id)
       ? withoutNenhum.filter((m) => m !== id)
@@ -48,7 +46,6 @@ export default function StepMedication({ data, onChange, onNext }: StepMedicatio
     if (!trimmed) return;
     if (data.customMedications.includes(trimmed)) return;
 
-    // Remove "nenhum" if present
     const medsWithoutNenhum = data.medications.filter((m) => m !== 'nenhum');
     onChange({
       medications: medsWithoutNenhum,
@@ -63,7 +60,6 @@ export default function StepMedication({ data, onChange, onNext }: StepMedicatio
     });
   };
 
-  // Separate "nenhum" from the rest
   const regularMeds = MEDICATIONS.filter((m) => m.id !== 'nenhum');
   const nenhumMed = MEDICATIONS.find((m) => m.id === 'nenhum')!;
 
@@ -77,7 +73,6 @@ export default function StepMedication({ data, onChange, onNext }: StepMedicatio
         <Animated.View entering={FadeInUp.duration(400)}>
           <Text style={styles.title}>Tomou algum remédio?</Text>
 
-          {/* ── Medication grid ── */}
           <View style={styles.grid}>
             {regularMeds.map((med, index) => {
               const isActive = data.medications.includes(med.id);
@@ -109,7 +104,6 @@ export default function StepMedication({ data, onChange, onNext }: StepMedicatio
             })}
           </View>
 
-          {/* ── Custom medication input ── */}
           <Animated.View
             entering={FadeInUp.delay(350).duration(300)}
             style={styles.customSection}
@@ -138,7 +132,6 @@ export default function StepMedication({ data, onChange, onNext }: StepMedicatio
             </View>
           </Animated.View>
 
-          {/* ── Custom medications tags ── */}
           {data.customMedications.length > 0 && (
             <Animated.View entering={FadeInUp.duration(200)} style={styles.customTags}>
               {data.customMedications.map((name) => (
@@ -156,7 +149,6 @@ export default function StepMedication({ data, onChange, onNext }: StepMedicatio
             </Animated.View>
           )}
 
-          {/* ── "Nenhum" option ── */}
           <Animated.View entering={FadeInUp.delay(400).duration(300)}>
             <TouchableOpacity
               onPress={() => toggleMedication('nenhum')}
@@ -178,7 +170,6 @@ export default function StepMedication({ data, onChange, onNext }: StepMedicatio
             </TouchableOpacity>
           </Animated.View>
 
-          {/* ── Count badge ── */}
           {totalSelected > 0 && (
             <Animated.View entering={FadeInUp.duration(200)} style={styles.countBadge}>
               <Text style={styles.countText}>
@@ -215,7 +206,6 @@ const styles = StyleSheet.create({
     marginBottom: 24,
   },
 
-  // Grid
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -251,7 +241,6 @@ const styles = StyleSheet.create({
     color: Colors.accent,
   },
 
-  // Custom input
   customSection: {
     marginBottom: 20,
   },
@@ -290,7 +279,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#1E3A52',
   },
 
-  // Custom tags
   customTags: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -317,7 +305,6 @@ const styles = StyleSheet.create({
     color: Colors.accent,
   },
 
-  // Nenhum
   nenhumBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -348,7 +335,6 @@ const styles = StyleSheet.create({
     color: 'white',
   },
 
-  // Count badge
   countBadge: {
     alignSelf: 'center',
     marginTop: 4,

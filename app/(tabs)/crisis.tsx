@@ -50,8 +50,6 @@ import {
 import ScreenBackground from '@/components/ScreenBackground';
 import Animated, { FadeInUp, ZoomIn } from 'react-native-reanimated';
 
-
-// ── Past phase card (collapsible) ─────────────────────────────────────
 function PhaseCard({
   phase,
   index,
@@ -91,7 +89,6 @@ function PhaseCard({
     phase.endTime ? fmtTime(phase.endTime) : 'Em andamento'
   }`;
 
-  // Brief summary line shown even when collapsed
   const collapsedDetail = [
     locationData ? `${locationData.emoji} ${locationData.label}` : null,
     sideData?.label,
@@ -194,7 +191,6 @@ function PhaseCard({
             </View>
           )}
 
-          {/* Delete phase */}
           <TouchableOpacity onPress={confirmDelete} style={phaseStyles.deleteBtn}>
             <Trash2 size={14} color="#EF4444" />
             <Text style={phaseStyles.deleteBtnText}>Remover esta fase</Text>
@@ -268,8 +264,6 @@ const phaseStyles = StyleSheet.create({
   },
 });
 
-
-// ── Helpers for time since last crisis ─────────────────────────────────
 function formatTimeSince(lastDate: Date): string {
   const now = new Date();
   const diffMs = now.getTime() - lastDate.getTime();
@@ -283,7 +277,6 @@ function formatTimeSince(lastDate: Date): string {
   return `${diffDays} dias`;
 }
 
-// ── Empty state ───────────────────────────────────────────────────────
 function EmptyState() {
   const router = useRouter();
   const { ultimaAtualizacao } = useSync();
@@ -353,7 +346,6 @@ function EmptyState() {
   );
 }
 
-// ── Main screen ───────────────────────────────────────────────────────
 export default function CrisisDetailScreen() {
   const { activeCrisis, phases, updateActiveCrisis, addPhase, removePhase, clearCrisis, hasActiveCrisis, hydrated } = useCrisis();
   const router = useRouter();
@@ -425,9 +417,6 @@ export default function CrisisDetailScreen() {
     );
   }
 
-  // Enquanto a crise guardada no aparelho não foi lida, não dá para saber se
-  // existe crise em andamento. Mostrar EmptyState aqui faria piscar
-  // "nenhuma crise" antes da crise restaurada aparecer.
   if (!hydrated) return null;
 
   if (!hasActiveCrisis || !activeCrisis) return <EmptyState />;
@@ -448,7 +437,6 @@ export default function CrisisDetailScreen() {
   const fmtSecs = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
-  // ── Voice handlers ──────────────────────────────────────────────────
   const stopAndProcess = async () => {
     setError(null);
     try {
@@ -489,7 +477,6 @@ export default function CrisisDetailScreen() {
     }
   };
 
-  // ── Duration ────────────────────────────────────────────────────────
   const getDuration = () => {
     if (!crisis.endTime) return 'Em andamento';
     const diff = crisis.endTime.getTime() - crisis.startTime.getTime();
@@ -507,7 +494,6 @@ export default function CrisisDetailScreen() {
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 120, paddingHorizontal: 24 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <View style={styles.header}>
           <Text style={styles.headerTitle}>Resumo da crise</Text>
           <TouchableOpacity
@@ -525,7 +511,6 @@ export default function CrisisDetailScreen() {
           <Text style={[styles.errorText, { marginBottom: 16 }]}>{erroAoFinalizar}</Text>
         )}
 
-        {/* ── Past phases ── */}
         {phases.length > 0 && (
           <Animated.View entering={FadeInUp.delay(50)}>
             {phases.map((phase, i) => (
@@ -539,7 +524,6 @@ export default function CrisisDetailScreen() {
           </Animated.View>
         )}
 
-        {/* ── Time + Duration ── */}
         <Animated.View entering={FadeInUp.delay(100)}>
           <Card className="mb-4">
             <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
@@ -566,7 +550,6 @@ export default function CrisisDetailScreen() {
           </Card>
         </Animated.View>
 
-        {/* ── Intensity ── */}
         <Animated.View entering={FadeInUp.delay(200)}>
           <Card className="mb-4" onPress={() => setEditingField('intensity')}>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
@@ -587,7 +570,6 @@ export default function CrisisDetailScreen() {
           </Card>
         </Animated.View>
 
-        {/* ── Location + Side ── */}
         <Animated.View entering={FadeInUp.delay(300)}>
           <TouchableOpacity
             onPress={() => setEditingField('location')}
@@ -620,7 +602,6 @@ export default function CrisisDetailScreen() {
           </TouchableOpacity>
         </Animated.View>
 
-        {/* ── Symptoms ── */}
         <Animated.View entering={FadeInUp.delay(400)}>
           <Card className="mb-4" onPress={() => setEditingField('symptoms')}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -644,7 +625,6 @@ export default function CrisisDetailScreen() {
           </Card>
         </Animated.View>
 
-        {/* ── Medications ── */}
         <Animated.View entering={FadeInUp.delay(450)}>
           <Card className="mb-4" onPress={() => setEditingField('medications')}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -674,7 +654,6 @@ export default function CrisisDetailScreen() {
           </Card>
         </Animated.View>
 
-        {/* ── Add new phase ── */}
         <Animated.View entering={FadeInUp.delay(500)}>
           <TouchableOpacity onPress={addPhase} style={styles.addPhaseBtn} activeOpacity={0.75}>
             <View style={styles.addPhaseIconCircle}>
@@ -692,7 +671,6 @@ export default function CrisisDetailScreen() {
           </TouchableOpacity>
         </Animated.View>
 
-        {/* ── AI summary ── */}
         {(() => {
           const structured = crisis.aiComplement?.aiResult?.structured;
           const gatilhos = crisis.triggers;
@@ -730,7 +708,6 @@ export default function CrisisDetailScreen() {
           );
         })()}
 
-        {/* ── Voice complement ── */}
         <Animated.View entering={FadeInUp.delay(620)}>
           {!showVoice ? (
             <TouchableOpacity onPress={() => setShowVoice(true)} style={styles.voiceEntryBtn}>
@@ -799,7 +776,6 @@ export default function CrisisDetailScreen() {
         </Animated.View>
       </ScrollView>
 
-      {/* ── Edit modals ── */}
       <IntensityEditor
         visible={editingField === 'intensity'}
         onClose={() => setEditingField(null)}
@@ -855,7 +831,6 @@ const styles = StyleSheet.create({
     color: Colors.accent,
   },
 
-  // Phase divider
   phaseDivider: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -876,7 +851,6 @@ const styles = StyleSheet.create({
     letterSpacing: 1.5,
   },
 
-  // Cards
   cardLabel: {
     fontSize: 11,
     fontFamily: 'Epilogue_700Bold',
@@ -903,7 +877,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
 
-  // Edit hint (replaces generic "Editar" button look)
   editHint: {
     marginTop: 8,
     paddingVertical: 8,
@@ -918,7 +891,6 @@ const styles = StyleSheet.create({
     color: Colors.accent,
   },
 
-  // Tags
   tagRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -942,7 +914,6 @@ const styles = StyleSheet.create({
     color: Colors.purple,
   },
 
-  // End crisis
   endCrisisBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -960,7 +931,6 @@ const styles = StyleSheet.create({
     color: Colors.orange,
   },
 
-  // Add new phase
   addPhaseBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -992,7 +962,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // AI
   aiSummary: {
     fontSize: 15,
     fontFamily: 'Epilogue_400Regular',
@@ -1012,7 +981,6 @@ const styles = StyleSheet.create({
     flex: 1,
   },
 
-  // Voice entry
   voiceEntryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1036,7 +1004,6 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // Voice panel
   micBtn: {
     width: 72,
     height: 72,
@@ -1090,7 +1057,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Epilogue_700Bold',
   },
 
-  // Empty
   emptyContainer: {
     flex: 1,
     alignItems: 'center',
@@ -1149,7 +1115,6 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
 
-  // Success
   successContainer: {
     flex: 1,
     alignItems: 'center',

@@ -78,7 +78,6 @@ export default function StepIntensity({ data, onChange, onNext }: StepIntensityP
 
         <View style={styles.sliderWrapper}>
 
-          {/* Track + thumb */}
           <View
             style={[styles.track, { height: SLIDER_HEIGHT }]}
             {...panResponder.panHandlers}
@@ -112,7 +111,6 @@ export default function StepIntensity({ data, onChange, onNext }: StepIntensityP
             </View>
           </View>
 
-          {/* Labels — apenas valores pares */}
           <View style={[styles.labelsColumn, { height: SLIDER_HEIGHT }]}>
             {[...INTENSITY_CONFIG]
               .reverse()
