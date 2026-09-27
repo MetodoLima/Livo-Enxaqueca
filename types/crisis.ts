@@ -1,6 +1,5 @@
 import { MigraineRecord, MigraineStructured, SintomasAssociados } from '@/services/api';
 
-// ── Location options ──────────────────────────────────────────────────
 export const LOCATIONS = [
   { id: 'frontal', label: 'Frontal', emoji: '🤯' },
   { id: 'temporal', label: 'Temporal', emoji: '😵' },
@@ -19,7 +18,6 @@ export const SIDES = [
 
 export type SideId = (typeof SIDES)[number]['id'];
 
-// ── Symptom options ───────────────────────────────────────────────────
 export const SYMPTOMS = [
   { id: 'nausea', label: 'Náusea', emoji: '🤢' },
   { id: 'fotofobia', label: 'Luz incomoda', emoji: '💡' },
@@ -31,7 +29,6 @@ export const SYMPTOMS = [
 
 export type SymptomId = (typeof SYMPTOMS)[number]['id'];
 
-// ── Medication options ────────────────────────────────────────────────
 export const MEDICATIONS = [
   { id: 'sumatriptano', label: 'Sumatriptano', emoji: '🧬' },
   { id: 'dipirona', label: 'Dipirona', emoji: '💧' },
@@ -44,11 +41,6 @@ export const MEDICATIONS = [
 
 export type MedicationId = (typeof MEDICATIONS)[number]['id'];
 
-// ── Rótulos para exibição ─────────────────────────────────────────────
-// O banco guarda os ids do catálogo, não os rótulos, para que renomear um rótulo
-// não exija migrar dados. Quem exibe traduz aqui. O fallback devolve o próprio
-// valor, que é o caso dos medicamentos digitados pelo usuário e dos fatores
-// desencadeantes, que são texto livre.
 export function symptomLabel(id: string): string {
   return SYMPTOMS.find((s) => s.id === id)?.label ?? id;
 }
@@ -57,7 +49,6 @@ export function medicationLabel(id: string): string {
   return MEDICATIONS.find((m) => m.id === id)?.label ?? id;
 }
 
-// ── Intensity labels ──────────────────────────────────────────────────
 export const INTENSITY_CONFIG = [
   { value: 0,  label: 'Sem dor',        sublabel: 'Nenhuma dor',              emoji: '😌', color: '#10B981' },
   { value: 1,  label: 'Dói um pouco',   sublabel: 'Quase imperceptível',      emoji: '🙂', color: '#34D399' },
@@ -72,18 +63,15 @@ export const INTENSITY_CONFIG = [
   { value: 10, label: 'Insuportável',   sublabel: 'A pior dor possível',      emoji: '🤯', color: '#991B1B' },
 ] as const;
 
-// ── Quick time presets ────────────────────────────────────────────────
 export type TimePreset = 'now' | '1h_ago' | 'custom';
 export type EndTimePreset = 'ongoing' | 'now' | 'custom';
 
-// ── AI Complement ─────────────────────────────────────────────────────
 export interface AiComplement {
   audioUri: string | null;
   textNote: string | null;
   aiResult: MigraineRecord | null;
 }
 
-// ── Full crisis record ────────────────────────────────────────────────
 export interface CrisisRecord {
   startTime: Date;
   endTime: Date | null;
@@ -124,7 +112,6 @@ export function mergeAiResultIntoCrisis(
     patch.intensity = structured.intensidade_dor;
   }
 
-  // Só sobrescreve localização se a IA retornou algo (preserva 'atras_olhos' se a IA não mudou)
   if (structured.localizacao !== null) {
     patch.location = structured.localizacao as LocationId;
   }
@@ -133,7 +120,6 @@ export function mergeAiResultIntoCrisis(
     patch.side = structured.lado as SideId;
   }
 
-  // Merge: adiciona sintomas positivos, remove os que a IA explicitamente negou
   const s = structured.sintomas_associados;
   type BoolSymptomKey = Exclude<keyof SintomasAssociados, 'outros'>;
   const symptomMap: [BoolSymptomKey, SymptomId][] = [
@@ -155,7 +141,6 @@ export function mergeAiResultIntoCrisis(
   }
   patch.symptoms = Array.from(new Set(mergedSymptoms));
 
-  // Medicamentos: separa conhecidos (MedicationId) de custom, faz união com os do questionário
   if (structured.medicamentos_tomados.length > 0) {
     const knownIds = MEDICATIONS.map((m) => m.id);
     const aiKnown: MedicationId[] = [];
@@ -171,7 +156,6 @@ export function mergeAiResultIntoCrisis(
       }
     }
 
-    // Remove 'nenhum' se a IA detectou medicamentos reais
     const baseKnown = current.medications.filter((m) => m !== 'nenhum');
     patch.medications = Array.from(new Set([...baseKnown, ...aiKnown]));
     patch.customMedications = Array.from(
@@ -179,7 +163,6 @@ export function mergeAiResultIntoCrisis(
     );
   }
 
-  // Fatores desencadeantes: união acumulada a cada complemento
   if (structured.fatores_desencadeantes.length > 0) {
     patch.triggers = Array.from(
       new Set([...current.triggers, ...structured.fatores_desencadeantes]),
@@ -200,7 +183,6 @@ export function crisisToMigraineStructured(crisis: CrisisRecord): MigraineStruct
     outros: [],
   };
 
-  // 'atras_olhos' não existe no schema do backend — mapeamos para null
   const localizacao =
     crisis.location === 'atras_olhos' || crisis.location === null
       ? null

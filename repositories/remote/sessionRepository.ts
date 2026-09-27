@@ -1,16 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type { AuthOutcome, SessionRepository, SignUpOutcome } from '@/repositories/types';
 
-/**
- * Entrada, cadastro e saida. Issue #48.
- *
- * Envelope fino: as telas ja tratam falha mostrando Alert com a mensagem, entao devolver
- * `{ error }` preserva o que elas fazem hoje em vez de obrigar cada uma a um try/catch.
- *
- * O que NAO esta aqui: leitura e validacao da sessao corrente. Isso vive em
- * contexts/AuthContext.tsx, que e onde a trilha de sessao offline esta trabalhando nas
- * T3.9 a T3.13. Este arquivo cobre so os pontos que estavam soltos nas telas.
- */
 export const sessionRepository: SessionRepository = {
   async signIn(email: string, senha: string): Promise<AuthOutcome> {
     const { error } = await supabase.auth.signInWithPassword({ email, password: senha });
@@ -32,7 +22,7 @@ export const sessionRepository: SessionRepository = {
       options: {
         data: {
           name: nome,
-          setupCompleted: false, // Define status do setup inicial
+          setupCompleted: false,
         },
       },
     });

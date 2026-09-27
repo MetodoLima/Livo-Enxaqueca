@@ -16,12 +16,8 @@ import {
     type SetupQuestion,
 } from '@/repositories';
 
-// ─── Tipos ────────────────────────────────────────────────────────────────────
-
 type ImpactLevel = 'none' | 'mild' | 'moderate' | 'high' | 'total' | 'unknown' | null;
 type ActivityStop = 'never' | 'sometimes' | 'often' | 'always' | null;
-
-// ─── Constantes ───────────────────────────────────────────────────────────────
 
 const TOTAL_STEPS = 9;
 const CURRENT_STEP = 9;
@@ -89,8 +85,6 @@ const ACTIVITY_STOP_OPTIONS: {
         { value: 'often', label: 'Na maioria das crises', sublabel: 'Geralmente preciso descansar', emoji: '🛋️', color: '#F07040' },
         { value: 'always', label: 'Sempre preciso parar tudo', sublabel: 'Toda crise me tira de ação', emoji: '🛑', color: '#E85D75' },
     ];
-
-// ─── Mapeamento banco ─────────────────────────────────────────────────────────
 
 const FIELD_META: Record<string, { passo: number; tipo: string }> = {
     frequency: { passo: 1, tipo: 'single_choice' },
@@ -202,8 +196,6 @@ async function saveSetupAnswers(
     await setupRepository.saveAnswers(rows);
 }
 
-// ─── Componente Principal ─────────────────────────────────────────────────────
-
 export default function Step9Impacto() {
     const { setupData, clearSetupData } = useSetup();
     const { checkSetupStatus } = useAuth();
@@ -261,10 +253,8 @@ export default function Step9Impacto() {
                 contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
                 showsVerticalScrollIndicator={false}
             >
-                {/* ── Cabeçalho ── */}
                 <View style={{ paddingHorizontal: 24, paddingTop: 56, paddingBottom: 8 }}>
 
-                    {/* Barra de progresso */}
                     <View style={{ flexDirection: 'row', gap: 6, marginBottom: 32 }}>
                         {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
                             <View
@@ -292,7 +282,6 @@ export default function Step9Impacto() {
                     </Text>
                 </View>
 
-                {/* ── Opções de impacto ── */}
                 <View style={{ paddingHorizontal: 24, marginTop: 28, gap: 10 }}>
                     {IMPACT_OPTIONS.map((option) => {
                         const isSelected = impactLevel === option.value;
@@ -349,7 +338,6 @@ export default function Step9Impacto() {
                     })}
                 </View>
 
-                {/* ── Você precisa parar atividades? (só aparece se não selecionou "não sei") ── */}
                 {impactLevel && impactLevel !== 'unknown' && (
                     <View style={{ paddingHorizontal: 24, marginTop: 28 }}>
                         <Text style={{ fontSize: 15, fontWeight: '600', color: '#FFFFFF', marginBottom: 4 }}>
@@ -411,7 +399,6 @@ export default function Step9Impacto() {
                     </View>
                 )}
 
-                {/* ── Aviso de preventivo ── */}
                 {needsPreventive && (
                     <View style={{ paddingHorizontal: 24, marginTop: 20 }}>
                         <View
@@ -434,7 +421,6 @@ export default function Step9Impacto() {
                     </View>
                 )}
 
-                {/* ── Botão de avançar ── */}
                 <View style={{ paddingHorizontal: 24, marginTop: 32 }}>
                     <TouchableOpacity
                         onPress={handleNext}

@@ -19,11 +19,9 @@ export interface CrisisDay {
   inicioCrise: Date;
   fimCrise: Date | null;
   fases: CrisisPhase[];
-  // campos derivados da última fase para exibição rápida no calendário
   intensidadeDor: number | null;
   sintomas: string[];
   medicamentos: string[];
-  /** Falso enquanto a crise existe só no aparelho. O histórico marca com um relógio. #51 */
   enviado: boolean;
 }
 
@@ -31,8 +29,6 @@ export interface CrisisByDay {
   [day: number]: CrisisDay[];
 }
 
-// O repositorio entrega os ids do catalogo; o calendario mostra os rotulos.
-// Crise sem inicio nao chega aqui: nao ha dia do mes onde coloca-la.
 function toCrisisDay(crise: Crisis & { inicioCrise: Date }): CrisisDay {
   const fases: CrisisPhase[] = crise.fases.map((f) => ({
     id: f.id,
@@ -114,11 +110,9 @@ export function useCrisisCalendar(year: number, month: number) {
       crises.filter((c): c is Crisis & { inicioCrise: Date } => c.inicioCrise !== null);
 
     try {
-      // Crises que começam neste mês
       const doMes = await crisisRepository.list({ desde: firstDay, ate: lastDay });
       for (const crise of comInicio(doMes)) spreadCrisis(toCrisisDay(crise));
 
-      // Crises que começaram antes mas terminam neste mês
       const anteriores = await crisisRepository.list({
         comecouAntesDe: firstDay,
         terminaApos: firstDay,

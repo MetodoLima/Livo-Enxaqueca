@@ -16,8 +16,6 @@ if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
 }
 
-// ─── Tipos ────────────────────────────────────────────────────────────────────
-
 type HasSigns = 'yes' | 'no' | null;
 
 interface Sign {
@@ -26,8 +24,6 @@ interface Sign {
   description: string;
   emoji: string;
 }
-
-// ─── Constantes ───────────────────────────────────────────────────────────────
 
 const TOTAL_STEPS = 9;
 const CURRENT_STEP = 2;
@@ -95,8 +91,6 @@ const PREMONITORY_SIGNS: Sign[] = [
   },
 ];
 
-// ─── Componente Principal ─────────────────────────────────────────────────────
-
 export default function Step2Premonitoria() {
   const { updateSetupData } = useSetup();
 
@@ -157,10 +151,8 @@ export default function Step2Premonitoria() {
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Cabeçalho ── */}
         <View style={{ paddingHorizontal: 24, paddingTop: 56, paddingBottom: 8 }}>
 
-          {/* Barra de progresso */}
           <View style={{ flexDirection: 'row', gap: 6, marginBottom: 32 }}>
             {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
               <View
@@ -175,7 +167,6 @@ export default function Step2Premonitoria() {
             ))}
           </View>
 
-          {/* Rótulo do passo */}
           <Text
             style={{
               fontSize: 12,
@@ -189,7 +180,6 @@ export default function Step2Premonitoria() {
             Passo {CURRENT_STEP} de {TOTAL_STEPS} · Fase Premonitória
           </Text>
 
-          {/* Título */}
           <Text
             style={{
               fontSize: 26,
@@ -202,13 +192,11 @@ export default function Step2Premonitoria() {
             Você percebe sinais antes da dor começar?
           </Text>
 
-          {/* Subtítulo */}
           <Text style={{ fontSize: 15, color: '#7A99B2', lineHeight: 22 }}>
             Alguns sintomas aparecem horas antes da crise. Isso ajuda o app a te alertar com antecedência.
           </Text>
         </View>
 
-        {/* ── Sim / Não ── */}
         <View style={{ paddingHorizontal: 24, marginTop: 28, flexDirection: 'row', gap: 12 }}>
           {[
             { value: 'yes' as HasSigns, label: 'Sim, percebo', emoji: '👁️' },
@@ -247,7 +235,6 @@ export default function Step2Premonitoria() {
           })}
         </View>
 
-        {/* ── Lista de sinais (aparece só se Sim) ── */}
         {hasSigns === 'yes' && (
           <View style={{ paddingHorizontal: 24, marginTop: 28 }}>
             <Text
@@ -301,7 +288,6 @@ export default function Step2Premonitoria() {
                       </Text>
                     </View>
 
-                    {/* Checkbox quadrado */}
                     <View
                       style={{
                         width: 22,
@@ -324,7 +310,6 @@ export default function Step2Premonitoria() {
                 );
               })}
 
-              {/* ── Opção Outro ── */}
               <TouchableOpacity
                 onPress={handleToggleOther}
                 activeOpacity={0.8}
@@ -377,7 +362,6 @@ export default function Step2Premonitoria() {
           </View>
         )}
 
-        {/* ── Mensagem se Não ── */}
         {hasSigns === 'no' && (
           <View style={{ paddingHorizontal: 24, marginTop: 20 }}>
             <View
@@ -398,7 +382,6 @@ export default function Step2Premonitoria() {
           </View>
         )}
 
-        {/* ── Botão de avançar ── */}
         <View style={{ paddingHorizontal: 24, marginTop: 32 }}>
           <TouchableOpacity
             onPress={handleNext}

@@ -2,20 +2,6 @@ import { supabase } from '@/lib/supabase';
 import type { DailyRecord, HumorId } from '@/repositories/types';
 import { userRepository } from './userRepository';
 
-/**
- * Registro diario de sono, agua, humor e relato. Issues #48 e #50.
- *
- * `listBetween` continua consultando o servidor: e usado pela replicacao da #49, que so roda
- * com rede. A leitura offline vive em repositories/local.
- */
-
-/**
- * O que o insert precisa, e nada mais. Issue #51.
- *
- * Nao reutiliza `DailyRecord`: aquele tipo descreve um registro LIDO, e carrega `createdAt` e
- * `enviado`, que nao existem antes de a linha chegar ao servidor. Enviar um tipo de leitura
- * obrigaria a fila a inventar valor para campo que ela nao tem.
- */
 export type RegistroDiarioPayload = {
   id: string;
   data: string;
@@ -45,7 +31,6 @@ function toDailyRecord(row: RegistroDiarioRow): DailyRecord {
     mlAgua: row.ml_agua ?? null,
     humor: (row.humor ?? null) as HumorId | null,
     createdAt: row.created_at,
-    // O que veio do servidor esta enviado por definicao. Issue #51.
     enviado: true,
   };
 }
@@ -67,20 +52,6 @@ export const dailyRecordRepository = {
     return (data ?? []).map(toDailyRecord);
   },
 
-  /**
-   * Envia um registro diario ja formado. Issue #50.
-   *
-   * Recebe `usuarioId` de fora em vez de perguntar ao servidor: quem chama e a fila, que le
-   * o dono de sync_state e funciona sem rede ate a hora do envio. Era essa consulta que
-   * produzia "Perfil do usuario nao encontrado" ao salvar em modo aviao.
-   *
-   * O aparelho informar o dono nao e brecha: a politica de INSERT da tabela confere
-   * `user_id` contra `auth.uid()` dentro do banco, entao valor errado e recusado.
-   *
-   * `upsert` com `ignoreDuplicates` vira `on conflict do nothing` no PostgREST, o que da
-   * idempotencia no reenvio sem migration nova. E como nao acontece UPDATE, o gatilho
-   * trg_registro_diario_updated_at nao dispara e nao sobrescreve o horario do aparelho.
-   */
   async enviarRegistroDiario(
     registro: RegistroDiarioPayload,
     usuarioId: number,

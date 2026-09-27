@@ -20,10 +20,9 @@ import { audioAvailable, useAudioRecorder } from '@/hooks/useAudioRecorder';
 interface StepAiComplementProps {
   data: CrisisRecord;
   onChange: (patch: Partial<CrisisRecord>) => void;
-  onNext: () => void; // called after confirm or skip
+  onNext: () => void;
 }
 
-// ── Main component ────────────────────────────────────────────────────
 type SubStep = 'idle' | 'processing' | 'done';
 
 export default function StepAiComplement({ data, onChange, onNext }: StepAiComplementProps) {
@@ -36,7 +35,6 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
   const fmtSecs = (s: number) =>
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
-  // ── Audio ───────────────────────────────────────────────────────────
   const stopAndProcess = async () => {
     try {
       const uri = await stopRecording();
@@ -53,7 +51,6 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
     }
   };
 
-  // ── Text ────────────────────────────────────────────────────────────
   const submitText = async () => {
     if (!text.trim()) return;
     setError(null);
@@ -70,7 +67,6 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
     }
   };
 
-  // ── Processing state ────────────────────────────────────────────────
   if (subStep === 'processing') {
     return (
       <View style={styles.container}>
@@ -85,7 +81,6 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
     );
   }
 
-  // ── Done state ──────────────────────────────────────────────────────
   if (subStep === 'done') {
     return (
       <View style={styles.container}>
@@ -106,7 +101,6 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
     );
   }
 
-  // ── Idle / Recording state ──────────────────────────────────────────
   return (
     <View style={styles.container}>
       <Animated.View entering={FadeInUp.duration(400)} style={styles.content}>
@@ -117,7 +111,6 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
           </Text>
         )}
 
-        {/* Mic area */}
         {audioAvailable && (
           <View style={styles.micArea}>
             {isRecording ? (
@@ -133,7 +126,6 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
           </View>
         )}
 
-        {/* Divider */}
         {audioAvailable && (
           <View style={styles.divider}>
             <View style={styles.dividerLine} />
@@ -142,7 +134,6 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
           </View>
         )}
 
-        {/* Text input */}
         <TextInput
           value={text}
           onChangeText={setText}
@@ -155,7 +146,6 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
 
         {(error || micError) && <Text style={styles.errorText}>{error || micError}</Text>}
 
-        {/* Send text button */}
         {text.trim().length > 0 && !isRecording && (
           <TouchableOpacity onPress={submitText} style={styles.sendBtn}>
             <Send size={18} color="white" style={{ marginRight: 8 }} />
@@ -201,7 +191,6 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
 
-  // Mic
   micArea: {
     alignItems: 'center',
     marginBottom: 28,
@@ -226,7 +215,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
   },
 
-  // Divider
   divider: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -244,7 +232,6 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
   },
 
-  // Text
   textArea: {
     backgroundColor: 'rgba(255,255,255,0.04)',
     borderWidth: 1,
@@ -279,7 +266,6 @@ const styles = StyleSheet.create({
     fontFamily: 'Epilogue_700Bold',
   },
 
-  // Processing
   processingText: {
     color: 'white',
     fontSize: 18,
@@ -295,7 +281,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: 32,
   },
 
-  // Done
   doneTitle: {
     color: 'white',
     fontSize: 22,

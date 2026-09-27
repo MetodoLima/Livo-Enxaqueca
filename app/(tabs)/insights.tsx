@@ -94,7 +94,6 @@ export default function InsightsScreen() {
           </View>
         ) : (
           <>
-            {/* BIG RECTANGLE WIDGET: Crises */}
             <Animated.View entering={FadeInUp.delay(100)} style={{ marginTop: 20, marginBottom: 20 }}>
               <View style={[styles.bigWidget, { overflow: 'hidden' }]}>
                 <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFillObject, { borderRadius: 32 }]} />
@@ -117,9 +116,7 @@ export default function InsightsScreen() {
               </View>
             </Animated.View>
 
-            {/* SQUARE WIDGETS GRID */}
             <View style={styles.grid}>
-              {/* INTENSIDADE */}
               <Animated.View entering={FadeInUp.delay(200)} style={styles.gridItem}>
                 <View style={[styles.squareWidget, { overflow: 'hidden' }]}>
                   <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFillObject, { borderRadius: 32 }]} />
@@ -139,7 +136,6 @@ export default function InsightsScreen() {
                 </View>
               </Animated.View>
 
-              {/* DURAÇÃO */}
               <Animated.View entering={FadeInUp.delay(300)} style={styles.gridItem}>
                 <View style={[styles.squareWidget, { overflow: 'hidden' }]}>
                   <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFillObject, { borderRadius: 32 }]} />
@@ -158,7 +154,6 @@ export default function InsightsScreen() {
                 </View>
               </Animated.View>
 
-              {/* TENDÊNCIA */}
               <Animated.View entering={FadeInUp.delay(400)} style={styles.gridItem}>
                 <View style={[styles.squareWidget, { overflow: 'hidden' }]}>
                   <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFillObject, { borderRadius: 32 }]} />
@@ -180,7 +175,6 @@ export default function InsightsScreen() {
                 </View>
               </Animated.View>
 
-              {/* GATILHO */}
               <Animated.View entering={FadeInUp.delay(500)} style={styles.gridItem}>
                 <View style={[styles.squareWidget, { overflow: 'hidden' }]}>
                   <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFillObject, { borderRadius: 32 }]} />
@@ -200,7 +194,6 @@ export default function InsightsScreen() {
               </Animated.View>
             </View>
 
-            {/* AI / INFO EXPLANATION CARD */}
             <Animated.View entering={FadeInUp.delay(550)} className="mt-2 mb-6">
               <Card style={{ backgroundColor: 'rgba(37, 183, 187, 0.08)', borderWidth: 1, borderColor: 'rgba(37, 183, 187, 0.2)', padding: 20 }}>
                 <View className="flex-row gap-3">
@@ -217,9 +210,7 @@ export default function InsightsScreen() {
               </Card>
             </Animated.View>
 
-            {/* BAR LISTS IN FROSTED GLASS CARDS */}
             <View className="mt-8 gap-4">
-              {/* Gatilhos Completos */}
               {(data?.topTriggers?.length ?? 0) > 0 && (
                 <Animated.View entering={FadeInUp.delay(600)}>
                   <View style={[styles.listWidget, { overflow: 'hidden' }]}>
@@ -237,7 +228,6 @@ export default function InsightsScreen() {
                 </Animated.View>
               )}
 
-              {/* Sintomas */}
               {(data?.topSintomas?.length ?? 0) > 0 && (
                 <Animated.View entering={FadeInUp.delay(650)}>
                   <View style={[styles.listWidget, { overflow: 'hidden' }]}>
@@ -255,7 +245,6 @@ export default function InsightsScreen() {
                 </Animated.View>
               )}
 
-              {/* Medicamentos */}
               {(data?.topMedicamentos?.length ?? 0) > 0 && (
                 <Animated.View entering={FadeInUp.delay(700)}>
                   <View style={[styles.listWidget, { overflow: 'hidden' }]}>
@@ -274,7 +263,6 @@ export default function InsightsScreen() {
               )}
             </View>
 
-            {/* Qualitative Analysis */}
             <Animated.View entering={FadeInUp.delay(750)} style={{ marginTop: 32 }}>
               <View style={[styles.listWidget, { overflow: 'hidden' }]}>
                 <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFillObject, { borderRadius: 32 }]} />

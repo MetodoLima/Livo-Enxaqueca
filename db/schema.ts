@@ -1,42 +1,4 @@
-/**
- * Schema do banco local. Issues #49 e #50.
- *
- * Espelha as tres tabelas de dado de paciente que as telas leem. Nao espelha `usuarios`,
- * `perguntas_setup` nem `respostas_setup`: setup acontece uma vez, com conexao, e nao e
- * consultado offline.
- *
- * A replica pertence a UM usuario. Nenhuma tabela aqui guarda `user_id`, porque os
- * contratos de leitura da #48 nao devolvem esse campo e nao ha por que inventar coluna que
- * nao se sabe preencher. O dono fica em `sync_state` e e conferido a cada replicacao e a
- * cada envio.
- *
- * Duas traducoes que o SQLite obriga:
- *
- * 1. OS ARRAYS VIRAM TEXTO JSON. `sintomas`, `medicamentos`, `medicamentos_livres` e
- *    `fatores` sao `text[]` no Postgres desde a #45. O SQLite nao tem tipo de array, entao
- *    sao guardados como JSON e convertidos na leitura. E o unico ponto em que o formato
- *    local difere do remoto, e e exatamente por isso que os contratos da #48 falam em termos
- *    de dominio: as duas implementacoes chegam no mesmo `Phase`.
- *
- * 2. AS DATAS VIRAM TEXTO ISO. Comparadas por string, o que funciona porque ISO 8601 ordena
- *    lexicograficamente. E isso que permite os filtros de `CrisisFilter` virarem `where`
- *    sem funcao de conversao.
- */
-
-/**
- * Migracoes do banco local, aplicadas por `PRAGMA user_version`. Issue #50.
- *
- * Mesma ideia das migrations do Supabase: lista ordenada, cada passo roda uma vez, nunca se
- * edita um passo ja aplicado. `create table if not exists` nao resolve isso sozinho, porque
- * nao adiciona coluna em tabela que ja existe — e todo aparelho do time ja tem as tabelas da
- * versao 1, criadas pela #49.
- *
- * Para adicionar um passo: acrescente ao fim da lista e nao toque nos anteriores. A posicao
- * no array e a versao: indice 0 leva o banco para a versao 1.
- */
 export const MIGRACOES: string[] = [
-  // ── v1 · Issue #49 ────────────────────────────────────────────────────────
-  // O espelho das tres tabelas de paciente, mais o estado da replicacao.
   `
   create table if not exists crise_enxaqueca (
     id           text primary key not null,
@@ -88,15 +50,6 @@ export const MIGRACOES: string[] = [
   create index if not exists idx_registro_diario_data    on registro_diario(data);
   `,
 
-  // ── v2 · Issue #50 ────────────────────────────────────────────────────────
-  // Controle de envio. Estas tres colunas existem SO no aparelho: o servidor nao precisa
-  // saber quantas vezes tentamos mandar. Sao o que a #51 le para avisar que algo falha ha
-  // dias.
-  //
-  // A quarentena guarda registro nao enviado de um dono que nao e mais o da sessao. A
-  // alternativa era apagar, e apagar dado clinico do paciente em silencio nao esta em
-  // questao. O `payload` e a linha inteira em JSON, porque a tabela de origem pode ter
-  // schema diferente quando ela voltar para a fila.
   `
   alter table crise_enxaqueca add column tentativas          integer not null default 0;
   alter table crise_enxaqueca add column ultima_tentativa_em text;

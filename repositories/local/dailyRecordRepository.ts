@@ -2,15 +2,6 @@ import { bancoDoUsuario } from '@/db/owner';
 import type { RegistroDiarioPayload } from '@/repositories/remote/dailyRecordRepository';
 import type { DailyRecord, HumorId } from '@/repositories/types';
 
-/**
- * Leitura de registro diario contra o banco local. Issue #49.
- *
- * A versao remota resolve o dono chamando `userRepository.currentUsuarioId()`, que vai ao
- * servidor. Aqui isso nao acontece, e nao e simplificacao: em modo aviao aquela chamada
- * falharia e derrubaria a leitura local junto. A replica pertence a um usuario so, garantido
- * pela conferencia de dono em sync_state a cada replicacao, entao nao ha o que filtrar.
- */
-
 type RegistroRow = {
   id: string;
   data: string;
@@ -19,7 +10,6 @@ type RegistroRow = {
   ml_agua: number | null;
   humor: string | null;
   created_at: string | null;
-  /** 0 enquanto o registro existe so no aparelho. Issue #51. */
   synced: number;
 };
 
@@ -47,16 +37,6 @@ export const dailyRecordRepository = {
     }));
   },
 
-  /**
-   * Grava o registro no aparelho, com `synced = 0`. Issue #50.
-   *
-   * Nao consulta o servidor para descobrir o usuario — era isso que produzia "Perfil do
-   * usuario nao encontrado" ao salvar em modo aviao. O dono e resolvido na hora do envio,
-   * lendo sync_state, e conferido pela politica de INSERT dentro do banco.
-   *
-   * Recebe o registro com id ja gerado, pelo mesmo motivo da crise: o envio direto ao
-   * servidor, quando este banco nao abre, usa o MESMO id, e o reenvio nao duplica.
-   */
   async save(registro: RegistroDiarioPayload): Promise<string> {
     const db = await bancoDoUsuario();
 

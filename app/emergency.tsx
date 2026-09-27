@@ -43,7 +43,6 @@ export default function EmergencyScreen() {
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 40, paddingHorizontal: 24 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
         <View className="flex-row items-center justify-between mt-3 mb-8">
           <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2 rounded-xl">
             <X size={24} color={Colors.muted} />
@@ -52,7 +51,6 @@ export default function EmergencyScreen() {
           <View className="w-10" />
         </View>
 
-        {/* Intensity */}
         <View className="flex-1 items-center justify-center -mt-20">
           <Text className="text-muted text-sm mb-3 font-epilogue">Intensidade da dor</Text>
           <Text className="text-7xl text-accent mb-8 font-epilogue-bold">

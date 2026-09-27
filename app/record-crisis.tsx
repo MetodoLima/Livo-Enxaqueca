@@ -14,7 +14,6 @@ import { Colors } from '@/constants/Colors';
 import { createEmptyCrisis, type CrisisRecord } from '@/types/crisis';
 import { useCrisis } from '@/contexts/CrisisContext';
 
-// Step components
 import StepHeader, { ProgressBar } from '@/components/crisis/StepHeader';
 import StepTime from '@/components/crisis/StepTime';
 import StepIntensity from '@/components/crisis/StepIntensity';
@@ -31,19 +30,16 @@ export default function RecordCrisisScreen() {
   const router = useRouter();
   const { saveCrisis } = useCrisis();
 
-  // ── Patch crisis data from any step ─────────────────────────────────
   const updateCrisis = useCallback((patch: Partial<CrisisRecord>) => {
     setCrisis((prev) => ({ ...prev, ...patch }));
   }, []);
 
-  // ── Confirm & save ──────────────────────────────────────────────────
   const handleConfirm = useCallback(() => {
     saveCrisis(crisis);
     router.dismiss();
     router.push('/(tabs)/crisis');
   }, [crisis, router, saveCrisis]);
 
-  // ── Navigation ──────────────────────────────────────────────────────
   const goNext = useCallback(() => {
     if (currentStep < 5) {
       setCurrentStep((s) => (s + 1) as Step);
@@ -67,7 +63,6 @@ export default function RecordCrisisScreen() {
     router.back();
   }, [router]);
 
-  // ── Render current step ─────────────────────────────────────────────
   const renderStep = () => {
     switch (currentStep) {
       case 1:
@@ -105,7 +100,6 @@ export default function RecordCrisisScreen() {
         </Animated.View>
       </ScrollView>
 
-      {/* ── Exit confirmation modal ── */}
       <Modal
         visible={showExitModal}
         transparent
@@ -149,7 +143,6 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
 
-  // Exit modal
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.7)',

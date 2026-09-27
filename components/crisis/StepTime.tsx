@@ -37,7 +37,6 @@ function subtractHours(date: Date, hours: number): Date {
   return d;
 }
 
-// ── Inline Time Picker ────────────────────────────────────────────────
 function TimePicker({
   value,
   onConfirm,
@@ -70,7 +69,6 @@ function TimePicker({
       <Text style={pickerStyles.title}>Selecionar horário</Text>
 
       <View style={pickerStyles.row}>
-        {/* Hour */}
         <View style={pickerStyles.column}>
           <TouchableOpacity
             onPress={() => nudge(setHour, hour, 24, 1)}
@@ -94,7 +92,6 @@ function TimePicker({
 
         <Text style={pickerStyles.separator}>:</Text>
 
-        {/* Minute */}
         <View style={pickerStyles.column}>
           <TouchableOpacity
             onPress={() => nudge(setMinute, minute, 60, 1)}
@@ -129,7 +126,6 @@ function TimePicker({
   );
 }
 
-// ── Inline Date Picker ────────────────────────────────────────────────
 function DatePicker({
   value,
   onConfirm,
@@ -140,7 +136,7 @@ function DatePicker({
   onCancel: () => void;
 }) {
   const [day, setDay] = React.useState(value.getDate());
-  const [month, setMonth] = React.useState(value.getMonth()); // 0-indexed
+  const [month, setMonth] = React.useState(value.getMonth());
   const [year, setYear] = React.useState(value.getFullYear());
 
   const MONTHS = [
@@ -178,7 +174,6 @@ function DatePicker({
       <Text style={pickerStyles.title}>Selecionar data</Text>
 
       <View style={pickerStyles.row}>
-        {/* Day */}
         <View style={pickerStyles.column}>
           <TouchableOpacity onPress={() => nudgeDay(1)} style={pickerStyles.arrowBtn}>
             <ChevronUp size={28} color={Colors.muted} />
@@ -196,7 +191,6 @@ function DatePicker({
 
         <Text style={pickerStyles.separator}>/</Text>
 
-        {/* Month */}
         <View style={pickerStyles.column}>
           <TouchableOpacity onPress={() => nudgeMonth(1)} style={pickerStyles.arrowBtn}>
             <ChevronUp size={28} color={Colors.muted} />
@@ -214,7 +208,6 @@ function DatePicker({
 
         <Text style={pickerStyles.separator}>/</Text>
 
-        {/* Year */}
         <View style={pickerStyles.column}>
           <TouchableOpacity onPress={() => nudgeYear(1)} style={pickerStyles.arrowBtn}>
             <ChevronUp size={28} color={Colors.muted} />
@@ -332,7 +325,6 @@ const pickerStyles = StyleSheet.create({
   },
 });
 
-// ── Main Step ─────────────────────────────────────────────────────────
 type PickerTarget = 'start' | 'end' | null;
 type PickerMode = 'time' | 'date';
 
@@ -349,7 +341,6 @@ export default function StepTime({ data, onChange, onNext }: StepTimeProps) {
     } else if (preset === '1h_ago') {
       onChange({ startTime: subtractHours(new Date(), 1) });
     } else if (preset === 'custom') {
-      // Just select the preset, the dateTimeRow is already visible for start time
     }
   };
 
@@ -360,7 +351,6 @@ export default function StepTime({ data, onChange, onNext }: StepTimeProps) {
     } else if (preset === 'now') {
       onChange({ endTime: new Date() });
     } else if (preset === 'custom') {
-      // Initialize endTime if not set so the dateTimeRow appears
       if (!data.endTime) {
         onChange({ endTime: new Date() });
       }
@@ -381,7 +371,6 @@ export default function StepTime({ data, onChange, onNext }: StepTimeProps) {
       <Animated.View entering={FadeInUp.duration(400)} style={styles.content}>
         <Text style={styles.title}>Horário da crise</Text>
 
-        {/* ── Start time ── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Clock size={18} color={Colors.accent} />
@@ -441,7 +430,6 @@ export default function StepTime({ data, onChange, onNext }: StepTimeProps) {
           </View>
         </View>
 
-        {/* ── End time ── */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Clock size={18} color={Colors.orange} />
@@ -511,7 +499,6 @@ export default function StepTime({ data, onChange, onNext }: StepTimeProps) {
 
       <StepFooter onNext={onNext} />
 
-      {/* ── Time picker modal ── */}
       <Modal
         visible={pickerTarget !== null}
         transparent

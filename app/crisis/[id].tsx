@@ -13,8 +13,6 @@ import { Colors } from '@/constants/Colors';
 import { INTENSITY_CONFIG } from '@/types/crisis';
 import { CrisisPhase } from '@/hooks/useCrisisCalendar';
 
-// ── Helpers ───────────────────────────────────────────────────────────
-
 function getIntensityColor(intensity: number | null): string {
   if (intensity === null) return Colors.muted;
   return INTENSITY_CONFIG.find((c) => c.value === intensity)?.color ?? Colors.muted;
@@ -52,8 +50,6 @@ function formatNivelIncapacidade(nivel: string | null): string {
   return nivel ? (map[nivel] ?? nivel) : '—';
 }
 
-// ── Tag ───────────────────────────────────────────────────────────────
-
 function Tag({ label, color, filled = false }: { label: string; color?: string; filled?: boolean }) {
   return (
     <View style={{
@@ -75,8 +71,6 @@ function Tag({ label, color, filled = false }: { label: string; color?: string; 
   );
 }
 
-// ── PhaseCard ─────────────────────────────────────────────────────────
-
 function PhaseCard({ phase, index, total }: { phase: CrisisPhase; index: number; total: number }) {
   const [expanded, setExpanded] = useState(false);
   const color = getIntensityColor(phase.intensidadeDor);
@@ -96,13 +90,11 @@ function PhaseCard({ phase, index, total }: { phase: CrisisPhase; index: number;
         borderLeftColor: color,
         overflow: 'hidden',
       }}>
-        {/* Cabeçalho da fase */}
         <TouchableOpacity
           onPress={() => hasDetails && setExpanded((v) => !v)}
           activeOpacity={hasDetails ? 0.7 : 1}
           style={{ padding: 18, flexDirection: 'row', alignItems: 'center' }}
         >
-          {/* Número da fase */}
           <View style={{
             width: 36, height: 36, borderRadius: 18,
             backgroundColor: `${color}25`,
@@ -112,7 +104,6 @@ function PhaseCard({ phase, index, total }: { phase: CrisisPhase; index: number;
             <Text style={{ color, fontFamily: 'Epilogue_700Bold', fontSize: 14 }}>{index + 1}</Text>
           </View>
 
-          {/* Info */}
           <View style={{ flex: 1 }}>
             <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 15 }}>
               {emoji} {phase.intensidadeDor !== null ? `${phase.intensidadeDor}/10` : '—'}
@@ -133,7 +124,6 @@ function PhaseCard({ phase, index, total }: { phase: CrisisPhase; index: number;
           )}
         </TouchableOpacity>
 
-        {/* Detalhes expandidos */}
         {expanded && (
           <View style={{ paddingHorizontal: 18, paddingBottom: 18, gap: 14 }}>
             <View style={{ height: 1, backgroundColor: '#1E3A52', marginBottom: 2 }} />
@@ -201,8 +191,6 @@ function PhaseCard({ phase, index, total }: { phase: CrisisPhase; index: number;
   );
 }
 
-// ── CrisisDetailScreen ────────────────────────────────────────────────
-
 export default function CrisisDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string; data: string }>();
@@ -238,7 +226,6 @@ export default function CrisisDetailScreen() {
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bgDark }}>
 
-      {/* Header */}
       <View style={{
         flexDirection: 'row',
         alignItems: 'center',
@@ -270,7 +257,6 @@ export default function CrisisDetailScreen() {
         contentContainerStyle={{ padding: 24, paddingBottom: 60 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* Hero de intensidade máxima */}
         <Animated.View
           entering={FadeInDown.duration(350)}
           style={{
@@ -295,7 +281,6 @@ export default function CrisisDetailScreen() {
           </Text>
         </Animated.View>
 
-        {/* Tempo */}
         <Animated.View
           entering={FadeInDown.delay(80).duration(300)}
           style={{ backgroundColor: '#112236', borderRadius: 20, padding: 20, marginBottom: 20 }}
@@ -330,7 +315,6 @@ export default function CrisisDetailScreen() {
           </View>
         </Animated.View>
 
-        {/* Fases */}
         {fases.length > 0 && (
           <Animated.View entering={FadeInDown.delay(160).duration(300)}>
             <Text style={{

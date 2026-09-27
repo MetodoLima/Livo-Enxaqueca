@@ -36,8 +36,6 @@ function countTop(items: string[], total: number, limit = 5): InsightItem[] {
 }
 
 export function useInsights() {
-  // Relê quando a replicação termina: na primeira abertura o banco local ainda está vazio
-  // quando este hook monta, e sem isso a tela ficaria vazia até sair e voltar.
   const { ultimaAtualizacao } = useSync();
   const [data, setData] = useState<InsightsData | null>(null);
   const [loading, setLoading] = useState(false);
@@ -66,7 +64,6 @@ export function useInsights() {
         return;
       }
 
-      // Todos os registros de todas as crises (uma crise pode ter vários registros)
       const allRegistros = crises.flatMap((c) => c.fases);
 
       const intensities = allRegistros
@@ -77,7 +74,6 @@ export function useInsights() {
           ? Math.round((intensities.reduce((a, b) => a + b, 0) / intensities.length) * 10) / 10
           : null;
 
-      // Só crise com as duas pontas entra na média de duração, como antes.
       const durations = crises
         .filter((c) => c.inicioCrise !== null && c.fimCrise !== null)
         .map((c) => (c.fimCrise!.getTime() - c.inicioCrise!.getTime()) / (1000 * 60 * 60));
@@ -86,7 +82,6 @@ export function useInsights() {
           ? Math.round((durations.reduce((a, b) => a + b, 0) / durations.length) * 10) / 10
           : null;
 
-      // inicio_crise aceita nulo no schema, e a ordenacao joga os nulos para o fim.
       const comInicio = crises.filter((c) => c.inicioCrise !== null) as Array<
         (typeof crises)[number] & { inicioCrise: Date }
       >;
@@ -105,8 +100,6 @@ export function useInsights() {
       const allSintomas = allRegistros.flatMap((r) => r.sintomas.map(symptomLabel));
       const allRegions = allRegistros.map((r) => r.regiaoDor).filter(Boolean) as string[];
 
-      // Os medicamentos vinham numa segunda consulta, porque a tabela de juncao era o
-      // unico lugar onde os customizados apareciam. Agora os dois vem no mesmo select.
       const allMedicamentos = allRegistros.flatMap((r) => [
         ...r.medicamentos.map(medicationLabel),
         ...r.medicamentosLivres,

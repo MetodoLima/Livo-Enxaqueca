@@ -31,7 +31,6 @@ export default function AppLockScreen({ mode = 'unlock', onClose }: AppLockScree
   const [error, setError] = useState<string | null>(null);
   const [now, setNow] = useState(() => Date.now());
 
-  // Relógio só para a contagem regressiva, e só enquanto há espera.
   useEffect(() => {
     if (pinLockedUntil === null) return;
     setNow(Date.now());

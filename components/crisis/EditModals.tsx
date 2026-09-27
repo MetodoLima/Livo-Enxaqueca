@@ -62,7 +62,6 @@ const ms = StyleSheet.create({
   title: { fontSize: 18, fontFamily: 'Epilogue_700Bold', color: 'white' },
 });
 
-// ── Intensity Editor ──────────────────────────────────────────────────
 export function IntensityEditor({
   visible, onClose, value, onChange,
 }: {
@@ -90,7 +89,6 @@ export function IntensityEditor({
   );
 }
 
-// ── Location Editor ───────────────────────────────────────────────────
 export function LocationEditor({
   visible, onClose, location, side, onChange,
 }: {
@@ -137,7 +135,6 @@ export function LocationEditor({
   );
 }
 
-// ── Symptoms Editor ───────────────────────────────────────────────────
 export function SymptomsEditor({
   visible, onClose, symptoms, onChange,
 }: {
@@ -172,7 +169,6 @@ export function SymptomsEditor({
   );
 }
 
-// ── Medications Editor ────────────────────────────────────────────────
 export function MedicationsEditor({
   visible, onClose, medications, customMedications, onChange,
 }: {
@@ -235,7 +231,6 @@ export function MedicationsEditor({
         })}
       </View>
 
-      {/* Custom medication input */}
       <View style={{ marginTop: 16, marginBottom: 10 }}>
         <Text style={mes.sectionLabel}>Outro remédio</Text>
         <View style={{ flexDirection: 'row', gap: 10, marginTop: 8 }}>
@@ -258,7 +253,6 @@ export function MedicationsEditor({
         </View>
       </View>
 
-      {/* Custom medication tags */}
       {customMedications.length > 0 && (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
           {customMedications.map((name) => (
@@ -276,7 +270,6 @@ export function MedicationsEditor({
         </View>
       )}
 
-      {/* Nenhum option */}
       <TouchableOpacity
         onPress={() => toggleMedication('nenhum')}
         style={[mes.nenhumBtn, medications.includes('nenhum') && mes.nenhumBtnActive]}
@@ -295,13 +288,11 @@ export function MedicationsEditor({
 }
 
 const es = StyleSheet.create({
-  // Intensity rows
   row: { flexDirection: 'row', alignItems: 'center', height: 42, borderRadius: 8 },
   bar: { width: 6, height: '100%', borderRadius: 3 },
   num: { width: 36, textAlign: 'center', fontSize: 16, fontFamily: 'Epilogue_700Bold', color: Colors.muted },
   emoji: { fontSize: 24, marginRight: 12 },
   label: { fontSize: 11, fontFamily: 'Epilogue_700Bold', color: Colors.muted, letterSpacing: 1, flex: 1 },
-  // Grid
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center' },
   gridItem: {
     width: '30%', aspectRatio: 1.1, borderRadius: 18,
@@ -311,7 +302,6 @@ const es = StyleSheet.create({
   gridItemActive: { backgroundColor: `${Colors.accent}15`, borderColor: Colors.accent },
   gridItemActivePurple: { backgroundColor: `${Colors.purple}15`, borderColor: Colors.purple },
   gridLabel: { fontSize: 11, fontFamily: 'Epilogue_600SemiBold', color: Colors.muted, textAlign: 'center' },
-  // Side
   sectionTitle: { fontSize: 15, fontFamily: 'Epilogue_600SemiBold', color: 'white', marginBottom: 10, textAlign: 'center' },
   sideRow: { flexDirection: 'row', gap: 10 },
   sideBtn: {
@@ -320,7 +310,6 @@ const es = StyleSheet.create({
   },
   sideBtnActive: { backgroundColor: `${Colors.accent}15`, borderColor: Colors.accent },
   sideLabel: { fontSize: 14, fontFamily: 'Epilogue_600SemiBold', color: Colors.muted },
-  // Done
   doneBtn: {
     marginTop: 24, backgroundColor: Colors.accent,
     paddingVertical: 16, borderRadius: 14, alignItems: 'center',

@@ -1,10 +1,6 @@
 import { supabase } from '@/lib/supabase';
 import type { SetupAnswer, SetupQuestion, SetupRepository } from '@/repositories/types';
 
-/**
- * Perguntas e respostas do cadastro inicial de nove passos. Issue #48.
- */
-
 type PerguntaRow = {
   id: number;
   texto: string;
@@ -26,11 +22,6 @@ function toQuestion(row: PerguntaRow): SetupQuestion {
   };
 }
 
-/**
- * Nao grava chave ausente. A tabela tem uma coluna por tipo de resposta e a linha preenche
- * so a que corresponde ao tipo da pergunta; mandar as outras como undefined viraria null
- * explicito no insert.
- */
 function toRow(resposta: SetupAnswer): Record<string, unknown> {
   const row: Record<string, unknown> = {
     user_id: resposta.usuarioId,

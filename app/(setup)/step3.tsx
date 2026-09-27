@@ -16,8 +16,6 @@ if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
 }
 
-// ─── Tipos ────────────────────────────────────────────────────────────────────
-
 type HasAura = 'yes' | 'no' | null;
 
 interface AuraSign {
@@ -27,8 +25,6 @@ interface AuraSign {
   emoji: string;
   cortexType: string;
 }
-
-// ─── Constantes ───────────────────────────────────────────────────────────────
 
 const TOTAL_STEPS = 9;
 const CURRENT_STEP = 3;
@@ -106,8 +102,6 @@ const AURA_SIGNS: AuraSign[] = [
   },
 ];
 
-// ─── Componente Principal ─────────────────────────────────────────────────────
-
 export default function Step3Aura() {
   const { updateSetupData } = useSetup();
 
@@ -173,10 +167,8 @@ export default function Step3Aura() {
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Cabeçalho ── */}
         <View style={{ paddingHorizontal: 24, paddingTop: 56, paddingBottom: 8 }}>
 
-          {/* Barra de progresso */}
           <View style={{ flexDirection: 'row', gap: 6, marginBottom: 32 }}>
             {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
               <View
@@ -191,7 +183,6 @@ export default function Step3Aura() {
             ))}
           </View>
 
-          {/* Rótulo do passo */}
           <Text
             style={{
               fontSize: 12,
@@ -205,7 +196,6 @@ export default function Step3Aura() {
             Passo {CURRENT_STEP} de {TOTAL_STEPS} · Aura
           </Text>
 
-          {/* Título */}
           <Text
             style={{
               fontSize: 26,
@@ -218,13 +208,11 @@ export default function Step3Aura() {
             Sua visão ou sensibilidade mudam antes da dor?
           </Text>
 
-          {/* Subtítulo */}
           <Text style={{ fontSize: 15, color: '#7A99B2', lineHeight: 22 }}>
             A aura são sintomas neurológicos que aparecem minutos antes da crise. Ocorre em cerca de 30% dos casos.
           </Text>
         </View>
 
-        {/* ── Sim / Não ── */}
         <View style={{ paddingHorizontal: 24, marginTop: 28, flexDirection: 'row', gap: 12 }}>
           {[
             { value: 'yes' as HasAura, label: 'Sim, acontece', emoji: '⚡' },
@@ -263,7 +251,6 @@ export default function Step3Aura() {
           })}
         </View>
 
-        {/* ── Lista de sinais de aura (aparece só se Sim) ── */}
         {hasAura === 'yes' && (
           <View style={{ paddingHorizontal: 24, marginTop: 28 }}>
             <Text
@@ -315,7 +302,6 @@ export default function Step3Aura() {
                       <Text style={{ fontSize: 13, color: '#4A6A82' }}>
                         {sign.description}
                       </Text>
-                      {/* Badge do tipo cortical */}
                       <View
                         style={{
                           alignSelf: 'flex-start',
@@ -339,7 +325,6 @@ export default function Step3Aura() {
                       </View>
                     </View>
 
-                    {/* Checkbox quadrado */}
                     <View
                       style={{
                         width: 22,
@@ -362,7 +347,6 @@ export default function Step3Aura() {
                 );
               })}
 
-              {/* ── Opção Outro ── */}
               <TouchableOpacity
                 onPress={handleToggleOther}
                 activeOpacity={0.8}
@@ -413,7 +397,6 @@ export default function Step3Aura() {
               </TouchableOpacity>
             </View>
 
-            {/* Aviso para sintomas graves */}
             {showWarning && (
               <View
                 style={{
@@ -437,7 +420,6 @@ export default function Step3Aura() {
           </View>
         )}
 
-        {/* ── Mensagem se Não ── */}
         {hasAura === 'no' && (
           <View style={{ paddingHorizontal: 24, marginTop: 20 }}>
             <View
@@ -458,7 +440,6 @@ export default function Step3Aura() {
           </View>
         )}
 
-        {/* ── Botão de avançar ── */}
         <View style={{ paddingHorizontal: 24, marginTop: 32 }}>
           <TouchableOpacity
             onPress={handleNext}

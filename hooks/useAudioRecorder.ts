@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 
-// Loaded once at module init — never changes, so the conditional hook call below is safe
 let _useExpoAudioRecorder: any;
 let _RecordingPresets: any;
 let _requestRecordingPermissionsAsync: any;

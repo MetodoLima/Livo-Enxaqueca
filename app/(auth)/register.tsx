@@ -24,7 +24,7 @@ export default function Register() {
 
   const validatePassword = (password: string): string[] => {
     const errors: string[] = [];
-    
+
     if (password.length < 8) {
       errors.push('Mínimo de 8 dígitos');
     }
@@ -40,7 +40,7 @@ export default function Register() {
     if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
       errors.push('Um símbolo especial');
     }
-    
+
     return errors;
   };
 
@@ -73,7 +73,6 @@ export default function Register() {
     setConfirmPassword(text);
   }, []);
 
-  // Validar confirmação de senha quando qualquer uma das senhas mudar
   useEffect(() => {
     if (confirmPassword.length > 0) {
       validateConfirmPassword(password, confirmPassword);
@@ -110,7 +109,6 @@ export default function Register() {
     if (error) {
       Alert.alert('Erro de Cadastro', error);
     } else if (signedIn) {
-      // Login automático e redirecionamento tratados pelo AuthProvider
       Alert.alert('Sucesso', 'Sua conta foi criada!');
     } else {
       Alert.alert('Verificação necessária', 'Verifique seu e-mail para confirmar a conta.');

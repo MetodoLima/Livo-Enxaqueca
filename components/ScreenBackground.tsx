@@ -8,9 +8,7 @@ export default function ScreenBackground({ children, style }: ViewProps) {
     <SafeAreaView style={[{ flex: 1, backgroundColor: '#0A1E28' }, style]}>
       <StatusBar barStyle="light-content" />
 
-      {/* ── Background Layer: Frosted Gradient + Light Orbs ── */}
       <View style={styles.bgLayer} pointerEvents="none">
-        {/* Base gradient overlay */}
         <LinearGradient
           colors={['#0A1E28', '#102F40', '#0D2636']}
           start={{ x: 0, y: 0 }}
@@ -18,7 +16,6 @@ export default function ScreenBackground({ children, style }: ViewProps) {
           style={StyleSheet.absoluteFillObject}
         />
 
-        {/* Orbs and Blur (iOS Only) */}
         {Platform.OS === 'ios' && (
           <>
             <View style={[styles.orb, styles.orbLight]} />
@@ -39,7 +36,6 @@ export default function ScreenBackground({ children, style }: ViewProps) {
 }
 
 const styles = StyleSheet.create({
-  /* ── Background ── */
   bgLayer: {
     ...StyleSheet.absoluteFillObject,
     overflow: 'hidden',

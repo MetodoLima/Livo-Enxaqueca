@@ -129,12 +129,10 @@ export async function complementCrisis(
 
   if (audioUri) {
     if (audioUri.startsWith('blob:')) {
-      // Web: blob URL precisa ser convertida para Blob real
       const blobRes = await fetch(audioUri);
       const blob = await blobRes.blob();
       formData.append('file', blob, 'audio.webm');
     } else {
-      // Native: extensão do FormData do React Native
       formData.append('file', {
         uri: audioUri,
         name: 'audio.m4a',
@@ -147,7 +145,7 @@ export async function complementCrisis(
   }
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 300_000); // 5 min
+  const timeoutId = setTimeout(() => controller.abort(), 300_000);
 
   try {
     const response = await fetch(`${API_BASE_URL}/api/complement-crisis`, {

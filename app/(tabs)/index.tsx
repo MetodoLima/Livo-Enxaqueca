@@ -53,7 +53,6 @@ function formatAgua(ml: number): string {
   return `${ml}ml`;
 }
 
-// ── Helper: format time since last crisis ──────────────────────────────
 function formatTimeSinceHome(lastDate: Date): { number: string; label: string } {
   const now = new Date();
   const diffMs = now.getTime() - lastDate.getTime();
@@ -73,7 +72,6 @@ export default function HomeScreen() {
   const [sonoLocal, setSonoLocal] = useState(0);
   const [aguaLocal, setAguaLocal] = useState(0);
 
-  // ── Home stats ──────────────────────────────────────────────────────
   const { ultimaAtualizacao } = useSync();
   const [streakInfo, setStreakInfo] = useState<{ number: string; label: string } | null>(null);
   const [crisesThisMonth, setCrisesThisMonth] = useState<number | null>(null);
@@ -83,18 +81,15 @@ export default function HomeScreen() {
     let cancelled = false;
     (async () => {
       try {
-        // Last crisis end time
         const lastEnd = await crisisRepository.lastEndedAt();
         if (cancelled) return;
         if (lastEnd) setStreakInfo(formatTimeSinceHome(lastEnd));
 
-        // Crises this month
         const now = new Date();
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
         const count = await crisisRepository.countSince(monthStart);
         if (!cancelled) setCrisesThisMonth(count);
 
-        // Average intensity (all-time via registro_crise)
         const intensidades = await crisisRepository.intensities();
         if (!cancelled && intensidades.length > 0) {
           const soma = intensidades.reduce((a, b) => a + b, 0);
@@ -120,8 +115,6 @@ export default function HomeScreen() {
       humor: selectedMood,
     });
 
-    // Só limpa depois de gravar. Antes o formulário era zerado sem esperar, e uma falha levava
-    // embora o que a pessoa tinha digitado, sem aviso.
     if (!gravou) {
       Alert.alert(
         'Não foi possível salvar agora',
@@ -151,7 +144,6 @@ export default function HomeScreen() {
       >
         <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
 
-          {/* ── Header ── */}
           <View className="flex-row justify-between items-center" style={{ marginBottom: 28 }}>
             <View>
               <Text className="text-[28px] text-white/60 font-epilogue-light">
@@ -166,7 +158,6 @@ export default function HomeScreen() {
             </TouchableOpacity>
           </View>
 
-          {/* ── Mood Selector ── */}
           <Animated.View entering={FadeInUp.delay(100)} style={{ marginBottom: 28 }}>
             <Text style={styles.sectionLabel}>Como você está hoje?</Text>
             <MoodSelector
@@ -175,10 +166,8 @@ export default function HomeScreen() {
             />
           </Animated.View>
 
-          {/* ── Mascote + Registro (bloco conectado) ── */}
           <Animated.View entering={FadeInUp.delay(200)} style={{ marginBottom: 20 }}>
 
-            {/* Card do mascote — topo */}
             <View style={styles.mascotContainer}>
               <Image
                 source={require('../../assets/images/IA-Livo.webp')}
@@ -211,7 +200,6 @@ export default function HomeScreen() {
               </View>
             </View>
 
-            {/* Card de rotina — base, conectado visualmente */}
             <View style={styles.rotinaCard}>
               <BlurView
                 intensity={40}
@@ -232,14 +220,12 @@ export default function HomeScreen() {
               />
 
               <View style={{ position: 'relative' }}>
-                {/* Divisor com label */}
                 <View style={styles.dividerRow}>
                   <View style={styles.dividerLine} />
                   <Text style={styles.dividerLabel}>rotina de hoje</Text>
                   <View style={styles.dividerLine} />
                 </View>
 
-                {/* Sono */}
                 <View style={styles.sliderBlock}>
                   <View style={styles.sliderHeader}>
                     <View style={styles.sliderIconRow}>
@@ -268,7 +254,6 @@ export default function HomeScreen() {
                   </View>
                 </View>
 
-                {/* Água */}
                 <View style={styles.sliderBlock}>
                   <View style={styles.sliderHeader}>
                     <View style={styles.sliderIconRow}>
@@ -297,7 +282,6 @@ export default function HomeScreen() {
                   </View>
                 </View>
 
-                {/* Botão registrar */}
                 <TouchableOpacity
                   onPress={handleRegistrar}
                   disabled={!temAlgumDado || saving}
@@ -333,7 +317,6 @@ export default function HomeScreen() {
             </View>
           </Animated.View>
 
-          {/* ── Widget: Migraine Status ── */}
           <Animated.View entering={FadeInUp.delay(300)}>
             <View style={styles.widget}>
               <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFillObject, { borderRadius: 28 }]} />
@@ -364,7 +347,6 @@ export default function HomeScreen() {
             </View>
           </Animated.View>
 
-          {/* ── Widget: Stats Grid ── */}
           <View style={styles.statsGridContainer}>
             <Animated.View entering={FadeInUp.delay(400)} style={[styles.statWidget, styles.statCardLeft]}>
               <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFillObject, { borderRadius: 24 }]} />
@@ -399,7 +381,6 @@ export default function HomeScreen() {
             </Animated.View>
           </View>
 
-          {/* ── Widget: Insight ── */}
           <Animated.View entering={FadeInUp.delay(600)} style={{ marginBottom: 20 }}>
             <View style={styles.widget}>
               <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFillObject, { borderRadius: 28 }]} />

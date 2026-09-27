@@ -9,8 +9,6 @@ import {
 } from 'react-native';
 import { useSetup } from '@/contexts/SetupContext';
 
-
-
 type OptionValue = '2' | '7' | '12' | '16' | 'unknown';
 
 interface Option {
@@ -20,8 +18,6 @@ interface Option {
   userType: 'episodic' | 'chronic' | null;
   color: string;
 }
-
-
 
 const TOTAL_STEPS = 9;
 const CURRENT_STEP = 1;
@@ -64,7 +60,6 @@ const OPTIONS: Option[] = [
   },
 ];
 
-
 export default function Step1Fenotipagem() {
   const { updateSetupData } = useSetup();
   const [selected, setSelected] = useState<OptionValue | null>(null);
@@ -94,10 +89,8 @@ export default function Step1Fenotipagem() {
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
         showsVerticalScrollIndicator={false}
       >
-        {/* ── Cabeçalho ── */}
         <View style={{ paddingHorizontal: 24, paddingTop: 56, paddingBottom: 8 }}>
 
-          {/* Barra de progresso */}
           <View style={{ flexDirection: 'row', gap: 6, marginBottom: 32 }}>
             {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
               <View
@@ -112,7 +105,6 @@ export default function Step1Fenotipagem() {
             ))}
           </View>
 
-          {/* Rótulo do passo */}
           <Text
             style={{
               fontSize: 12,
@@ -126,7 +118,6 @@ export default function Step1Fenotipagem() {
             Passo {CURRENT_STEP} de {TOTAL_STEPS} · Fenotipagem
           </Text>
 
-          {/* Título */}
           <Text
             style={{
               fontSize: 26,
@@ -139,13 +130,11 @@ export default function Step1Fenotipagem() {
             Com que frequência você tem crises?
           </Text>
 
-          {/* Subtítulo */}
           <Text style={{ fontSize: 15, color: '#7A99B2', lineHeight: 22 }}>
             Pense nos últimos 3 meses. Inclua dias com dor leve ou moderada também.
           </Text>
         </View>
 
-        {/* ── Badge de classificação (aparece ao selecionar) ── */}
         <View style={{ paddingHorizontal: 24, marginTop: 20, minHeight: 48 }}>
           {selectedOption && selectedOption.userType ? (
             <View
@@ -187,7 +176,6 @@ export default function Step1Fenotipagem() {
           ) : null}
         </View>
 
-        {/* ── Opções ── */}
         <View style={{ paddingHorizontal: 24, marginTop: 12, gap: 12 }}>
           {OPTIONS.map((option) => {
             const isSelected = selected === option.value;
@@ -227,7 +215,6 @@ export default function Step1Fenotipagem() {
                   </Text>
                 </View>
 
-                {/* Indicador de seleção */}
                 <View
                   style={{
                     width: 22,
@@ -256,7 +243,6 @@ export default function Step1Fenotipagem() {
           })}
         </View>
 
-        {/* ── Botão de avançar ── */}
         <View style={{ paddingHorizontal: 24, marginTop: 32 }}>
           <TouchableOpacity
             onPress={handleNext}

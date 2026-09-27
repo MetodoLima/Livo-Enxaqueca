@@ -47,8 +47,6 @@ const HUMOR_EMOJI: Record<string, string> = {
 
 type Tab = 'todos' | 'crises' | 'eventos';
 
-// ── Helpers ───────────────────────────────────────────────────────────
-
 function getIntensityColor(intensity: number | null): string {
   if (intensity === null) return Colors.muted;
   return INTENSITY_CONFIG.find((c) => c.value === intensity)?.color ?? Colors.muted;
@@ -84,20 +82,6 @@ function formatAgua(ml: number): string {
   return `${ml}ml`;
 }
 
-// ── Aviso de pendência travada ────────────────────────────────────────
-
-/**
- * O único texto que a #51 mostra, e só quando a fila deixou de ser transitória.
- *
- * Abaixo de três dias o relógio em cada crise basta: a fila esvazia sozinha e não há nada a
- * fazer. Passados três dias, a causa provável não se resolve sozinha — projeto do Supabase
- * pausado, cota esgotada, servidor recusando o dado — e nenhuma delas o paciente conserta.
- *
- * Então o texto informa ONDE o dado está, não pede ação técnica nem fala de servidor. O risco
- * real é o registro existir em um lugar só: trocar de celular, reinstalar ou limpar os dados
- * apaga o que ainda não subiu. O relatório em PDF sai completo, porque é gerado do banco do
- * aparelho desde a T3.6 — a perda é de cópia, não de conteúdo.
- */
 function PendenciaTravadaAviso() {
   const { fila } = useSync();
 
@@ -134,8 +118,6 @@ function PendenciaTravadaAviso() {
     </View>
   );
 }
-
-// ── CrisisListItem ────────────────────────────────────────────────────
 
 function CrisisListItem({ crisis, index }: { crisis: CrisisDay; index: number }) {
   const router = useRouter();
@@ -182,8 +164,6 @@ function CrisisListItem({ crisis, index }: { crisis: CrisisDay; index: number })
             {crisis.sintomas.length > 0 && ` · ${crisis.sintomas.length} sintoma${crisis.sintomas.length > 1 ? 's' : ''}`}
           </Text>
         </View>
-        {/* Crise que existe só no aparelho. Mesmo gesto dos aplicativos de mensagem: o
-            relógio some quando sobe, e não há nada para o usuário fazer. Issue #51. */}
         {!crisis.enviado && (
           <Clock
             size={14}
@@ -197,8 +177,6 @@ function CrisisListItem({ crisis, index }: { crisis: CrisisDay; index: number })
     </Animated.View>
   );
 }
-
-// ── RegistroListItem ──────────────────────────────────────────────────
 
 function RegistroListItem({ registro, index }: { registro: RegistroCalendarDay; index: number }) {
   const router = useRouter();
@@ -222,7 +200,6 @@ function RegistroListItem({ registro, index }: { registro: RegistroCalendarDay; 
           borderLeftWidth: 3, borderLeftColor: Colors.accent,
         }}
       >
-        {/* Hora */}
         <View style={{ marginRight: 14 }}>
           <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 11 }}>HORA</Text>
           <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 15, marginTop: 2 }}>
@@ -232,7 +209,6 @@ function RegistroListItem({ registro, index }: { registro: RegistroCalendarDay; 
 
         <View style={{ width: 1, height: 36, backgroundColor: '#1E3A52', marginRight: 14 }} />
 
-        {/* Conteúdo */}
         <View style={{ flex: 1 }}>
           {registro.humor ? (
             <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 14 }}>
@@ -254,8 +230,6 @@ function RegistroListItem({ registro, index }: { registro: RegistroCalendarDay; 
           </Text>
         </View>
 
-        {/* Mesma marca da crise: o registro diário também entra na fila, e sem marcá-lo uma
-            pendência ficaria invisível ao lado de uma crise marcada. Issue #51. */}
         {!registro.enviado && (
           <Clock
             size={14}
@@ -269,8 +243,6 @@ function RegistroListItem({ registro, index }: { registro: RegistroCalendarDay; 
     </Animated.View>
   );
 }
-
-// ── TabBar ────────────────────────────────────────────────────────────
 
 function TabBar({ active, onChange, hasCrises, hasRegistro }: {
   active: Tab;
@@ -323,8 +295,6 @@ function TabBar({ active, onChange, hasCrises, hasRegistro }: {
   );
 }
 
-// ── TimelineEntry ─────────────────────────────────────────────────────
-
 type TimelineEntry =
   | { type: 'crise'; time: Date; data: CrisisDay }
   | { type: 'registro'; time: Date; data: RegistroCalendarDay };
@@ -333,8 +303,6 @@ function TimelineItem({ entry, index }: { entry: TimelineEntry; index: number })
   if (entry.type === 'crise') return <CrisisListItem crisis={entry.data} index={index} />;
   return <RegistroListItem registro={entry.data} index={index} />;
 }
-
-// ── CalendarScreen ────────────────────────────────────────────────────
 
 export default function CalendarScreen() {
   const today = new Date();
@@ -399,14 +367,12 @@ export default function CalendarScreen() {
       >
         <View style={{ paddingHorizontal: 24, paddingTop: 40 }}>
 
-          {/* Título */}
           <Text style={{ fontSize: 28, color: 'white', fontFamily: 'Epilogue_300Light', marginBottom: 24 }}>
             Seu <Text style={{ fontFamily: 'Epilogue_700Bold' }}>Histórico</Text>
           </Text>
 
           <PendenciaTravadaAviso />
 
-          {/* Calendário */}
           <Card style={{ marginBottom: 24 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <TouchableOpacity
@@ -426,7 +392,6 @@ export default function CalendarScreen() {
               </TouchableOpacity>
             </View>
 
-            {/* Dias da semana */}
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
               {WEEKDAYS.map((d, i) => (
                 <Text key={i} style={{ width: 40, textAlign: 'center', fontSize: 11, color: Colors.muted, fontFamily: 'Epilogue_700Bold' }}>
@@ -435,7 +400,6 @@ export default function CalendarScreen() {
               ))}
             </View>
 
-            {/* Grid */}
             {loading ? (
               <View style={{ height: 180, alignItems: 'center', justifyContent: 'center' }}>
                 <ActivityIndicator color={Colors.accent} />
@@ -516,7 +480,6 @@ export default function CalendarScreen() {
               </View>
             )}
 
-            {/* Legenda */}
             <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#1E3A52', flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <View style={{ width: 10, height: 10, borderRadius: 3, backgroundColor: '#EF444430' }} />
@@ -533,7 +496,6 @@ export default function CalendarScreen() {
             </View>
           </Card>
 
-          {/* Estatísticas do mês */}
           {!loading && totalCrises > 0 && (
             <Animated.View entering={FadeInUp.duration(300)} style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
               <View style={{ flex: 1, backgroundColor: '#1E3A52', borderRadius: 16, padding: 16, alignItems: 'center' }}>
@@ -559,7 +521,6 @@ export default function CalendarScreen() {
             </Animated.View>
           )}
 
-          {/* Erro */}
           {error && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 16, backgroundColor: '#EF444420', borderRadius: 16, marginBottom: 16 }}>
               <AlertCircle size={16} color="#EF4444" />
@@ -569,7 +530,6 @@ export default function CalendarScreen() {
             </View>
           )}
 
-          {/* Painel do dia selecionado */}
           {selectedDay !== null && (
             <Animated.View entering={FadeInUp.duration(250)}>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
@@ -640,7 +600,6 @@ export default function CalendarScreen() {
             </Animated.View>
           )}
 
-          {/* Estado vazio do mês */}
           {!loading && !error && totalCrises === 0 && Object.keys(registroByDay).length === 0 && selectedDay === null && (
             <Animated.View entering={FadeInUp.duration(300)} style={{
               padding: 40, borderWidth: 1.5, borderStyle: 'dashed',

@@ -25,7 +25,6 @@ export default function StepLocation({ data, onChange, onNext }: StepLocationPro
       <Animated.View entering={FadeInUp.duration(400)} style={styles.content}>
         <Text style={styles.title}>Onde dói?</Text>
 
-        {/* Location grid */}
         <View style={styles.grid}>
           {LOCATIONS.map((loc) => {
             const isActive = data.location === loc.id;
@@ -53,7 +52,6 @@ export default function StepLocation({ data, onChange, onNext }: StepLocationPro
           })}
         </View>
 
-        {/* Side selection — only show when a location is selected */}
         {data.location && (
           <Animated.View entering={FadeInUp.duration(300)} style={styles.sideSection}>
             <Text style={styles.sideTitle}>Qual lado?</Text>
@@ -112,7 +110,6 @@ const styles = StyleSheet.create({
     marginBottom: 28,
   },
 
-  // Location grid
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -146,7 +143,6 @@ const styles = StyleSheet.create({
     color: Colors.accent,
   },
 
-  // Side
   sideSection: {
     marginTop: 24,
   },

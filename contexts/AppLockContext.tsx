@@ -16,7 +16,6 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
-// Sair para responder uma mensagem e voltar não deve pedir PIN. Decidido pelo time.
 const LOCK_GRACE_MS = 60 * 1000;
 
 export type AppLockStatus = 'loading' | 'configured' | 'locked' | 'unlocked';
@@ -25,12 +24,7 @@ type AppLockContextValue = {
   status: AppLockStatus;
   config: AppLockConfig | null;
   biometricAvailable: boolean;
-  /**
-   * Verdadeiro enquanto o app está fora de primeiro plano. Com a tolerância, o bloqueio não
-   * dispara na hora, e sem essa capa a miniatura no seletor de tarefas mostraria o histórico.
-   */
   privacyCover: boolean;
-  /** Até quando o PIN está recusado por excesso de erros. A biometria continua valendo. */
   pinLockedUntil: number | null;
   configure: (pin: string, biometricEnabled: boolean) => Promise<void>;
   unlockWithPin: (pin: string) => Promise<boolean>;
@@ -107,8 +101,6 @@ export function AppLockProvider({ children }: { children: React.ReactNode }) {
         }
       })
       .catch((error) => {
-        // Falha ao ler o SecureStore não pode ser tratada como ausência de AppLock.
-        // Mantemos o estado de loading para não liberar os dados protegidos.
         console.error('Não foi possível carregar a configuração do AppLock:', error);
       });
 
@@ -120,7 +112,6 @@ export function AppLockProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
       if (nextState !== 'active') {
-        // 'inactive' no iOS já é o momento da miniatura, então a capa entra no primeiro sinal.
         if (leftForegroundAtRef.current === null) leftForegroundAtRef.current = Date.now();
         setPrivacyCover(true);
         return;
@@ -130,7 +121,6 @@ export function AppLockProvider({ children }: { children: React.ReactNode }) {
       leftForegroundAtRef.current = null;
       if (leftAt !== null && configRef.current) {
         const elapsed = Date.now() - leftAt;
-        // Tempo negativo é relógio atrasado de propósito ou não; nos dois casos, bloqueia.
         if (elapsed < 0 || elapsed >= LOCK_GRACE_MS) setStatus('locked');
       }
       setPrivacyCover(false);
@@ -148,7 +138,6 @@ export function AppLockProvider({ children }: { children: React.ReactNode }) {
     try {
       await clearPinAttempts(currentUserId);
     } catch (error) {
-      // Não impede o desbloqueio: a pessoa provou quem é. A contagem velha só pesa no próximo erro.
       console.error('Não foi possível zerar as tentativas de PIN:', error);
     }
   }, []);
@@ -173,7 +162,6 @@ export function AppLockProvider({ children }: { children: React.ReactNode }) {
     const currentUserId = userIdRef.current;
     if (!currentUserId) return false;
 
-    // A tela já desabilita o botão durante a espera. Esta checagem é a que vale.
     const { lockedUntil } = attemptsRef.current;
     if (lockedUntil !== null && lockedUntil > Date.now()) return false;
 

@@ -9,8 +9,6 @@ import {
     View,
 } from 'react-native';
 
-
-
 type MealFrequency = 'regular' | 'fasting' | 'irregular' | null;
 
 interface Option {
@@ -22,8 +20,6 @@ interface Option {
     color: string;
     feedback: string;
 }
-
-
 
 const TOTAL_STEPS = 9;
 const CURRENT_STEP = 5;
@@ -58,8 +54,6 @@ const OPTIONS: Option[] = [
     },
 ];
 
-
-
 export default function Step5Jejum() {
     const { updateSetupData } = useSetup();
     const [selected, setSelected] = useState<MealFrequency>(null);
@@ -87,10 +81,8 @@ export default function Step5Jejum() {
                 contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
                 showsVerticalScrollIndicator={false}
             >
-                {/* ── Cabeçalho ── */}
                 <View style={{ paddingHorizontal: 24, paddingTop: 56, paddingBottom: 8 }}>
 
-                    {/* Barra de progresso */}
                     <View style={{ flexDirection: 'row', gap: 6, marginBottom: 32 }}>
                         {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
                             <View
@@ -105,7 +97,6 @@ export default function Step5Jejum() {
                         ))}
                     </View>
 
-                    {/* Rótulo do passo */}
                     <Text
                         style={{
                             fontSize: 12,
@@ -119,7 +110,6 @@ export default function Step5Jejum() {
                         Passo {CURRENT_STEP} de {TOTAL_STEPS} · Gatilhos Alimentares
                     </Text>
 
-                    {/* Título */}
                     <Text
                         style={{
                             fontSize: 26,
@@ -132,13 +122,11 @@ export default function Step5Jejum() {
                         Qual a frequência das suas refeições?
                     </Text>
 
-                    {/* Subtítulo */}
                     <Text style={{ fontSize: 15, color: '#7A99B2', lineHeight: 22 }}>
                         O jejum é um dos principais gatilhos metabólicos de enxaqueca. Queremos entender seu padrão.
                     </Text>
                 </View>
 
-                {/* ── Badge de feedback ── */}
                 <View style={{ paddingHorizontal: 24, marginTop: 20, minHeight: 64 }}>
                     {selectedOption && (
                         <View
@@ -176,7 +164,6 @@ export default function Step5Jejum() {
                     )}
                 </View>
 
-                {/* ── Opções ── */}
                 <View style={{ paddingHorizontal: 24, marginTop: 12, gap: 12 }}>
                     {OPTIONS.map((option) => {
                         const isSelected = selected === option.value;
@@ -197,10 +184,8 @@ export default function Step5Jejum() {
                                     gap: 14,
                                 }}
                             >
-                                {/* Emoji */}
                                 <Text style={{ fontSize: 26 }}>{option.emoji}</Text>
 
-                                {/* Texto */}
                                 <View style={{ flex: 1, gap: 2 }}>
                                     <Text
                                         style={{
@@ -216,7 +201,6 @@ export default function Step5Jejum() {
                                     </Text>
                                 </View>
 
-                                {/* Radio button */}
                                 <View
                                     style={{
                                         width: 22,
@@ -245,7 +229,6 @@ export default function Step5Jejum() {
                     })}
                 </View>
 
-                {/* ── Botão de avançar ── */}
                 <View style={{ paddingHorizontal: 24, marginTop: 32 }}>
                     <TouchableOpacity
                         onPress={handleNext}

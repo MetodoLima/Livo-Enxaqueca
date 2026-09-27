@@ -46,8 +46,6 @@ function intensityColor(v: number): string {
   return '#ef4444';
 }
 
-// O banco guarda os ids do catalogo; o relatorio mostra os rotulos. Medicamentos
-// digitados pelo usuario e fatores desencadeantes sao texto livre e passam direto.
 function phaseLabels(r: any): { sintomas: string[]; medicamentos: string[]; fatores: string[] } {
   return {
     sintomas: ((r.sintomas ?? []) as string[]).map(symptomLabel),
@@ -68,12 +66,6 @@ function countTop(items: string[], limit = 5): Array<{ nome: string; count: numb
     .map(([nome, count]) => ({ nome, count }));
 }
 
-/**
- * O gerador de HTML abaixo tem quase duzentas linhas e le os nomes de coluna do banco.
- * Reescrever tudo para os nomes do dominio nao e o que a #48 pede e arriscaria um relatorio
- * que acabou de ser conferido no aparelho, entao a conversao acontece aqui, num lugar so.
- * Tipar o gerador e a T5.2.
- */
 function toReportRows(crises: Crisis[]) {
   return crises.map((c) => ({
     id: c.id,

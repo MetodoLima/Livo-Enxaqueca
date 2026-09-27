@@ -211,14 +211,6 @@ async function exportPlaintextToEncrypted(
   }
 }
 
-/**
- * Converte uma cópia plaintext em um arquivo SQLCipher temporário.
- *
- * Este módulo deliberadamente não integra com getDb(), não substitui o banco original e não
- * remove nenhum arquivo. As APIs atuais do expo-sqlite não oferecem uma operação de existência
- * sem abertura; por isso esta função deve ser chamada somente para um nome que o chamador já
- * confirmou existir. Um nome inexistente seria criado pelo SQLite como banco vazio.
- */
 export async function migratePlaintextDatabase(
   databaseName: string,
   encryptionKey: string,
