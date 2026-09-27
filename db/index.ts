@@ -59,6 +59,7 @@ async function open(): Promise<SQLite.SQLiteDatabase> {
       );
     }
     await prepararBanco(migratedDb.db);
+    await apagarOrigemEmTextoPuro(marker);
     return migratedDb.db;
   }
 
@@ -124,6 +125,33 @@ async function openEncryptedDatabase(
   } catch (error) {
     await db.closeAsync().catch(() => undefined);
     throw error;
+  }
+}
+
+/**
+ * Apaga o banco antigo em texto puro depois que a copia cifrada provou funcionar.
+ *
+ * A migracao da #58 nunca apaga a origem, e com razao: se a primeira abertura do banco novo
+ * falhasse, a origem seria a unica copia. Mas sem apagar em algum momento, o historico clinico
+ * continuaria legivel em disco para sempre, que e justamente o que a #58 existe para impedir.
+ *
+ * Por isso apaga AQUI, na abertura pelo marcador: o marcador so e gravado depois da validacao
+ * completa, e chegar a este ponto significa que o banco cifrado abriu de novo e as migracoes
+ * rodaram. A origem ja nao tem funcao de reserva.
+ *
+ * Falha ao apagar nao derruba a abertura. O banco cifrado ja esta funcionando, e a limpeza e
+ * tentada de novo na proxima vez. Depois da primeira limpeza bem-sucedida o arquivo nao existe
+ * mais e a tentativa so falha em silencio.
+ */
+async function apagarOrigemEmTextoPuro(marker: PlaintextMigrationMarker): Promise<void> {
+  // O destino tem nome proprio, gerado pela migracao. A checagem existe para que um marcador
+  // estranho nunca faca o app apagar o banco que acabou de abrir.
+  if (marker.destinationDatabaseName === DATABASE_NAME) return;
+
+  try {
+    await SQLite.deleteDatabaseAsync(DATABASE_NAME);
+  } catch {
+    // Arquivo ja apagado numa abertura anterior, ou em uso. Nos dois casos nao ha o que fazer.
   }
 }
 
