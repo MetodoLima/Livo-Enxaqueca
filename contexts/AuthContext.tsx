@@ -9,7 +9,7 @@ import {
   removeLastValidatedAt,
   setLastValidatedAt,
   type OfflineSessionStatus,
-} from '@/util/offlineTolerance';
+} from '@/lib/offlineTolerance';
 
 export type LocalSessionStatus = 'loading' | 'available' | 'absent';
 
