@@ -1,0 +1,121 @@
+import Card from '@/components/ui/Card';
+import ExportModal from '@/features/profile/ExportModal';
+import ScreenBackground from '@/components/ui/ScreenBackground';
+import { Colors } from '@/constants/Colors';
+import { useAuth } from '@/contexts/AuthContext';
+import { usePdfExport } from '@/features/profile/usePdfExport';
+import AppLockScreen from '@/features/app-lock/AppLockScreen';
+import { sessionRepository } from '@/repositories';
+import { Bell as BellIcon, ChevronRight, FileText, LogOut, Moon as MoonIcon, Shield, User } from 'lucide-react-native';
+import React, { useState } from 'react';
+import { Alert, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
+
+const menuItems = [
+  { icon: Shield, label: 'Dados de saúde', desc: 'Perfil médico e alergias' },
+  { icon: MoonIcon, label: 'Preferências', desc: 'Tema, notificações, idioma' },
+  { icon: BellIcon, label: 'Lembretes', desc: 'Medicações e hidratação' },
+  { icon: FileText, label: 'Exportar dados', desc: 'PDF para seu médico' },
+  { icon: Shield, label: 'Segurança', desc: 'PIN e biometria' },
+];
+
+export default function ProfileScreen() {
+  const { user } = useAuth();
+  const [exportModalVisible, setExportModalVisible] = useState(false);
+  const [appLockModalVisible, setAppLockModalVisible] = useState(false);
+  const { exportPdf, loading: pdfLoading } = usePdfExport();
+
+  const handleExport = async (months: number) => {
+    const userName = user?.user_metadata?.name ?? user?.email ?? 'Paciente';
+    try {
+      await exportPdf(months, userName);
+      setExportModalVisible(false);
+    } catch {
+      setExportModalVisible(false);
+      Alert.alert('Erro', 'Não foi possível gerar o relatório. Tente novamente.');
+    }
+  };
+
+  const handleMenuPress = (label: string) => {
+    if (label === 'Exportar dados') {
+      setExportModalVisible(true);
+    } else if (label === 'Segurança') {
+      setAppLockModalVisible(true);
+    }
+  };
+
+  const handleLogout = async () => {
+    Alert.alert('Sair da conta', 'Tem certeza que deseja sair?', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Sair', style: 'destructive', onPress: async () => await sessionRepository.signOut() },
+    ]);
+  };
+
+  return (
+    <ScreenBackground>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 160, paddingHorizontal: 24, paddingTop: 40 }}
+        showsVerticalScrollIndicator={false}
+      >
+        <Animated.View entering={FadeInUp} className="mb-8">
+          <Text className="text-[28px] text-white font-epilogue-light">
+            Seu <Text className="font-epilogue-bold">Perfil</Text>
+          </Text>
+        </Animated.View>
+
+        <Animated.View entering={FadeInUp.delay(100)}>
+          <Card className="flex-row items-center mb-8">
+            <View className="w-16 h-16 rounded-full bg-accent items-center justify-center mr-4">
+              <User size={32} color="white" />
+            </View>
+            <View>
+              <Text className="text-xl text-white font-epilogue-bold">
+                {user?.user_metadata?.name ? `${user.user_metadata.name}` : 'Visitante'}
+              </Text>
+              <Text className="text-xs text-muted font-epilogue">Membro desde Mar 2026</Text>
+              <Text className="text-xs text-accent mt-1 font-epilogue-bold">Plano Premium ✨</Text>
+            </View>
+          </Card>
+        </Animated.View>
+
+        <Animated.View entering={FadeInUp.delay(200)} className="gap-3">
+          {menuItems.map((item) => (
+            <TouchableOpacity
+              key={item.label}
+              onPress={() => handleMenuPress(item.label)}
+              className="flex-row items-center p-4 rounded-2xl mb-2"
+              style={{ backgroundColor: '#232533', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.10)' }}
+            >
+              <View className="w-12 h-12 rounded-xl bg-accent/10 items-center justify-center mr-4">
+                <item.icon size={20} color={Colors.accent} />
+              </View>
+              <View className="flex-1">
+                <Text className="text-white font-epilogue-semi">{item.label}</Text>
+                <Text className="text-[11px] text-muted font-epilogue">{item.desc}</Text>
+              </View>
+              <ChevronRight size={18} color={Colors.muted} />
+            </TouchableOpacity>
+          ))}
+        </Animated.View>
+
+        <Animated.View entering={FadeInUp.delay(400)} className="mt-8 mb-10">
+          <TouchableOpacity onPress={handleLogout} className="flex-row items-center justify-center gap-2 py-4">
+            <LogOut size={20} color="#EF4444" />
+            <Text className="text-red-500 font-epilogue-bold">Sair da conta</Text>
+          </TouchableOpacity>
+        </Animated.View>
+      </ScrollView>
+
+      <ExportModal
+        visible={exportModalVisible}
+        loading={pdfLoading}
+        onClose={() => setExportModalVisible(false)}
+        onSelect={handleExport}
+      />
+      <Modal visible={appLockModalVisible} animationType="slide" onRequestClose={() => setAppLockModalVisible(false)}>
+        <AppLockScreen mode="setup" onClose={() => setAppLockModalVisible(false)} />
+      </Modal>
+    </ScreenBackground>
+  );
+}

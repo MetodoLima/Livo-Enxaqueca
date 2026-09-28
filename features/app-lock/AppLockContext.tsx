@@ -11,7 +11,7 @@ import {
   validateAppLockPin,
   type AppLockConfig,
   type PinAttempts,
-} from '@/services/appLockStore';
+} from '@/features/app-lock/appLockStore';
 import * as LocalAuthentication from 'expo-local-authentication';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';

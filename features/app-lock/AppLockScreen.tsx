@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { ActivityIndicator, SafeAreaView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { Colors } from '@/constants/Colors';
-import { useAppLock } from '@/contexts/AppLockContext';
-import { isValidPin } from '@/services/appLockStore';
+import { useAppLock } from '@/features/app-lock/AppLockContext';
+import { isValidPin } from '@/features/app-lock/appLockStore';
 
 type AppLockScreenProps = {
   mode?: 'unlock' | 'setup';
