@@ -10,6 +10,7 @@ import { useCrisis } from '@/contexts/CrisisContext';
 import { complementCrisis } from '@/services/api';
 import { crisisRepository, ehBancoLocalIndisponivel } from '@/repositories';
 import { useSync } from '@/contexts/SyncContext';
+import { elapsedSince } from '@/lib/format';
 import {
   INTENSITY_CONFIG,
   LOCATIONS,
@@ -264,19 +265,6 @@ const phaseStyles = StyleSheet.create({
   },
 });
 
-function formatTimeSince(lastDate: Date): string {
-  const now = new Date();
-  const diffMs = now.getTime() - lastDate.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 60) return `${diffMins} minuto${diffMins !== 1 ? 's' : ''}`;
-  if (diffHours < 24) return `${diffHours} hora${diffHours !== 1 ? 's' : ''}`;
-  if (diffDays === 1) return '1 dia';
-  return `${diffDays} dias`;
-}
-
 function EmptyState() {
   const router = useRouter();
   const { ultimaAtualizacao } = useSync();
@@ -289,7 +277,8 @@ function EmptyState() {
         const lastEnd = await crisisRepository.lastEndedAt();
         if (cancelled) return;
         if (lastEnd) {
-          setTimeSinceLabel(formatTimeSince(lastEnd));
+          const { value, unit } = elapsedSince(lastEnd);
+          setTimeSinceLabel(`${value} ${unit}`);
         }
       } catch {}
     })();

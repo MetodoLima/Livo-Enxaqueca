@@ -25,7 +25,16 @@ import Card from '@/components/Card';
 import ScreenBackground from '@/components/ScreenBackground';
 import { useCrisisCalendar, CrisisDay } from '@/hooks/useCrisisCalendar';
 import { useRegistroCalendar, RegistroCalendarDay } from '@/hooks/useRegistroCalendar';
-import { INTENSITY_CONFIG } from '@/types/crisis';
+import {
+  formatDuration,
+  formatSleep,
+  formatTime,
+  formatWater,
+  intensityColor,
+  intensityLabel,
+  moodEmoji,
+  moodLabel,
+} from '@/lib/format';
 import { useSync } from '@/contexts/SyncContext';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -38,49 +47,7 @@ const MONTH_NAMES = [
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ];
 
-const HUMOR_LABEL: Record<string, string> = {
-  terrible: 'Péssimo', bad: 'Ruim', 'so-so': 'Regular', okay: 'Bem', great: 'Ótimo',
-};
-const HUMOR_EMOJI: Record<string, string> = {
-  terrible: '😣', bad: '😕', 'so-so': '😐', okay: '🙂', great: '😄',
-};
-
 type Tab = 'todos' | 'crises' | 'eventos';
-
-function getIntensityColor(intensity: number | null): string {
-  if (intensity === null) return Colors.muted;
-  return INTENSITY_CONFIG.find((c) => c.value === intensity)?.color ?? Colors.muted;
-}
-
-function getIntensityLabel(intensity: number | null): string {
-  if (intensity === null) return 'Não registrada';
-  return INTENSITY_CONFIG.find((c) => c.value === intensity)?.label ?? `${intensity}/10`;
-}
-
-function formatTime(date: Date): string {
-  return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-}
-
-function formatDuration(start: Date, end: Date | null): string {
-  if (!end) return 'Em andamento';
-  const diffMs = end.getTime() - start.getTime();
-  const hours = Math.floor(diffMs / (1000 * 60 * 60));
-  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-  if (hours === 0) return `${minutes}min`;
-  if (minutes === 0) return `${hours}h`;
-  return `${hours}h ${minutes}min`;
-}
-
-function formatSono(h: number): string {
-  const horas = Math.floor(h);
-  const min = h % 1 !== 0 ? '30min' : '';
-  return min ? `${horas}h ${min}` : `${horas}h`;
-}
-
-function formatAgua(ml: number): string {
-  if (ml >= 1000) return `${(ml / 1000).toFixed(1).replace('.0', '')}L`;
-  return `${ml}ml`;
-}
 
 function PendenciaTravadaAviso() {
   const { fila } = useSync();
@@ -121,8 +88,8 @@ function PendenciaTravadaAviso() {
 
 function CrisisListItem({ crisis, index }: { crisis: CrisisDay; index: number }) {
   const router = useRouter();
-  const color = getIntensityColor(crisis.intensidadeDor);
-  const label = getIntensityLabel(crisis.intensidadeDor);
+  const color = intensityColor(crisis.intensidadeDor);
+  const label = intensityLabel(crisis.intensidadeDor);
   const duration = formatDuration(crisis.inicioCrise, crisis.fimCrise);
 
   return (
@@ -212,9 +179,9 @@ function RegistroListItem({ registro, index }: { registro: RegistroCalendarDay; 
         <View style={{ flex: 1 }}>
           {registro.humor ? (
             <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 14 }}>
-              {HUMOR_EMOJI[registro.humor]}{' '}
+              {moodEmoji(registro.humor)}{' '}
               <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 12 }}>
-                {HUMOR_LABEL[registro.humor]}
+                {moodLabel(registro.humor)}
               </Text>
             </Text>
           ) : (
@@ -224,8 +191,8 @@ function RegistroListItem({ registro, index }: { registro: RegistroCalendarDay; 
           )}
           <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 12, marginTop: 3 }}>
             {[
-              registro.horasSono !== null && `${formatSono(registro.horasSono)} sono`,
-              registro.mlAgua !== null && `${formatAgua(registro.mlAgua)} água`,
+              registro.horasSono !== null && `${formatSleep(registro.horasSono)} sono`,
+              registro.mlAgua !== null && `${formatWater(registro.mlAgua)} água`,
             ].filter(Boolean).join(' · ') || 'Sem dados de rotina'}
           </Text>
         </View>
@@ -419,7 +386,7 @@ export default function CalendarScreen() {
                   const maxIntensity = hasCrisisDay
                     ? Math.max(...(crisisByDay[day] ?? []).map((c) => c.intensidadeDor ?? 0))
                     : null;
-                  const crisisColor = maxIntensity !== null ? getIntensityColor(maxIntensity) : null;
+                  const crisisColor = maxIntensity !== null ? intensityColor(maxIntensity) : null;
 
                   return (
                     <TouchableOpacity
@@ -512,7 +479,7 @@ export default function CalendarScreen() {
               </View>
               {avgIntensity !== null && (
                 <View style={{ flex: 1, backgroundColor: '#1E3A52', borderRadius: 16, padding: 16, alignItems: 'center' }}>
-                  <Text style={{ color: getIntensityColor(Math.round(parseFloat(avgIntensity))), fontFamily: 'Epilogue_700Bold', fontSize: 22 }}>
+                  <Text style={{ color: intensityColor(Math.round(parseFloat(avgIntensity))), fontFamily: 'Epilogue_700Bold', fontSize: 22 }}>
                     {avgIntensity}
                   </Text>
                   <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 11, marginTop: 2 }}>intensidade média</Text>

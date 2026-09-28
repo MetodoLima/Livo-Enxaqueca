@@ -10,40 +10,14 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Clock, ChevronDown, ChevronUp, Activity, Pill, MapPin, FileText } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Colors } from '@/constants/Colors';
-import { INTENSITY_CONFIG } from '@/types/crisis';
+import {
+  formatDateTime,
+  formatDuration,
+  intensityColor,
+  intensityEmoji,
+  intensityLabel,
+} from '@/lib/format';
 import { CrisisPhase } from '@/hooks/useCrisisCalendar';
-
-function getIntensityColor(intensity: number | null): string {
-  if (intensity === null) return Colors.muted;
-  return INTENSITY_CONFIG.find((c) => c.value === intensity)?.color ?? Colors.muted;
-}
-
-function getIntensityLabel(intensity: number | null): string {
-  if (intensity === null) return 'Não registrada';
-  return INTENSITY_CONFIG.find((c) => c.value === intensity)?.label ?? `${intensity}/10`;
-}
-
-function getIntensityEmoji(intensity: number | null): string {
-  if (intensity === null) return '❓';
-  return INTENSITY_CONFIG.find((c) => c.value === intensity)?.emoji ?? '😐';
-}
-
-function formatDateTime(date: Date): string {
-  return date.toLocaleString('pt-BR', {
-    day: '2-digit', month: 'long', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  });
-}
-
-function formatDuration(start: Date, end: Date | null): string {
-  if (!end) return 'Em andamento';
-  const diffMs = end.getTime() - start.getTime();
-  const hours = Math.floor(diffMs / (1000 * 60 * 60));
-  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-  if (hours === 0) return `${minutes} minutos`;
-  if (minutes === 0) return `${hours}h`;
-  return `${hours}h ${minutes}min`;
-}
 
 function formatNivelIncapacidade(nivel: string | null): string {
   const map: Record<string, string> = { leve: 'Leve', moderado: 'Moderado', severo: 'Severo' };
@@ -73,9 +47,9 @@ function Tag({ label, color, filled = false }: { label: string; color?: string; 
 
 function PhaseCard({ phase, index, total }: { phase: CrisisPhase; index: number; total: number }) {
   const [expanded, setExpanded] = useState(false);
-  const color = getIntensityColor(phase.intensidadeDor);
-  const emoji = getIntensityEmoji(phase.intensidadeDor);
-  const label = getIntensityLabel(phase.intensidadeDor);
+  const color = intensityColor(phase.intensidadeDor);
+  const emoji = intensityEmoji(phase.intensidadeDor);
+  const label = intensityLabel(phase.intensidadeDor);
   const hasDetails =
     phase.regiaoDor || phase.lado || phase.sintomas.length > 0 ||
     phase.medicamentos.length > 0 || phase.resumo;
@@ -218,9 +192,9 @@ export default function CrisisDetailScreen() {
   }
 
   const maxIntensidade = crisis.intensidadeDor;
-  const color = getIntensityColor(maxIntensidade);
-  const label = getIntensityLabel(maxIntensidade);
-  const emoji = getIntensityEmoji(maxIntensidade);
+  const color = intensityColor(maxIntensidade);
+  const label = intensityLabel(maxIntensidade);
+  const emoji = intensityEmoji(maxIntensidade);
   const fases: CrisisPhase[] = crisis.fases;
 
   return (
