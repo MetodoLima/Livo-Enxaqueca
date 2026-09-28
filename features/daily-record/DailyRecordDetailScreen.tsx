@@ -47,7 +47,7 @@ function Row({ label, value, valueColor }: { label: string; value: string; value
   );
 }
 
-export default function RegistroDetailScreen() {
+export default function DailyRecordDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string; data: string }>();
 

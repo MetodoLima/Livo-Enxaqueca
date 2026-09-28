@@ -1,8 +1,8 @@
 import React from 'react';
 import { Modal, View } from 'react-native';
-import AppLockScreen from '@/components/AppLockScreen';
+import AppLockScreen from '@/features/app-lock/AppLockScreen';
 import { Colors } from '@/constants/Colors';
-import { useAppLock } from '@/contexts/AppLockContext';
+import { useAppLock } from '@/features/app-lock/AppLockContext';
 
 export function AppLockGate({ children }: { children: React.ReactNode }) {
   const { status, privacyCover } = useAppLock();

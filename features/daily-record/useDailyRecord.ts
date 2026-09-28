@@ -12,7 +12,7 @@ export interface RegistroEvento {
   humor: HumorId | null;
 }
 
-export function useRegistroEvento(data: string) {
+export function useDailyRecord(data: string) {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [naFila, setNaFila] = useState(false);

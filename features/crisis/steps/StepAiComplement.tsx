@@ -14,7 +14,7 @@ import StepFooter from './StepFooter';
 import { complementCrisis } from '@/services/api';
 import type { CrisisRecord, AiComplement } from '@/types/crisis';
 import { crisisToMigraineStructured, mergeAiResultIntoCrisis } from '@/types/crisis';
-import PulsingMic from '@/components/PulsingMic';
+import PulsingMic from '@/components/ui/PulsingMic';
 import { audioAvailable, useAudioRecorder } from '@/hooks/useAudioRecorder';
 
 interface StepAiComplementProps {
