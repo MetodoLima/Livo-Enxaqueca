@@ -3,6 +3,7 @@ import { medicationLabel, symptomLabel } from '@/types/crisis';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { useState } from 'react';
+import { formatDuration } from '@/lib/format';
 
 const REGION_LABELS: Record<string, string> = {
   frontal: 'Frontal',
@@ -28,16 +29,6 @@ function formatDateTime(dateStr: string) {
     hour: '2-digit',
     minute: '2-digit',
   });
-}
-
-function formatDuration(start: string, end: string | null): string {
-  if (!end) return 'Em andamento';
-  const diff = new Date(end).getTime() - new Date(start).getTime();
-  const hours = Math.floor(diff / (1000 * 60 * 60));
-  const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-  if (hours === 0) return `${minutes}min`;
-  if (minutes === 0) return `${hours}h`;
-  return `${hours}h ${minutes}min`;
 }
 
 function intensityColor(v: number): string {
@@ -163,7 +154,7 @@ function buildHtml(crises: any[], userName: string, months: number): string {
         <div class="crisis-header">
           <div>
             <div class="crisis-date">${formatDateTime(c.inicio_crise)}</div>
-            <div class="crisis-duration">Duração: ${formatDuration(c.inicio_crise, c.fim_crise)}</div>
+            <div class="crisis-duration">Duração: ${formatDuration(new Date(c.inicio_crise), c.fim_crise ? new Date(c.fim_crise) : null)}</div>
           </div>
           ${maxIntensity >= 0 ? `<div class="intensity-badge" style="background:${color}">Intensidade ${maxIntensity}/10</div>` : ''}
         </div>

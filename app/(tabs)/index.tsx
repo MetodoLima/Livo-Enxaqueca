@@ -35,35 +35,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRegistroEvento } from '@/hooks/useRegistroEvento';
 import { crisisRepository } from '@/repositories';
 import { useSync } from '@/contexts/SyncContext';
-
-function toDateString(date: Date): string {
-  return date.toISOString().split('T')[0];
-}
-
-function formatSono(h: number): string {
-  if (h === 0) return '0h';
-  const horas = Math.floor(h);
-  const min = h % 1 !== 0 ? '30min' : '';
-  return min ? `${horas}h ${min}` : `${horas}h`;
-}
-
-function formatAgua(ml: number): string {
-  if (ml === 0) return '0ml';
-  if (ml >= 1000) return `${(ml / 1000).toFixed(1).replace('.0', '')}L`;
-  return `${ml}ml`;
-}
-
-function formatTimeSinceHome(lastDate: Date): { number: string; label: string } {
-  const now = new Date();
-  const diffMs = now.getTime() - lastDate.getTime();
-  const diffMins = Math.floor(diffMs / 60000);
-  const diffHours = Math.floor(diffMs / 3600000);
-  const diffDays = Math.floor(diffMs / 86400000);
-
-  if (diffMins < 60) return { number: String(diffMins), label: `minuto${diffMins !== 1 ? 's' : ''} sem crises` };
-  if (diffHours < 24) return { number: String(diffHours), label: `hora${diffHours !== 1 ? 's' : ''} sem crises` };
-  return { number: String(diffDays), label: `dia${diffDays !== 1 ? 's' : ''} sem crises` };
-}
+import { elapsedSince, formatSleep, formatWater, toLocalDateString } from '@/lib/format';
 
 export default function HomeScreen() {
   const { user } = useAuth();
@@ -83,7 +55,10 @@ export default function HomeScreen() {
       try {
         const lastEnd = await crisisRepository.lastEndedAt();
         if (cancelled) return;
-        if (lastEnd) setStreakInfo(formatTimeSinceHome(lastEnd));
+        if (lastEnd) {
+          const { value, unit } = elapsedSince(lastEnd);
+          setStreakInfo({ number: String(value), label: `${unit} sem crises` });
+        }
 
         const now = new Date();
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -100,7 +75,7 @@ export default function HomeScreen() {
     return () => { cancelled = true; };
   }, [ultimaAtualizacao]);
 
-  const today = toDateString(new Date());
+  const today = toLocalDateString(new Date());
   const { saving, saved, naFila, salvar } = useRegistroEvento(today);
 
   const now = new Date();
@@ -233,7 +208,7 @@ export default function HomeScreen() {
                       <Text style={styles.sliderLabel}>Sono</Text>
                     </View>
                     <Text style={[styles.sliderValue, { color: sonoLocal > 0 ? (Colors.purple ?? '#8B6FC0') : Colors.muted }]}>
-                      {sonoLocal > 0 ? formatSono(sonoLocal) : 'Não registrado'}
+                      {sonoLocal > 0 ? formatSleep(sonoLocal) : 'Não registrado'}
                     </Text>
                   </View>
                   <Slider
@@ -261,7 +236,7 @@ export default function HomeScreen() {
                       <Text style={styles.sliderLabel}>Água</Text>
                     </View>
                     <Text style={[styles.sliderValue, { color: aguaLocal > 0 ? Colors.accent : Colors.muted }]}>
-                      {aguaLocal > 0 ? formatAgua(aguaLocal) : 'Não registrado'}
+                      {aguaLocal > 0 ? formatWater(aguaLocal) : 'Não registrado'}
                     </Text>
                   </View>
                   <Slider

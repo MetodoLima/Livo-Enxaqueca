@@ -1,5 +1,6 @@
 import { crisisRepository, type Crisis } from '@/repositories';
 import { analyzeInsights, CriseInsightRecord, QualitativeAnalysis } from '@/services/api';
+import { toLocalDateString } from '@/lib/format';
 import { medicationLabel, symptomLabel } from '@/types/crisis';
 import { useCallback, useState } from 'react';
 
@@ -11,7 +12,7 @@ function serializeCrises(crises: Crisis[]): CriseInsightRecord[] {
       inicio && fim
         ? Math.round(((fim.getTime() - inicio.getTime()) / (1000 * 60 * 60)) * 10) / 10
         : null;
-    const data = inicio ? inicio.toISOString().split('T')[0] : 'data desconhecida';
+    const data = inicio ? toLocalDateString(inicio) : 'data desconhecida';
 
     if (c.fases.length === 0) return [];
 
