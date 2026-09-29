@@ -117,8 +117,8 @@ export default function Register() {
   };
 
   return (
-    <KeyboardAvoidingView 
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'} 
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       className="flex-1 bg-bg-dark"
     >
       <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} className="px-6">
@@ -131,7 +131,7 @@ export default function Register() {
           </View>
 
           <View className="mb-6">
-            <Text className="text-soft font-epilogue-semi mb-2 ml-1">Nome Completo</Text>
+            <Text className="text-soft font-epilogue-semi mb-2 ml-1">Nome</Text>
             <TextInput
               className="w-full bg-card-dark text-soft font-epilogue p-4 rounded-2xl border border-[#334155]"
               placeholder="Como quer ser chamado?"
