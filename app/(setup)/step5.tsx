@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { useSetup } from '@/contexts/SetupContext';
+import { SetupBackButton } from '@/components/SetupBackButton';
 import {
     ScrollView,
     StatusBar,
@@ -82,6 +83,7 @@ export default function Step5Jejum() {
                 showsVerticalScrollIndicator={false}
             >
                 <View style={{ paddingHorizontal: 24, paddingTop: 56, paddingBottom: 8 }}>
+                    <SetupBackButton fallbackRoute="/(setup)/step4" />
 
                     <View style={{ flexDirection: 'row', gap: 6, marginBottom: 32 }}>
                         {Array.from({ length: TOTAL_STEPS }).map((_, i) => (

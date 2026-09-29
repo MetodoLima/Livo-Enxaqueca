@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useSetup } from '@/contexts/SetupContext';
+import { SetupBackButton } from '@/components/SetupBackButton';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -152,6 +153,7 @@ export default function Step2Premonitoria() {
         showsVerticalScrollIndicator={false}
       >
         <View style={{ paddingHorizontal: 24, paddingTop: 56, paddingBottom: 8 }}>
+          <SetupBackButton fallbackRoute="/(setup)/step1" />
 
           <View style={{ flexDirection: 'row', gap: 6, marginBottom: 32 }}>
             {Array.from({ length: TOTAL_STEPS }).map((_, i) => (

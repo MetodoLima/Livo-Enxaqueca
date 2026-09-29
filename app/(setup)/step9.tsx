@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSetup } from '@/contexts/SetupContext';
+import { SetupBackButton } from '@/components/SetupBackButton';
 import {
     sessionRepository,
     setupRepository,
@@ -254,6 +255,7 @@ export default function Step9Impacto() {
                 showsVerticalScrollIndicator={false}
             >
                 <View style={{ paddingHorizontal: 24, paddingTop: 56, paddingBottom: 8 }}>
+                    <SetupBackButton fallbackRoute="/(setup)/step8" />
 
                     <View style={{ flexDirection: 'row', gap: 6, marginBottom: 32 }}>
                         {Array.from({ length: TOTAL_STEPS }).map((_, i) => (

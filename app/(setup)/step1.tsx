@@ -8,6 +8,7 @@ import {
   View,
 } from 'react-native';
 import { useSetup } from '@/contexts/SetupContext';
+import { SetupBackButton } from '@/components/SetupBackButton';
 
 type OptionValue = '2' | '7' | '12' | '16' | 'unknown';
 
@@ -90,6 +91,7 @@ export default function Step1Fenotipagem() {
         showsVerticalScrollIndicator={false}
       >
         <View style={{ paddingHorizontal: 24, paddingTop: 56, paddingBottom: 8 }}>
+          <SetupBackButton fallbackRoute="/(setup)/intro" />
 
           <View style={{ flexDirection: 'row', gap: 6, marginBottom: 32 }}>
             {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
