@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -9,33 +9,20 @@ import {
   Platform,
   UIManager,
 } from 'react-native';
-import {
-  ChevronLeft,
-  ChevronRight,
-  AlertCircle,
-  ChevronRight as ArrowRight,
-  Moon,
-  Droplets,
-  Clock,
-} from 'lucide-react-native';
-import Animated, { FadeInUp, FadeInDown } from 'react-native-reanimated';
-import { useRouter } from 'expo-router';
+import { ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
 import { Colors } from '@/constants/Colors';
 import Card from '@/components/ui/Card';
 import ScreenBackground from '@/components/ui/ScreenBackground';
-import { useCrisisCalendar, CrisisDay } from '@/features/crisis/useCrisisCalendar';
-import { useDailyRecordCalendar, RegistroCalendarDay } from '@/features/daily-record/useDailyRecordCalendar';
-import {
-  formatDuration,
-  formatSleep,
-  formatTime,
-  formatWater,
-  intensityColor,
-  intensityLabel,
-  moodEmoji,
-  moodLabel,
-} from '@/lib/format';
-import { useSync } from '@/contexts/SyncContext';
+import { useCrisisCalendar } from '@/features/crisis/useCrisisCalendar';
+import { useDailyRecordCalendar } from '@/features/daily-record/useDailyRecordCalendar';
+import { intensityColor } from '@/lib/format';
+import type { CalendarTab, TimelineEntry } from '@/features/calendar/types';
+import StuckQueueNotice from '@/features/calendar/components/StuckQueueNotice';
+import CrisisListItem from '@/features/calendar/components/CrisisListItem';
+import DailyRecordListItem from '@/features/calendar/components/DailyRecordListItem';
+import CalendarTabBar from '@/features/calendar/components/CalendarTabBar';
+import TimelineItem from '@/features/calendar/components/TimelineItem';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
   UIManager.setLayoutAnimationEnabledExperimental(true);
@@ -47,236 +34,12 @@ const MONTH_NAMES = [
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ];
 
-type Tab = 'todos' | 'crises' | 'eventos';
-
-function PendenciaTravadaAviso() {
-  const { fila } = useSync();
-
-  if (!fila.travado) return null;
-
-  return (
-    <View
-      style={{
-        flexDirection: 'row',
-        alignItems: 'center',
-        gap: 10,
-        marginBottom: 20,
-        paddingVertical: 12,
-        paddingHorizontal: 14,
-        borderRadius: 14,
-        backgroundColor: 'rgba(232, 144, 79, 0.10)',
-        borderLeftWidth: 3,
-        borderLeftColor: Colors.orange,
-      }}
-    >
-      <Clock size={16} color={Colors.orange} />
-      <Text
-        style={{
-          flex: 1,
-          color: Colors.soft,
-          fontFamily: 'Epilogue_400Regular',
-          fontSize: 13,
-          lineHeight: 18,
-        }}
-      >
-        Alguns registros estão só neste celular. Mantenha o aplicativo instalado até eles
-        aparecerem sem o relógio.
-      </Text>
-    </View>
-  );
-}
-
-function CrisisListItem({ crisis, index }: { crisis: CrisisDay; index: number }) {
-  const router = useRouter();
-  const color = intensityColor(crisis.intensidadeDor);
-  const label = intensityLabel(crisis.intensidadeDor);
-  const duration = formatDuration(crisis.inicioCrise, crisis.fimCrise);
-
-  return (
-    <Animated.View entering={FadeInDown.delay(index * 60).duration(250)}>
-      <TouchableOpacity
-        onPress={() => router.push({
-          pathname: '/crisis/[id]',
-          params: {
-            id: String(crisis.id),
-            data: JSON.stringify({
-              ...crisis,
-              inicioCrise: crisis.inicioCrise.toISOString(),
-              fimCrise: crisis.fimCrise ? crisis.fimCrise.toISOString() : null,
-            }),
-          },
-        })}
-        activeOpacity={0.7}
-        style={{
-          flexDirection: 'row', alignItems: 'center',
-          backgroundColor: '#112236', borderRadius: 16,
-          marginBottom: 10, padding: 16,
-          borderLeftWidth: 3, borderLeftColor: color,
-        }}
-      >
-        <View style={{ marginRight: 14 }}>
-          <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 11 }}>INÍCIO</Text>
-          <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 15, marginTop: 2 }}>
-            {formatTime(crisis.inicioCrise)}
-          </Text>
-        </View>
-        <View style={{ width: 1, height: 36, backgroundColor: '#1E3A52', marginRight: 14 }} />
-        <View style={{ flex: 1 }}>
-          <Text style={{ color, fontFamily: 'Epilogue_700Bold', fontSize: 14 }}>
-            {crisis.intensidadeDor !== null ? `${crisis.intensidadeDor}/10` : '—'}{' '}
-            <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 12 }}>{label}</Text>
-          </Text>
-          <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 12, marginTop: 3 }}>
-            {duration}
-            {crisis.sintomas.length > 0 && ` · ${crisis.sintomas.length} sintoma${crisis.sintomas.length > 1 ? 's' : ''}`}
-          </Text>
-        </View>
-        {!crisis.enviado && (
-          <Clock
-            size={14}
-            color={Colors.muted}
-            style={{ marginRight: 8 }}
-            accessibilityLabel="Ainda não enviado, guardado neste aparelho"
-          />
-        )}
-        <ArrowRight size={16} color={Colors.muted} />
-      </TouchableOpacity>
-    </Animated.View>
-  );
-}
-
-function RegistroListItem({ registro, index }: { registro: RegistroCalendarDay; index: number }) {
-  const router = useRouter();
-  const hora = new Date(registro.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-
-  return (
-    <Animated.View entering={FadeInDown.delay(index * 60).duration(250)}>
-      <TouchableOpacity
-        onPress={() => router.push({
-          pathname: '/daily-record/[id]',
-          params: {
-            id: String(registro.id),
-            data: JSON.stringify(registro),
-          },
-        })}
-        activeOpacity={0.7}
-        style={{
-          flexDirection: 'row', alignItems: 'center',
-          backgroundColor: '#112236', borderRadius: 16,
-          marginBottom: 10, padding: 16,
-          borderLeftWidth: 3, borderLeftColor: Colors.accent,
-        }}
-      >
-        <View style={{ marginRight: 14 }}>
-          <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 11 }}>HORA</Text>
-          <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 15, marginTop: 2 }}>
-            {hora}
-          </Text>
-        </View>
-
-        <View style={{ width: 1, height: 36, backgroundColor: '#1E3A52', marginRight: 14 }} />
-
-        <View style={{ flex: 1 }}>
-          {registro.humor ? (
-            <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 14 }}>
-              {moodEmoji(registro.humor)}{' '}
-              <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 12 }}>
-                {moodLabel(registro.humor)}
-              </Text>
-            </Text>
-          ) : (
-            <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 13 }}>
-              Sem humor registrado
-            </Text>
-          )}
-          <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 12, marginTop: 3 }}>
-            {[
-              registro.horasSono !== null && `${formatSleep(registro.horasSono)} sono`,
-              registro.mlAgua !== null && `${formatWater(registro.mlAgua)} água`,
-            ].filter(Boolean).join(' · ') || 'Sem dados de rotina'}
-          </Text>
-        </View>
-
-        {!registro.enviado && (
-          <Clock
-            size={14}
-            color={Colors.muted}
-            style={{ marginRight: 8 }}
-            accessibilityLabel="Ainda não enviado, guardado neste aparelho"
-          />
-        )}
-        <ArrowRight size={16} color={Colors.muted} />
-      </TouchableOpacity>
-    </Animated.View>
-  );
-}
-
-function TabBar({ active, onChange, hasCrises, hasRegistro }: {
-  active: Tab;
-  onChange: (t: Tab) => void;
-  hasCrises: boolean;
-  hasRegistro: boolean;
-}) {
-  const tabs: { key: Tab; label: string }[] = [
-    { key: 'todos', label: 'Tudo' },
-    { key: 'crises', label: 'Crises' },
-    { key: 'eventos', label: 'Eventos' },
-  ];
-
-  return (
-    <View style={{
-      flexDirection: 'row', backgroundColor: '#0F1E2E',
-      borderRadius: 14, padding: 4, marginBottom: 16,
-    }}>
-      {tabs.map((tab) => {
-        const isActive = active === tab.key;
-        const hasData = tab.key === 'crises' ? hasCrises : tab.key === 'eventos' ? hasRegistro : hasCrises || hasRegistro;
-        return (
-          <TouchableOpacity
-            key={tab.key}
-            onPress={() => onChange(tab.key)}
-            style={{
-              flex: 1, paddingVertical: 8, borderRadius: 10,
-              alignItems: 'center', justifyContent: 'center',
-              backgroundColor: isActive ? Colors.accent : 'transparent',
-              flexDirection: 'row', gap: 6,
-            }}
-          >
-            <Text style={{
-              color: isActive ? 'white' : Colors.muted,
-              fontFamily: isActive ? 'Epilogue_700Bold' : 'Epilogue_400Regular',
-              fontSize: 13,
-            }}>
-              {tab.label}
-            </Text>
-            {hasData && !isActive && (
-              <View style={{
-                width: 6, height: 6, borderRadius: 3,
-                backgroundColor: tab.key === 'crises' ? '#EF4444' : Colors.accent,
-              }} />
-            )}
-          </TouchableOpacity>
-        );
-      })}
-    </View>
-  );
-}
-
-type TimelineEntry =
-  | { type: 'crise'; time: Date; data: CrisisDay }
-  | { type: 'registro'; time: Date; data: RegistroCalendarDay };
-
-function TimelineItem({ entry, index }: { entry: TimelineEntry; index: number }) {
-  if (entry.type === 'crise') return <CrisisListItem crisis={entry.data} index={index} />;
-  return <RegistroListItem registro={entry.data} index={index} />;
-}
-
 export default function CalendarScreen() {
   const today = new Date();
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState<number | null>(null);
-  const [activeTab, setActiveTab] = useState<Tab>('todos');
+  const [activeTab, setActiveTab] = useState<CalendarTab>('todos');
 
   const { crisisByDay, loading: loadingCrises, error: errorCrises } = useCrisisCalendar(year, month);
   const { registroByDay, loading: loadingRegistro, error: errorRegistro } = useDailyRecordCalendar(year, month);
@@ -338,7 +101,7 @@ export default function CalendarScreen() {
             Seu <Text style={{ fontFamily: 'Epilogue_700Bold' }}>Histórico</Text>
           </Text>
 
-          <PendenciaTravadaAviso />
+          <StuckQueueNotice />
 
           <Card style={{ marginBottom: 24 }}>
             <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
@@ -511,7 +274,7 @@ export default function CalendarScreen() {
               </View>
 
               {(hasCrises || hasRegistro) && (
-                <TabBar
+                <CalendarTabBar
                   active={activeTab}
                   onChange={setActiveTab}
                   hasCrises={hasCrises}
@@ -551,7 +314,7 @@ export default function CalendarScreen() {
               ) : (
                 hasRegistro ? (
                   selectedRegistros.map((r, i) => (
-                    <RegistroListItem key={r.id} registro={r} index={i} />
+                    <DailyRecordListItem key={r.id} registro={r} index={i} />
                   ))
                 ) : (
                   <View style={{

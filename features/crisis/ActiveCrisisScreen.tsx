@@ -1,16 +1,10 @@
 import Card from '@/components/ui/Card';
-import {
-  IntensityEditor,
-  LocationEditor,
-  MedicationsEditor,
-  SymptomsEditor,
-} from '@/features/crisis/components/EditModals';
+import { IntensityEditor, LocationEditor, MedicationsEditor, SymptomsEditor } from '@/features/crisis/components/EditModals';
 import { Colors } from '@/constants/Colors';
 import { useCrisis } from '@/contexts/CrisisContext';
 import { complementCrisis } from '@/services/api';
 import { crisisRepository, ehBancoLocalIndisponivel } from '@/repositories';
-import { useSync } from '@/contexts/SyncContext';
-import { elapsedSince } from '@/lib/format';
+import { tagStyles } from '@/features/crisis/components/tagStyles';
 import {
   INTENSITY_CONFIG,
   LOCATIONS,
@@ -19,28 +13,14 @@ import {
   SYMPTOMS,
   crisisToMigraineStructured,
   mergeAiResultIntoCrisis,
-  type CrisisRecord,
 } from '@/types/crisis';
 import PulsingMic from '@/components/ui/PulsingMic';
 import { audioAvailable, useAudioRecorder } from '@/hooks/useAudioRecorder';
 import { useRouter } from 'expo-router';
-import {
-  Check,
-  ChevronDown,
-  ChevronRight,
-  Clock,
-  Mic,
-  Plus,
-  Send,
-  Trash2,
-  X,
-  Zap,
-} from 'lucide-react-native';
-import React, { useCallback, useEffect, useState } from 'react';
+import { Check, ChevronRight, Clock, Mic, Plus, Send, X, Zap } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Alert,
-  Image,
   ScrollView,
   StyleSheet,
   Text,
@@ -50,290 +30,8 @@ import {
 } from 'react-native';
 import ScreenBackground from '@/components/ui/ScreenBackground';
 import Animated, { FadeInUp, ZoomIn } from 'react-native-reanimated';
-
-function PhaseCard({
-  phase,
-  index,
-  onDelete,
-}: {
-  phase: CrisisRecord;
-  index: number;
-  onDelete: () => void;
-}) {
-  const [expanded, setExpanded] = useState(false);
-
-  const confirmDelete = useCallback(() => {
-    Alert.alert(
-      'Remover fase?',
-      `A Fase ${index + 1} será removida do registro.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Remover', style: 'destructive', onPress: onDelete },
-      ],
-    );
-  }, [index, onDelete]);
-
-  const fmtTime = (d: Date) =>
-    d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-
-  const intensityConfig = phase.intensity !== null ? INTENSITY_CONFIG[phase.intensity] : null;
-  const locationData = LOCATIONS.find((l) => l.id === phase.location);
-  const sideData = SIDES.find((s) => s.id === phase.side);
-  const symptomNames = phase.symptoms
-    .map((id) => SYMPTOMS.find((s) => s.id === id))
-    .filter(Boolean);
-  const medicationNames = phase.medications
-    .map((id) => MEDICATIONS.find((m) => m.id === id))
-    .filter(Boolean);
-
-  const timeRange = `${fmtTime(phase.startTime)} – ${
-    phase.endTime ? fmtTime(phase.endTime) : 'Em andamento'
-  }`;
-
-  const collapsedDetail = [
-    locationData ? `${locationData.emoji} ${locationData.label}` : null,
-    sideData?.label,
-  ]
-    .filter(Boolean)
-    .join(' · ');
-
-  return (
-    <Card className="mb-3">
-      <TouchableOpacity
-        onPress={() => setExpanded((v) => !v)}
-        activeOpacity={0.7}
-        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
-      >
-        <View style={{ flex: 1 }}>
-          <Text style={phaseStyles.label}>Fase {index + 1}</Text>
-          <Text style={phaseStyles.timeRange}>{timeRange}</Text>
-          {collapsedDetail ? (
-            <Text style={phaseStyles.collapsedDetail}>{collapsedDetail}</Text>
-          ) : null}
-        </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginLeft: 12 }}>
-          {intensityConfig && (
-            <Text style={[phaseStyles.intensityBadge, { color: intensityConfig.color }]}>
-              {phase.intensity}/10
-            </Text>
-          )}
-          <ChevronDown
-            size={18}
-            color={Colors.muted}
-            style={{ transform: [{ rotate: expanded ? '180deg' : '0deg' }] }}
-          />
-        </View>
-      </TouchableOpacity>
-
-      {expanded && (
-        <View style={phaseStyles.body}>
-          {intensityConfig && (
-            <View style={phaseStyles.row}>
-              <Text style={phaseStyles.rowLabel}>Intensidade</Text>
-              <Text style={[phaseStyles.rowValue, { color: intensityConfig.color }]}>
-                {phase.intensity}/10 · {intensityConfig.label}
-              </Text>
-            </View>
-          )}
-          {(locationData || sideData) && (
-            <View style={{ flexDirection: 'row', gap: 32, marginBottom: 10 }}>
-              {locationData && (
-                <View>
-                  <Text style={phaseStyles.rowLabel}>Localização</Text>
-                  <Text style={phaseStyles.rowValue}>
-                    {locationData.emoji} {locationData.label}
-                  </Text>
-                </View>
-              )}
-              {sideData && (
-                <View>
-                  <Text style={phaseStyles.rowLabel}>Lado</Text>
-                  <Text style={phaseStyles.rowValue}>{sideData.label}</Text>
-                </View>
-              )}
-            </View>
-          )}
-          {symptomNames.length > 0 && (
-            <View style={{ marginBottom: 10 }}>
-              <Text style={[phaseStyles.rowLabel, { marginBottom: 6 }]}>Sintomas</Text>
-              <View style={styles.tagRow}>
-                {symptomNames.map(
-                  (s) =>
-                    s && (
-                      <View key={s.id} style={styles.tag}>
-                        <Text style={styles.tagEmoji}>{s.emoji}</Text>
-                        <Text style={styles.tagText}>{s.label}</Text>
-                      </View>
-                    ),
-                )}
-              </View>
-            </View>
-          )}
-          {(medicationNames.length > 0 || phase.customMedications.length > 0) && (
-            <View style={{ marginBottom: 14 }}>
-              <Text style={[phaseStyles.rowLabel, { marginBottom: 6 }]}>Medicamentos</Text>
-              <View style={styles.tagRow}>
-                {medicationNames.map(
-                  (m) =>
-                    m && (
-                      <View key={m.id} style={[styles.tag, { backgroundColor: `${Colors.accent}15` }]}>
-                        <Text style={styles.tagEmoji}>{m.emoji}</Text>
-                        <Text style={[styles.tagText, { color: Colors.accent }]}>{m.label}</Text>
-                      </View>
-                    ),
-                )}
-                {phase.customMedications.map((name) => (
-                  <View key={name} style={[styles.tag, { backgroundColor: `${Colors.accent}15` }]}>
-                    <Text style={styles.tagEmoji}>💊</Text>
-                    <Text style={[styles.tagText, { color: Colors.accent }]}>{name}</Text>
-                  </View>
-                ))}
-              </View>
-            </View>
-          )}
-
-          <TouchableOpacity onPress={confirmDelete} style={phaseStyles.deleteBtn}>
-            <Trash2 size={14} color="#EF4444" />
-            <Text style={phaseStyles.deleteBtnText}>Remover esta fase</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </Card>
-  );
-}
-
-const phaseStyles = StyleSheet.create({
-  label: {
-    fontSize: 10,
-    fontFamily: 'Epilogue_700Bold',
-    color: Colors.muted,
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-    marginBottom: 2,
-  },
-  timeRange: {
-    fontSize: 15,
-    fontFamily: 'Epilogue_600SemiBold',
-    color: 'white',
-  },
-  collapsedDetail: {
-    fontSize: 12,
-    fontFamily: 'Epilogue_400Regular',
-    color: Colors.muted,
-    marginTop: 3,
-  },
-  intensityBadge: {
-    fontSize: 13,
-    fontFamily: 'Epilogue_700Bold',
-  },
-  body: {
-    marginTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
-    paddingTop: 14,
-  },
-  row: {
-    marginBottom: 10,
-  },
-  rowLabel: {
-    fontSize: 10,
-    fontFamily: 'Epilogue_700Bold',
-    color: Colors.muted,
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-  },
-  rowValue: {
-    fontSize: 14,
-    fontFamily: 'Epilogue_600SemiBold',
-    color: 'white',
-    marginTop: 2,
-  },
-  deleteBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    alignSelf: 'flex-start',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-    backgroundColor: 'rgba(239,68,68,0.08)',
-  },
-  deleteBtnText: {
-    fontSize: 12,
-    fontFamily: 'Epilogue_600SemiBold',
-    color: '#EF4444',
-  },
-});
-
-function EmptyState() {
-  const router = useRouter();
-  const { ultimaAtualizacao } = useSync();
-  const [timeSinceLabel, setTimeSinceLabel] = useState<string | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    (async () => {
-      try {
-        const lastEnd = await crisisRepository.lastEndedAt();
-        if (cancelled) return;
-        if (lastEnd) {
-          const { value, unit } = elapsedSince(lastEnd);
-          setTimeSinceLabel(`${value} ${unit}`);
-        }
-      } catch {}
-    })();
-    return () => { cancelled = true; };
-  }, [ultimaAtualizacao]);
-
-  return (
-    <ScreenBackground>
-      <View style={styles.emptyContainer}>
-        <Animated.View entering={FadeInUp.delay(100)} style={styles.emptyMascotWrapper}>
-          <Image
-            source={require('../../assets/images/LivoMeditar.png')}
-            style={styles.emptyMascotImage}
-            resizeMode="contain"
-          />
-        </Animated.View>
-
-        <Animated.View entering={FadeInUp.delay(250)}>
-          <Text style={styles.emptyTitle}>Tudo tranquilo!</Text>
-          {timeSinceLabel ? (
-            <Text style={styles.emptyHighlight}>
-              Você está há{' '}
-              <Text style={{ color: Colors.accent }}>{timeSinceLabel}</Text>
-              {' '}sem crises
-            </Text>
-          ) : (
-            <Text style={styles.emptyHighlight}>
-              Nenhuma crise registrada
-            </Text>
-          )}
-          <Text style={styles.emptySub}>
-            Continue assim! Caso tenha uma crise, registre aqui para acompanhar seu progresso.
-          </Text>
-        </Animated.View>
-
-        <Animated.View entering={FadeInUp.delay(400)}>
-          <TouchableOpacity
-            onPress={() => router.push('/record-crisis')}
-            style={styles.emptyBtn}
-          >
-            <Zap size={18} color="white" fill="white" />
-            <Text style={styles.emptyBtnText}>Registrar Crise</Text>
-          </TouchableOpacity>
-        </Animated.View>
-
-        <Animated.View entering={FadeInUp.delay(550)} style={{ marginTop: 32 }}>
-          <Text style={styles.emptyArrowHint}>Ou toque no botão abaixo</Text>
-          <View style={{ alignItems: 'center', marginTop: 8 }}>
-            <ChevronDown size={24} color={Colors.muted} />
-          </View>
-        </Animated.View>
-      </View>
-    </ScreenBackground>
-  );
-}
+import PastPhaseCard from '@/features/crisis/components/PastPhaseCard';
+import CrisisEmptyState from '@/features/crisis/components/CrisisEmptyState';
 
 export default function ActiveCrisisScreen() {
   const { activeCrisis, phases, updateActiveCrisis, addPhase, removePhase, clearCrisis, hasActiveCrisis, hydrated } = useCrisis();
@@ -408,7 +106,7 @@ export default function ActiveCrisisScreen() {
 
   if (!hydrated) return null;
 
-  if (!hasActiveCrisis || !activeCrisis) return <EmptyState />;
+  if (!hasActiveCrisis || !activeCrisis) return <CrisisEmptyState />;
 
   const crisis = activeCrisis;
   const intensityConfig = crisis.intensity !== null ? INTENSITY_CONFIG[crisis.intensity] : null;
@@ -503,7 +201,7 @@ export default function ActiveCrisisScreen() {
         {phases.length > 0 && (
           <Animated.View entering={FadeInUp.delay(50)}>
             {phases.map((phase, i) => (
-              <PhaseCard key={i} phase={phase} index={i} onDelete={() => removePhase(i)} />
+              <PastPhaseCard key={i} phase={phase} index={i} onDelete={() => removePhase(i)} />
             ))}
             <View style={styles.phaseDivider}>
               <View style={styles.phaseDividerLine} />
@@ -598,11 +296,11 @@ export default function ActiveCrisisScreen() {
               <ChevronRight size={16} color={Colors.muted} style={{ marginBottom: 6 }} />
             </View>
             {symptomNames.length > 0 ? (
-              <View style={styles.tagRow}>
+              <View style={tagStyles.tagRow}>
                 {symptomNames.map((s) => s && (
-                  <View key={s.id} style={styles.tag}>
-                    <Text style={styles.tagEmoji}>{s.emoji}</Text>
-                    <Text style={styles.tagText}>{s.label}</Text>
+                  <View key={s.id} style={tagStyles.tag}>
+                    <Text style={tagStyles.tagEmoji}>{s.emoji}</Text>
+                    <Text style={tagStyles.tagText}>{s.label}</Text>
                   </View>
                 ))}
               </View>
@@ -621,17 +319,17 @@ export default function ActiveCrisisScreen() {
               <ChevronRight size={16} color={Colors.muted} style={{ marginBottom: 6 }} />
             </View>
             {(medicationNames.length > 0 || crisis.customMedications.length > 0) ? (
-              <View style={styles.tagRow}>
+              <View style={tagStyles.tagRow}>
                 {medicationNames.map((m) => m && (
-                  <View key={m.id} style={[styles.tag, { backgroundColor: `${Colors.accent}15` }]}>
-                    <Text style={styles.tagEmoji}>{m.emoji}</Text>
-                    <Text style={[styles.tagText, { color: Colors.accent }]}>{m.label}</Text>
+                  <View key={m.id} style={[tagStyles.tag, { backgroundColor: `${Colors.accent}15` }]}>
+                    <Text style={tagStyles.tagEmoji}>{m.emoji}</Text>
+                    <Text style={[tagStyles.tagText, { color: Colors.accent }]}>{m.label}</Text>
                   </View>
                 ))}
                 {crisis.customMedications.map((name) => (
-                  <View key={name} style={[styles.tag, { backgroundColor: `${Colors.accent}15` }]}>
-                    <Text style={styles.tagEmoji}>💊</Text>
-                    <Text style={[styles.tagText, { color: Colors.accent }]}>{name}</Text>
+                  <View key={name} style={[tagStyles.tag, { backgroundColor: `${Colors.accent}15` }]}>
+                    <Text style={tagStyles.tagEmoji}>💊</Text>
+                    <Text style={[tagStyles.tagText, { color: Colors.accent }]}>{name}</Text>
                   </View>
                 ))}
               </View>
@@ -880,29 +578,6 @@ const styles = StyleSheet.create({
     color: Colors.accent,
   },
 
-  tagRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  tag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 14,
-    backgroundColor: `${Colors.purple}15`,
-  },
-  tagEmoji: {
-    fontSize: 16,
-  },
-  tagText: {
-    fontSize: 13,
-    fontFamily: 'Epilogue_600SemiBold',
-    color: Colors.purple,
-  },
-
   endCrisisBtn: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1044,64 +719,6 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
     fontFamily: 'Epilogue_700Bold',
-  },
-
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-  },
-  emptyMascotWrapper: {
-    width: 180,
-    height: 180,
-    marginBottom: 24,
-  },
-  emptyMascotImage: {
-    width: '100%',
-    height: '100%',
-  },
-  emptyTitle: {
-    fontSize: 24,
-    fontFamily: 'Epilogue_700Bold',
-    color: 'white',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  emptyHighlight: {
-    fontSize: 18,
-    fontFamily: 'Epilogue_600SemiBold',
-    color: 'white',
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  emptySub: {
-    fontSize: 14,
-    fontFamily: 'Epilogue_400Regular',
-    color: Colors.muted,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 28,
-  },
-  emptyBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: Colors.accent,
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 16,
-  },
-  emptyBtnText: {
-    fontSize: 16,
-    fontFamily: 'Epilogue_700Bold',
-    color: 'white',
-  },
-  emptyArrowHint: {
-    fontSize: 13,
-    fontFamily: 'Epilogue_400Regular',
-    color: Colors.muted,
-    textAlign: 'center',
   },
 
   successContainer: {
