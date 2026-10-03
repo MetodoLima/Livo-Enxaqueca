@@ -72,15 +72,149 @@ mesmo jeito. Num app de saúde, isso pode mudar o comportamento de quem usa.
 5. **Sem cópia local de formatação.** Se precisar de um formato novo, ele entra em
    `lib/format.ts`.
 
-6. **Estilo com NativeWind (`className`).** Cores de `constants/colors.json`, pelas classes
-   (`bg-accent`, `text-muted`) ou por `Colors` onde `className` não chega. Sem hex escrito
-   na tela. As telas atuais ainda têm `StyleSheet` e cor em hex, que saem conforme cada uma
-   for redesenhada.
+6. **Estilo pelo design system.** NativeWind com os tokens e as primitivas de
+   `components/ui/`, conforme a seção [Design system](#design-system). Vale para toda tela
+   nova e para cada tela migrada. As telas ainda não migradas mantêm `StyleSheet`, hex e o
+   grupo `legacy` até serem redesenhadas.
 
 7. **Nomes em inglês.** Tela `XxxScreen.tsx`, componente `PascalCase.tsx`, hook `useXxx.ts`,
    pasta em `kebab-case`. Tabelas, colunas e textos da tela continuam em português.
 
 8. **Sem comentários no código.** O porquê de uma decisão vai na descrição do pull request.
+
+## Design system
+
+O Livo é usado por quem está em crise de enxaqueca: fotofobia, náusea, dificuldade de
+concentração, muitas vezes no escuro. As regras abaixo existem por causa disso. Elas valem
+para toda tela nova e para toda tela migrada, e são cobradas em revisão de pull request.
+
+### Tokens
+
+Ficam em `constants/colors.json` e `tailwind.config.js`. Em tela, são usados por classe. Onde
+`className` não chega (cor de ícone, `placeholderTextColor`), use `color`, `painColor` ou
+`moodColor` de `constants/Colors.ts`.
+
+| Grupo | Tokens |
+|---|---|
+| Fundo | `canvas` (tela), `surface` (cartão), `surface-raised` (algo sobre o cartão: campo, botão de ícone) |
+| Borda | `line` (divisória, borda de cartão), `line-strong` (borda de controle: campo, chip selecionável) |
+| Texto | `content` (principal), `content-muted` (secundário, legenda, placeholder) |
+| Ação | `primary` (área pequena), `primary-strong` (fundo de botão), `primary-subtle` (fundo tingido) |
+| Papel | `secondary`, `attention`, `danger`, `success`, cada um com `-subtle` |
+| Outros | `scrim` (fundo atrás de modal) |
+| Domínio | `pain-0` a `pain-10` (intensidade), `mood-*` (humor) |
+| Tipografia | `text-caption` 13, `text-body` 16, `text-heading` 18, `text-title` 24, `text-display` 32, `text-hero` 48 |
+| Espaçamento | escala do Tailwind restrita (ver regra DS9), mais `gutter` 24 e `section` 32 |
+| Raio | `rounded-sm` 8, `rounded-md` 16, `rounded-lg` 24, `rounded-full` |
+
+O grupo `legacy` (`accent`, `bg-dark`, `muted`, `soft`, `card-dark`, `border-dark`, `purple`,
+`orange`, e o `Colors` em JavaScript) existe só para as telas não migradas. Tela migrada não
+usa nada dele. Ele sai quando a última tela migrar.
+
+### Primitivas
+
+`Text`, `Button`, `IconButton`, `Screen`, `Card`, `Chip`, `ScreenHeader`, `SectionDivider`,
+`EmptyState`, `LoadingState`, `ErrorState`, `TextField`, `ProgressSteps` e `IconBadge`, em
+`components/ui/`. Antes de montar algo à mão numa tela, veja se uma delas já resolve.
+
+### Regras do design system
+
+DS1. **Nenhuma cor fora dos tokens.** Em tela migrada, não pode haver hex, `rgb()`, `rgba()`,
+`'white'`, `'black'` nem classe de cor do Tailwind fora dos tokens (`text-white`,
+`bg-red-500`, `text-[#…]`).
+
+DS2. **Texto colorido só sobre `canvas` e `surface`.** Sobre fundo tingido (`*-subtle`) e
+sobre `primary-strong`, o texto é `content`, e a cor do papel vai no ícone ou na borda.
+Abaixo disso, o contraste fica menor que 4,5.
+
+DS3. **`primary` é cor de área pequena:** ícone, link, seleção, progresso e foco. Fundo de
+botão é `primary-strong`, pelo `Button`. Área grande só em `canvas`, `surface` e
+`surface-raised`.
+
+DS4. **Borda decorativa e borda de controle são diferentes.** `line` é para divisória e
+cartão. `line-strong` é para o que precisa ser reconhecido como controle: campo, chip
+selecionável, caixa de seleção. Borda de controle precisa de 3:1.
+
+DS5. **Texto só pelo `Text`.** Proibido `fontSize`, `fontFamily`, `fontWeight` e
+`lineHeight` soltos, e as classes `text-sm`, `text-lg`, `text-[15px]` e `font-epilogue-*`
+direto na tela. Tamanho, peso e cor vêm de `variant`, `weight` e `tone`.
+
+DS6. **Um botão `primary` por tela.** O resto é `secondary` ou `ghost`.
+
+DS7. **Tocável é primitiva, com área de 48 ou mais.** Em tela migrada, toque é `Button`,
+`IconButton`, `Chip` ou `Card` com `onPress`. Proibido `TouchableOpacity` e `Pressable`
+direto na tela, e proibido `hitSlop` para compensar alvo pequeno.
+
+DS8. **Texto nunca dentro de altura fixa.** Em contêiner que tem texto, use `min-h-*`,
+nunca `h-*` nem `max-h-*`. Proibido `allowFontScaling={false}` e `maxFontSizeMultiplier`.
+Toda tela migrada é testada com a fonte do sistema no máximo.
+
+DS9. **Espaçamento só da lista fechada.** Em `p`, `px`, `py`, `pt`, `pb`, `pl`, `pr`, `m`
+(e variações) e `gap`, os únicos valores aceitos são:
+
+| Sufixo da classe | `0` | `1` | `2` | `3` | `4` | `5` | `6` | `8` | `10` | `12` | `14` | `gutter` | `section` |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| Valor em px | 0 | 4 | 8 | 12 | 16 | 20 | 24 | 32 | 40 | 48 | 56 | 24 | 32 |
+
+Proibido:
+
+- valor arbitrário entre colchetes: `p-[18px]`, `m-[14px]`, `gap-[10px]`, `mt-[-2px]`;
+- degrau fora da lista: `p-7`, `mb-9`, `gap-11`, `p-0.5`, `gap-2.5`, `py-3.5`;
+- `style={{ padding: … }}`, `margin`, `gap` ou similares em tela migrada.
+
+Como cobrar na revisão: a busca abaixo no arquivo da tela tem que voltar vazia.
+
+```text
+\b-?(p|m|gap)[xytrbl]?-(\[|7\b|9\b|11\b|13\b|1[5-9]\b|[2-9]\d\b|\d+\.5\b)|\b(padding|margin|gap)\w*\s*:
+```
+
+DS10. **Raio só `rounded-sm`, `rounded-md`, `rounded-lg`, `rounded-full` ou
+`rounded-none`.** Proibido `rounded-xl`, `rounded-2xl`, `rounded-3xl` e `rounded-[…]`.
+
+DS11. **Movimento que informa é permitido; movimento que decora, não.**
+- **Informa:** a transição simples entre telas, que mostra que a tela mudou. Ajuda quem
+  tem dificuldade de concentração.
+- **Decora, e é proibido:** entradas escalonadas (`FadeInUp.delay(…)` em sequência), pulsos
+  em loop, itens aparecendo um a um e animação de entrada de bloco dentro da tela.
+- **No registro de crise não há movimento nenhum** além da transição de tela: na
+  `RecordCrisisScreen`, nos passos de `features/crisis/steps/` e na `ActiveCrisisScreen`,
+  nada de `entering`, `exiting` ou `LayoutAnimation`.
+- Toda animação permitida respeita o "reduzir movimento" do sistema. Exceção aprovada: o
+  `PulsingMic`, enquanto grava, até ser revisto.
+
+DS12. **Toda tela que carrega dado trata os três estados** com `LoadingState`,
+`EmptyState` e `ErrorState`. A mensagem de erro é escrita para o paciente: nunca exibe
+`err.message`, código ou texto técnico.
+
+DS13. **Mesma aparência no Android e no iOS.**
+- Proibido `Platform.OS` para decidir estilo.
+- Proibido `BlurView`: no Android ele vira só um fundo translúcido.
+- **Sombra colorida é proibida.** No iOS ela vira um brilho da cor, e no Android a
+  `elevation` é sempre cinza, então as duas plataformas ficam diferentes.
+- **Sombra neutra, se usada, vem de um token de elevação** com valor equivalente nas duas
+  plataformas. Esse token ainda não existe: é pendência. Até ele existir, profundidade se
+  mostra pelos tons de `canvas`, `surface` e `surface-raised`.
+
+DS14. **Nenhum código pode assumir que o tema é escuro.** O plano é ter temas (pelo menos
+claro, escuro e alto contraste) e personalização de interface, incluindo desligar as
+animações do app, e os tokens são a camada que torna isso possível. Primitiva e tela se referem a papéis (`content`, `surface`), nunca
+a "texto claro" ou "fundo escuro".
+
+### O que falta para trocar de tema
+
+Hoje existe um tema só, e os valores dos tokens são fixos. Para suportar troca:
+
+- **Tokens como variáveis:** os papéis de `colors.json` viram um conjunto por tema. As cores
+  do `tailwind.config.js` passam a apontar para variáveis CSS
+  (`rgb(var(--canvas) / <alpha-value>)`), aplicadas por um provedor de tema no
+  `app/_layout.tsx` com o `vars()` do NativeWind.
+- **Cores em JavaScript:** o `color` de `constants/Colors.ts` é lido uma vez, na importação,
+  e não muda com o tema. Ele vira um hook (`useThemeColors()`).
+- **Desligar animação** entra na mesma personalização, ao lado dos temas claro e alto
+  contraste: uma preferência do app que se soma ao "reduzir movimento" do sistema.
+- **Lacunas atuais:** falta um token `on-primary` para o texto do botão, e a barra de
+  status do `Screen` é fixa em clara. Telas não migradas, com hex e `legacy`, não mudam de
+  tema.
 
 ## Rotas e telas
 
