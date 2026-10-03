@@ -4,6 +4,7 @@
     "surface": "#16313F",
     "surfaceRaised": "#1E3A52",
     "line": "#2A4458",
+    "lineStrong": "#6A8796",
     "content": "#E7EAE8",
     "contentMuted": "#90A8AC",
     "primary": "#25B7BB",
