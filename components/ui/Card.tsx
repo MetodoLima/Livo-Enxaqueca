@@ -1,30 +1,49 @@
-import React from 'react';
-import { View, Pressable, ViewStyle } from 'react-native';
+import type { ReactNode } from 'react';
+import { Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
 
-interface CardProps {
-  children: React.ReactNode;
-  variant?: 'default' | 'elevated' | 'accent-border';
-  className?: string;
+export type CardVariant = 'default' | 'accent-border';
+
+export interface CardProps {
+  children: ReactNode;
+  variant?: CardVariant;
   onPress?: () => void;
-  style?: ViewStyle;
+  accessibilityLabel?: string;
+  className?: string;
+  style?: StyleProp<ViewStyle>;
 }
 
-export default function Card({ children, variant = 'default', className = '', onPress, style }: CardProps) {
-  const base = 'rounded-[28px] p-6';
+const VARIANT: Record<CardVariant, string> = {
+  default: '',
+  'accent-border': 'border-l-4 border-l-primary',
+};
 
-  const accentBorderStyle: ViewStyle = variant === 'accent-border'
-    ? { borderLeftColor: 'rgba(37, 183, 187, 0.4)', borderLeftWidth: 3 }
-    : {};
+export default function Card({
+  children,
+  variant = 'default',
+  onPress,
+  accessibilityLabel,
+  className = '',
+  style,
+}: CardProps) {
+  const base = `rounded-lg border border-line bg-surface p-6 ${VARIANT[variant]} ${className}`;
 
-  const Component = onPress ? Pressable : View;
+  if (onPress) {
+    return (
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={accessibilityLabel}
+        onPress={onPress}
+        className={`${base} active:opacity-80`}
+        style={style}
+      >
+        {children}
+      </Pressable>
+    );
+  }
 
   return (
-    <Component
-      onPress={onPress}
-      style={[{ backgroundColor: '#232533', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.10)' }, accentBorderStyle, style]}
-      className={`${base} ${className}`}
-    >
+    <View className={base} style={style}>
       {children}
-    </Component>
+    </View>
   );
 }
