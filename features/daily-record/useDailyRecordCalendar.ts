@@ -5,7 +5,7 @@ import { useSync } from '@/contexts/SyncContext';
 
 export type RegistroCalendarDay = DailyRecord;
 
-export function useRegistroCalendar(year: number, month: number) {
+export function useDailyRecordCalendar(year: number, month: number) {
   const { ultimaAtualizacao } = useSync();
   const [registroByDay, setRegistroByDay] = useState<Record<number, RegistroCalendarDay[]>>({});
   const [loading, setLoading] = useState(false);

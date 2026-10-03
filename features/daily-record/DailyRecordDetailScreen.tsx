@@ -10,34 +10,11 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Moon, Droplets, FileText, Smile } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Colors } from '@/constants/Colors';
+import { formatDateTime, formatSleep, formatWater, moodEmoji, moodLabel } from '@/lib/format';
 
-const HUMOR_LABEL: Record<string, string> = {
-  terrible: 'Péssimo', bad: 'Ruim', 'so-so': 'Regular', okay: 'Bem', great: 'Ótimo',
-};
-const HUMOR_EMOJI: Record<string, string> = {
-  terrible: '😣', bad: '😕', 'so-so': '😐', okay: '🙂', great: '😄',
-};
 const HUMOR_COLOR: Record<string, string> = {
   terrible: '#EF4444', bad: '#F97316', 'so-so': '#EAB308', okay: '#22C55E', great: '#10B981',
 };
-
-function formatDateTime(dateStr: string): string {
-  return new Date(dateStr).toLocaleString('pt-BR', {
-    day: '2-digit', month: 'long', year: 'numeric',
-    hour: '2-digit', minute: '2-digit',
-  });
-}
-
-function formatSono(h: number): string {
-  const horas = Math.floor(h);
-  const min = h % 1 !== 0 ? '30min' : '';
-  return min ? `${horas}h ${min}` : `${horas}h`;
-}
-
-function formatAgua(ml: number): string {
-  if (ml >= 1000) return `${(ml / 1000).toFixed(1).replace('.0', '')}L`;
-  return `${ml}ml`;
-}
 
 function Section({ icon, label, children, delay = 0 }: {
   icon: React.ReactNode;
@@ -70,7 +47,7 @@ function Row({ label, value, valueColor }: { label: string; value: string; value
   );
 }
 
-export default function RegistroDetailScreen() {
+export default function DailyRecordDetailScreen() {
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string; data: string }>();
 
@@ -126,12 +103,12 @@ export default function RegistroDetailScreen() {
               borderWidth: 1, borderColor: `${humorColor}30`,
             }}
           >
-            <Text style={{ fontSize: 52, marginBottom: 8 }}>{HUMOR_EMOJI[humor]}</Text>
+            <Text style={{ fontSize: 52, marginBottom: 8 }}>{moodEmoji(humor)}</Text>
             <Text style={{ color: humorColor, fontFamily: 'Epilogue_700Bold', fontSize: 24 }}>
-              {HUMOR_LABEL[humor]}
+              {moodLabel(humor)}
             </Text>
             <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 13, marginTop: 6 }}>
-              {formatDateTime(registro.createdAt)}
+              {formatDateTime(new Date(registro.createdAt))}
             </Text>
           </Animated.View>
         )}
@@ -148,7 +125,7 @@ export default function RegistroDetailScreen() {
           >
             <Text style={{ fontSize: 52, marginBottom: 8 }}>📋</Text>
             <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 13, marginTop: 6 }}>
-              {formatDateTime(registro.createdAt)}
+              {formatDateTime(new Date(registro.createdAt))}
             </Text>
           </Animated.View>
         )}
@@ -159,7 +136,7 @@ export default function RegistroDetailScreen() {
               {registro.horasSono !== null && (
                 <Row
                   label="Sono"
-                  value={formatSono(registro.horasSono)}
+                  value={formatSleep(registro.horasSono)}
                   valueColor={Colors.purple ?? '#8B6FC0'}
                 />
               )}
@@ -169,7 +146,7 @@ export default function RegistroDetailScreen() {
               {registro.mlAgua !== null && (
                 <Row
                   label="Água"
-                  value={formatAgua(registro.mlAgua)}
+                  value={formatWater(registro.mlAgua)}
                   valueColor={Colors.accent}
                 />
               )}

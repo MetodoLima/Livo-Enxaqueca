@@ -10,6 +10,7 @@ import {
 import { Clock, ChevronUp, ChevronDown, Calendar } from 'lucide-react-native';
 import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
 import { Colors } from '@/constants/Colors';
+import { formatTime } from '@/lib/format';
 import StepFooter from './StepFooter';
 import type { CrisisRecord, TimePreset, EndTimePreset } from '@/types/crisis';
 
@@ -17,10 +18,6 @@ interface StepTimeProps {
   data: CrisisRecord;
   onChange: (patch: Partial<CrisisRecord>) => void;
   onNext: () => void;
-}
-
-function formatTime(date: Date): string {
-  return date.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
 function formatDate(date: Date): string {
