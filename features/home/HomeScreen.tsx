@@ -14,7 +14,6 @@ import Slider from '@react-native-community/slider';
 import {
   Mic,
   Zap,
-  ChevronRight,
   Activity,
   TrendingDown,
   Bell,
@@ -356,31 +355,6 @@ export default function HomeScreen() {
             </Animated.View>
           </View>
 
-          <Animated.View entering={FadeInUp.delay(600)} style={{ marginBottom: 20 }}>
-            <View style={styles.widget}>
-              <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFillObject, { borderRadius: 28 }]} />
-              <LinearGradient
-                colors={['rgba(37, 183, 187, 0.75)', 'rgba(139, 163, 167, 0.25)']}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFillObject}
-              />
-              <View style={styles.widgetContent}>
-                <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={styles.insightIcon}>
-                    <Text style={{ fontSize: 22 }}>💡</Text>
-                  </View>
-                  <View style={{ flex: 1 }}>
-                    <Text style={styles.widgetHeading}>Padrão detectado</Text>
-                    <Text style={styles.widgetSubtext}>
-                      Dormir antes das 23h evitou crises matinais.
-                    </Text>
-                  </View>
-                  <ChevronRight size={18} color={Colors.muted} />
-                </TouchableOpacity>
-              </View>
-            </View>
-          </Animated.View>
-
         </View>
       </ScrollView>
     </ScreenBackground>
@@ -501,10 +475,5 @@ const styles = StyleSheet.create({
   statLabel: {
     fontSize: 10, textAlign: 'center', textTransform: 'uppercase',
     letterSpacing: 1.5, fontFamily: 'Epilogue_700Bold',
-  },
-  insightIcon: {
-    width: 48, height: 48, borderRadius: 16,
-    backgroundColor: 'rgba(37, 183, 187, 0.1)',
-    alignItems: 'center', justifyContent: 'center', marginRight: 14,
   },
 });

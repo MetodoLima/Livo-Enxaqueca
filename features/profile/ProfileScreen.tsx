@@ -73,8 +73,6 @@ export default function ProfileScreen() {
               <Text className="text-xl text-white font-epilogue-bold">
                 {user?.user_metadata?.name ? `${user.user_metadata.name}` : 'Visitante'}
               </Text>
-              <Text className="text-xs text-muted font-epilogue">Membro desde Mar 2026</Text>
-              <Text className="text-xs text-accent mt-1 font-epilogue-bold">Plano Premium ✨</Text>
             </View>
           </Card>
         </Animated.View>

@@ -39,6 +39,16 @@ types/ constants/   Modelo de domínio, catálogos, cores
 | Ler ou gravar dados | `@/repositories` |
 | Estado que o app inteiro usa | `contexts/` |
 
+## Dados da pessoa
+
+O app não mostra como dado da pessoa nada que não venha dos registros dela. Quando um
+cálculo não tem base suficiente, ele diz isso em vez de mostrar um valor.
+
+Isso vale para texto fixo que parece descoberta pessoal ("dormir antes das 23h evitou
+crises") e, principalmente, para valor calculado sobre poucos registros. Um padrão tirado de
+três crises existe como número, mas não significa nada, e mostrar sem ressalva engana do
+mesmo jeito. Num app de saúde, isso pode mudar o comportamento de quem usa.
+
 ## Regras
 
 1. **Rota só reexporta.** Um arquivo em `app/` tem uma linha:
