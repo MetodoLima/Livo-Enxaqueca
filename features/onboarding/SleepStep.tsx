@@ -2,6 +2,7 @@ import Slider from '@react-native-community/slider';
 import { router } from 'expo-router';
 import React, { useState } from 'react';
 import { useSetup } from '@/features/onboarding/SetupContext';
+import { SetupBackButton } from '@/components/SetupBackButton';
 import {
     ScrollView,
     StatusBar,
@@ -22,57 +23,10 @@ function formatHours(value: number): string {
     return `${value}h`;
 }
 
-function getSleepFeedback(value: number): { label: string; color: string; description: string } {
-    if (value <= 3)
-        return {
-            label: 'Sono muito insuficiente',
-            color: '#E85D75',
-            description: 'Menos de 4h é um gatilho severo de crises.',
-        };
-    if (value < 6)
-        return {
-            label: 'Sono insuficiente',
-            color: '#E85D75',
-            description: 'Menos de 6h é um gatilho frequente de crises.',
-        };
-    if (value <= 6)
-        return {
-            label: 'Sono adequado',
-            color: '#F5A623',
-            description: 'Próximo do ideal. Tente manter consistência.',
-        };
-    if (value === 7)
-        return {
-            label: 'Sono ideal',
-            color: '#00BFA5',
-            description: 'Ótima faixa para reduzir o risco de crises.',
-        };
-    if (value <= 9)
-        return {
-            label: 'Sono ideal',
-            color: '#00BFA5',
-            description: 'Ótima faixa para reduzir o risco de crises.',
-        };
-    if (value <= 11)
-        return {
-            label: 'Sono excessivo',
-            color: '#F5A623',
-            description: 'Dormir mais de 9h também pode desencadear crises.',
-        };
-    return {
-        label: 'Sono excessivo',
-        color: '#E85D75',
-        description: 'Dormir mais de 9h também pode desencadear crises.',
-    };
-}
-
 export default function SleepStep() {
     const { updateSetupData } = useSetup();
 
     const [hours, setHours] = useState<number>(7);
-    const [touched, setTouched] = useState(false);
-
-    const feedback = getSleepFeedback(hours);
 
     function handleNext() {
         updateSetupData({
@@ -91,6 +45,7 @@ export default function SleepStep() {
                 showsVerticalScrollIndicator={false}
             >
                 <View style={{ paddingHorizontal: 24, paddingTop: 56, paddingBottom: 8 }}>
+                    <SetupBackButton fallbackRoute="/(setup)/step3" />
 
                     <View style={{ flexDirection: 'row', gap: 6, marginBottom: 32 }}>
                         {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
@@ -132,7 +87,7 @@ export default function SleepStep() {
                     </Text>
 
                     <Text style={{ fontSize: 15, color: '#7A99B2', lineHeight: 22 }}>
-                        Esse valor vira sua linha de base. O app vai te alertar quando seu sono desviar muito disso.
+                        Esse valor vira sua linha de base para acompanhar seus hábitos no dia a dia.
                     </Text>
                 </View>
 
@@ -142,7 +97,7 @@ export default function SleepStep() {
                             backgroundColor: '#112236',
                             borderRadius: 20,
                             borderWidth: 1.5,
-                            borderColor: feedback.color + '60',
+                            borderColor: '#00BFA540',
                             padding: 28,
                             alignItems: 'center',
                         }}
@@ -151,7 +106,7 @@ export default function SleepStep() {
                             style={{
                                 fontSize: 72,
                                 fontWeight: '800',
-                                color: feedback.color,
+                                color: '#00BFA5',
                                 includeFontPadding: false,
                             }}
                         >
@@ -170,11 +125,10 @@ export default function SleepStep() {
                             value={hours}
                             onValueChange={(val) => {
                                 setHours(val);
-                                if (!touched) setTouched(true);
                             }}
-                            minimumTrackTintColor={feedback.color}
+                            minimumTrackTintColor="#00BFA5"
                             maximumTrackTintColor="#1E3A52"
-                            thumbTintColor={feedback.color}
+                            thumbTintColor="#00BFA5"
                         />
 
                         <View
@@ -191,93 +145,7 @@ export default function SleepStep() {
                     </View>
                 </View>
 
-                <View style={{ paddingHorizontal: 24, marginTop: 16, minHeight: 56 }}>
-                    {touched && (
-                        <View
-                            style={{
-                                backgroundColor: feedback.color + '18',
-                                borderRadius: 12,
-                                borderWidth: 1,
-                                borderColor: feedback.color + '40',
-                                padding: 14,
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 10,
-                            }}
-                        >
-                            <View
-                                style={{
-                                    width: 8,
-                                    height: 8,
-                                    borderRadius: 4,
-                                    backgroundColor: feedback.color,
-                                }}
-                            />
-                            <View style={{ flex: 1 }}>
-                                <Text
-                                    style={{
-                                        fontSize: 13,
-                                        fontWeight: '700',
-                                        color: feedback.color,
-                                        marginBottom: 2,
-                                    }}
-                                >
-                                    {feedback.label}
-                                </Text>
-                                <Text style={{ fontSize: 13, color: '#7A99B2', lineHeight: 18 }}>
-                                    {feedback.description}
-                                </Text>
-                            </View>
-                        </View>
-                    )}
-                </View>
-
-                <View style={{ paddingHorizontal: 24, marginTop: 8 }}>
-                    <Text
-                        style={{
-                            fontSize: 12,
-                            fontWeight: '600',
-                            color: '#4A6A82',
-                            letterSpacing: 1,
-                            textTransform: 'uppercase',
-                            marginBottom: 12,
-                        }}
-                    >
-                        Referência
-                    </Text>
-
-                    <View style={{ gap: 8 }}>
-                        {[
-                            { range: 'Menos de 6h', label: 'Gatilho de risco', color: '#E85D75' },
-                            { range: '7h – 9h', label: 'Faixa ideal', color: '#00BFA5' },
-                            { range: 'Mais de 9h', label: 'Pode causar crises', color: '#F5A623' },
-                        ].map((item) => (
-                            <View
-                                key={item.range}
-                                style={{
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    gap: 10,
-                                }}
-                            >
-                                <View
-                                    style={{
-                                        width: 8,
-                                        height: 8,
-                                        borderRadius: 4,
-                                        backgroundColor: item.color,
-                                    }}
-                                />
-                                <Text style={{ fontSize: 13, color: '#FFFFFF', fontWeight: '500', width: 100 }}>
-                                    {item.range}
-                                </Text>
-                                <Text style={{ fontSize: 13, color: '#4A6A82' }}>{item.label}</Text>
-                            </View>
-                        ))}
-                    </View>
-                </View>
-
-                <View style={{ paddingHorizontal: 24, marginTop: 32 }}>
+                <View style={{ paddingHorizontal: 24, marginTop: 40 }}>
                     <TouchableOpacity
                         onPress={handleNext}
                         style={{

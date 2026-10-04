@@ -146,12 +146,12 @@ function RootLayoutNav() {
 
       if (inAuthGroup) {
         if (!isSetupCompleted) {
-          router.replace('/(setup)/step1');
+          router.replace('/(setup)/intro');
         } else {
           router.replace('/(tabs)');
         }
       } else if (!isSetupCompleted && !inSetupGroup) {
-        router.replace('/(setup)/step1');
+        router.replace('/(setup)/intro');
       } else if (isSetupCompleted && inSetupGroup) {
         router.replace('/(tabs)');
       }

@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { useAuth } from '@/contexts/AuthContext';
 import { useSetup } from '@/features/onboarding/SetupContext';
+import { SetupBackButton } from '@/components/SetupBackButton';
 import {
     sessionRepository,
     setupRepository,
@@ -41,28 +42,28 @@ const IMPACT_OPTIONS: {
             label: 'Afeta levemente',
             sublabel: 'Fico desconfortável mas consigo continuar',
             emoji: '🙂',
-            color: '#4DD9C0',
+            color: '#00BFA5',
         },
         {
             value: 'moderate',
             label: 'Preciso reduzir o ritmo',
             sublabel: 'Consigo fazer o essencial mas com dificuldade',
             emoji: '😐',
-            color: '#F5A623',
+            color: '#00BFA5',
         },
         {
             value: 'high',
             label: 'Preciso parar a maioria das atividades',
             sublabel: 'Trabalho, estudos e compromissos ficam prejudicados',
             emoji: '😣',
-            color: '#F07040',
+            color: '#00BFA5',
         },
         {
             value: 'total',
             label: 'Fico completamente incapacitado',
             sublabel: 'Preciso me isolar, apagar as luzes e ficar na cama',
             emoji: '🤕',
-            color: '#E85D75',
+            color: '#00BFA5',
         },
         {
             value: 'unknown',
@@ -81,9 +82,9 @@ const ACTIVITY_STOP_OPTIONS: {
     color: string;
 }[] = [
         { value: 'never', label: 'Nunca preciso parar', sublabel: 'Consigo manter minha rotina', emoji: '💪', color: '#00BFA5' },
-        { value: 'sometimes', label: 'Às vezes paro', sublabel: 'Em crises mais fortes', emoji: '⚖️', color: '#F5A623' },
-        { value: 'often', label: 'Na maioria das crises', sublabel: 'Geralmente preciso descansar', emoji: '🛋️', color: '#F07040' },
-        { value: 'always', label: 'Sempre preciso parar tudo', sublabel: 'Toda crise me tira de ação', emoji: '🛑', color: '#E85D75' },
+        { value: 'sometimes', label: 'Às vezes paro', sublabel: 'Em crises mais fortes', emoji: '⚖️', color: '#00BFA5' },
+        { value: 'often', label: 'Na maioria das crises', sublabel: 'Geralmente preciso descansar', emoji: '🛋️', color: '#00BFA5' },
+        { value: 'always', label: 'Sempre preciso parar tudo', sublabel: 'Toda crise me tira de ação', emoji: '🛑', color: '#00BFA5' },
     ];
 
 const FIELD_META: Record<string, { passo: number; tipo: string }> = {
@@ -207,12 +208,6 @@ export default function ImpactStep() {
     const selectedImpact = IMPACT_OPTIONS.find((o) => o.value === impactLevel) ?? null;
     const isValid = impactLevel !== null && (impactLevel === 'unknown' || activityStop !== null);
 
-    const needsPreventive =
-        impactLevel === 'high' ||
-        impactLevel === 'total' ||
-        activityStop === 'often' ||
-        activityStop === 'always';
-
     async function handleNext() {
         if (!isValid || isSubmitting || !selectedImpact) return;
 
@@ -254,6 +249,7 @@ export default function ImpactStep() {
                 showsVerticalScrollIndicator={false}
             >
                 <View style={{ paddingHorizontal: 24, paddingTop: 56, paddingBottom: 8 }}>
+                    <SetupBackButton fallbackRoute="/(setup)/step8" />
 
                     <View style={{ flexDirection: 'row', gap: 6, marginBottom: 32 }}>
                         {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
@@ -399,27 +395,6 @@ export default function ImpactStep() {
                     </View>
                 )}
 
-                {needsPreventive && (
-                    <View style={{ paddingHorizontal: 24, marginTop: 20 }}>
-                        <View
-                            style={{
-                                backgroundColor: '#7B68EE18',
-                                borderRadius: 12,
-                                borderWidth: 1,
-                                borderColor: '#7B68EE40',
-                                padding: 14,
-                                flexDirection: 'row',
-                                gap: 10,
-                                alignItems: 'flex-start',
-                            }}
-                        >
-                            <Text style={{ fontSize: 16 }}>💡</Text>
-                            <Text style={{ fontSize: 13, color: '#7B68EE', lineHeight: 19, flex: 1, fontWeight: '600' }}>
-                                Seu perfil sugere que você pode se beneficiar de tratamento preventivo. O app vai destacar isso nos seus relatórios.
-                            </Text>
-                        </View>
-                    </View>
-                )}
 
                 <View style={{ paddingHorizontal: 24, marginTop: 32 }}>
                     <TouchableOpacity

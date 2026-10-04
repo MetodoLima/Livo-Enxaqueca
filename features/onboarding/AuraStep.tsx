@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 import { useSetup } from '@/features/onboarding/SetupContext';
+import { SetupBackButton } from '@/components/SetupBackButton';
 
 if (Platform.OS === 'android') {
   UIManager.setLayoutAnimationEnabledExperimental?.(true);
@@ -83,7 +84,7 @@ const AURA_SIGNS: AuraSign[] = [
     id: 'motor',
     label: 'Fraqueza em membros',
     description: 'Sensação de peso ou dificuldade de mover',
-    emoji: '💪',
+    emoji: '🪫',
     cortexType: 'Motor',
   },
   {
@@ -168,6 +169,7 @@ export default function AuraStep() {
         showsVerticalScrollIndicator={false}
       >
         <View style={{ paddingHorizontal: 24, paddingTop: 56, paddingBottom: 8 }}>
+          <SetupBackButton fallbackRoute="/(setup)/step2" />
 
           <View style={{ flexDirection: 'row', gap: 6, marginBottom: 32 }}>
             {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
@@ -215,7 +217,7 @@ export default function AuraStep() {
 
         <View style={{ paddingHorizontal: 24, marginTop: 28, flexDirection: 'row', gap: 12 }}>
           {[
-            { value: 'yes' as HasAura, label: 'Sim, acontece', emoji: '⚡' },
+            { value: 'yes' as HasAura, label: 'Sim, acontece', emoji: '👍' },
             { value: 'no' as HasAura, label: 'Não acontece', emoji: '✋' },
           ].map((option) => {
             const isSelected = hasAura === option.value;
