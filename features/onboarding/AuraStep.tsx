@@ -84,7 +84,7 @@ const AURA_SIGNS: AuraSign[] = [
     id: 'motor',
     label: 'Fraqueza em membros',
     description: 'Sensação de peso ou dificuldade de mover',
-    emoji: '💪',
+    emoji: '🪫',
     cortexType: 'Motor',
   },
   {
@@ -217,7 +217,7 @@ export default function AuraStep() {
 
         <View style={{ paddingHorizontal: 24, marginTop: 28, flexDirection: 'row', gap: 12 }}>
           {[
-            { value: 'yes' as HasAura, label: 'Sim, acontece', emoji: '⚡' },
+            { value: 'yes' as HasAura, label: 'Sim, acontece', emoji: '👍' },
             { value: 'no' as HasAura, label: 'Não acontece', emoji: '✋' },
           ].map((option) => {
             const isSelected = hasAura === option.value;

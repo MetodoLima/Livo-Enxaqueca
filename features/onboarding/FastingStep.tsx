@@ -16,10 +16,7 @@ interface Option {
     value: MealFrequency;
     label: string;
     sublabel: string;
-    emoji: string;
-    risk: 'low' | 'medium' | 'high';
     color: string;
-    feedback: string;
 }
 
 const TOTAL_STEPS = 9;
@@ -30,28 +27,19 @@ const OPTIONS: Option[] = [
         value: 'regular',
         label: 'Regular',
         sublabel: 'Como a cada 3h aproximadamente',
-        emoji: '🍽️',
-        risk: 'low',
         color: '#00BFA5',
-        feedback: 'Ótimo hábito. Manter a glicemia estável reduz bastante o risco de crises.',
     },
     {
         value: 'fasting',
         label: 'Longos períodos de jejum',
         sublabel: 'Fico muitas horas sem comer',
-        emoji: '⏳',
-        risk: 'high',
-        color: '#E85D75',
-        feedback: 'O jejum prolongado é um dos principais gatilhos metabólicos de enxaqueca.',
+        color: '#00BFA5',
     },
     {
         value: 'irregular',
         label: 'Irregular',
         sublabel: 'Varia bastante de dia para dia',
-        emoji: '🎲',
-        risk: 'medium',
-        color: '#F5A623',
-        feedback: 'Irregularidade nas refeições pode desestabilizar a glicemia e provocar crises.',
+        color: '#00BFA5',
     },
 ];
 
@@ -129,44 +117,7 @@ export default function FastingStep() {
                     </Text>
                 </View>
 
-                <View style={{ paddingHorizontal: 24, marginTop: 20, minHeight: 64 }}>
-                    {selectedOption && (
-                        <View
-                            style={{
-                                backgroundColor: selectedOption.color + '18',
-                                borderRadius: 12,
-                                borderWidth: 1,
-                                borderColor: selectedOption.color + '40',
-                                padding: 14,
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 10,
-                            }}
-                        >
-                            <View
-                                style={{
-                                    width: 8,
-                                    height: 8,
-                                    borderRadius: 4,
-                                    backgroundColor: selectedOption.color,
-                                }}
-                            />
-                            <Text
-                                style={{
-                                    fontSize: 13,
-                                    color: selectedOption.color,
-                                    fontWeight: '600',
-                                    flex: 1,
-                                    lineHeight: 18,
-                                }}
-                            >
-                                {selectedOption.feedback}
-                            </Text>
-                        </View>
-                    )}
-                </View>
-
-                <View style={{ paddingHorizontal: 24, marginTop: 12, gap: 12 }}>
+                <View style={{ paddingHorizontal: 24, marginTop: 24, gap: 12 }}>
                     {OPTIONS.map((option) => {
                         const isSelected = selected === option.value;
                         return (
@@ -183,12 +134,10 @@ export default function FastingStep() {
                                     paddingHorizontal: 20,
                                     flexDirection: 'row',
                                     alignItems: 'center',
-                                    gap: 14,
+                                    justifyContent: 'space-between',
                                 }}
                             >
-                                <Text style={{ fontSize: 26 }}>{option.emoji}</Text>
-
-                                <View style={{ flex: 1, gap: 2 }}>
+                                <View style={{ flex: 1, gap: 2, marginRight: 12 }}>
                                     <Text
                                         style={{
                                             fontSize: 16,

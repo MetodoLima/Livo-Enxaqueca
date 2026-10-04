@@ -21,37 +21,25 @@ const FREQUENCY_OPTIONS = [
         value: 'as_needed' as FrequencyOption,
         label: 'Só quando a dor já está forte',
         sublabel: 'Aguardo piorar antes de tomar',
-        emoji: '⏱️',
-        risk: 'medium',
-        color: '#F5A623',
-        feedback: 'Tomar cedo costuma ser mais eficaz. O app pode te lembrar de agir antes.',
+        color: '#00BFA5',
     },
     {
         value: 'early' as FrequencyOption,
         label: 'Logo nos primeiros sintomas',
         sublabel: 'Tomo assim que percebo a crise',
-        emoji: '⚡',
-        risk: 'low',
         color: '#00BFA5',
-        feedback: 'Ótima estratégia. Agir cedo aumenta muito a eficácia dos abortivos.',
     },
     {
         value: 'daily' as FrequencyOption,
         label: 'Quase todo dia',
         sublabel: 'Uso frequente para controlar a dor',
-        emoji: '📅',
-        risk: 'high',
-        color: '#E85D75',
-        feedback: 'Uso diário pode causar cefaleia por uso excessivo. O app vai monitorar isso de perto.',
+        color: '#00BFA5',
     },
     {
         value: 'avoid' as FrequencyOption,
         label: 'Evito ao máximo tomar remédio',
         sublabel: 'Prefiro métodos não medicamentosos',
-        emoji: '🌿',
-        risk: 'low',
         color: '#00BFA5',
-        feedback: 'Válido! O app vai te ajudar a registrar o que funciona para você.',
     },
 ];
 
@@ -66,13 +54,13 @@ const EFFECTIVENESS_OPTIONS = [
         value: 'partial' as EffectivenessOption,
         label: 'Funciona parcialmente',
         emoji: '🔶',
-        color: '#F5A623',
+        color: '#00BFA5',
     },
     {
         value: 'ineffective' as EffectivenessOption,
         label: 'Quase não resolve',
         emoji: '❌',
-        color: '#E85D75',
+        color: '#00BFA5',
     },
 ];
 
@@ -150,48 +138,11 @@ export default function AbortiveMedicationsStep() {
                     </Text>
 
                     <Text style={{ fontSize: 15, color: '#7A99B2', lineHeight: 22 }}>
-                        O padrão de uso abortivo ajuda a identificar risco de dependência e orientar seu tratamento.
+                        O padrão de uso de medicamentos ajuda a entender sua rotina e orientar seu acompanhamento.
                     </Text>
                 </View>
 
-                <View style={{ paddingHorizontal: 24, marginTop: 20, minHeight: 64 }}>
-                    {selectedFrequency && (
-                        <View
-                            style={{
-                                backgroundColor: selectedFrequency.color + '18',
-                                borderRadius: 12,
-                                borderWidth: 1,
-                                borderColor: selectedFrequency.color + '40',
-                                padding: 14,
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 10,
-                            }}
-                        >
-                            <View
-                                style={{
-                                    width: 8,
-                                    height: 8,
-                                    borderRadius: 4,
-                                    backgroundColor: selectedFrequency.color,
-                                }}
-                            />
-                            <Text
-                                style={{
-                                    fontSize: 13,
-                                    color: selectedFrequency.color,
-                                    fontWeight: '600',
-                                    flex: 1,
-                                    lineHeight: 18,
-                                }}
-                            >
-                                {selectedFrequency.feedback}
-                            </Text>
-                        </View>
-                    )}
-                </View>
-
-                <View style={{ paddingHorizontal: 24, marginTop: 12, gap: 10 }}>
+                <View style={{ paddingHorizontal: 24, marginTop: 24, gap: 10 }}>
                     {FREQUENCY_OPTIONS.map((option) => {
                         const isSelected = frequency === option.value;
                         return (
@@ -208,11 +159,10 @@ export default function AbortiveMedicationsStep() {
                                     paddingHorizontal: 20,
                                     flexDirection: 'row',
                                     alignItems: 'center',
-                                    gap: 14,
+                                    justifyContent: 'space-between',
                                 }}
                             >
-                                <Text style={{ fontSize: 24 }}>{option.emoji}</Text>
-                                <View style={{ flex: 1, gap: 2 }}>
+                                <View style={{ flex: 1, gap: 2, marginRight: 12 }}>
                                     <Text
                                         style={{
                                             fontSize: 15,

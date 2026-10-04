@@ -97,8 +97,20 @@ export default function CalendarScreen() {
       >
         <View style={{ paddingHorizontal: 24, paddingTop: 40 }}>
 
-          <Text style={{ fontSize: 28, color: 'white', fontFamily: 'Epilogue_300Light', marginBottom: 24 }}>
+          <Text style={{ fontSize: 28, color: 'white', fontFamily: 'Epilogue_300Light', marginBottom: 8 }}>
             Seu <Text style={{ fontFamily: 'Epilogue_700Bold' }}>Histórico</Text>
+          </Text>
+
+          <Text
+            style={{
+              fontSize: 15,
+              color: Colors.muted,
+              fontFamily: 'Epilogue_400Regular',
+              lineHeight: 22,
+              marginBottom: 24,
+            }}
+          >
+            Consulte suas crises e eventos registrados em cada dia.
           </Text>
 
           <StuckQueueNotice />
@@ -162,8 +174,8 @@ export default function CalendarScreen() {
                         backgroundColor: isSelected
                           ? Colors.accent
                           : hasCrisisDay
-                          ? `${crisisColor}25`
-                          : 'transparent',
+                            ? `${crisisColor}25`
+                            : 'transparent',
                         borderWidth: isToday && !isSelected ? 1.5 : 0,
                         borderColor: Colors.accent,
                       }}
@@ -217,7 +229,7 @@ export default function CalendarScreen() {
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: Colors.accent, opacity: 0.8 }} />
-                <Text style={{ fontSize: 10, color: Colors.muted, fontFamily: 'Epilogue_400Regular' }}>Registro</Text>
+                <Text style={{ fontSize: 10, color: Colors.muted, fontFamily: 'Epilogue_400Regular' }}>Evento</Text>
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                 <View style={{ width: 10, height: 10, borderRadius: 3, borderWidth: 1.5, borderColor: Colors.accent }} />
@@ -225,31 +237,6 @@ export default function CalendarScreen() {
               </View>
             </View>
           </Card>
-
-          {!loading && totalCrises > 0 && (
-            <Animated.View entering={FadeInUp.duration(300)} style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
-              <View style={{ flex: 1, backgroundColor: '#1E3A52', borderRadius: 16, padding: 16, alignItems: 'center' }}>
-                <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 22 }}>{totalCrises}</Text>
-                <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 11, marginTop: 2 }}>
-                  {totalCrises === 1 ? 'crise' : 'crises'}
-                </Text>
-              </View>
-              <View style={{ flex: 1, backgroundColor: '#1E3A52', borderRadius: 16, padding: 16, alignItems: 'center' }}>
-                <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 22 }}>{criseDays}</Text>
-                <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 11, marginTop: 2 }}>
-                  {criseDays === 1 ? 'dia afetado' : 'dias afetados'}
-                </Text>
-              </View>
-              {avgIntensity !== null && (
-                <View style={{ flex: 1, backgroundColor: '#1E3A52', borderRadius: 16, padding: 16, alignItems: 'center' }}>
-                  <Text style={{ color: intensityColor(Math.round(parseFloat(avgIntensity))), fontFamily: 'Epilogue_700Bold', fontSize: 22 }}>
-                    {avgIntensity}
-                  </Text>
-                  <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 11, marginTop: 2 }}>intensidade média</Text>
-                </View>
-              )}
-            </Animated.View>
-          )}
 
           {error && (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 16, backgroundColor: '#EF444420', borderRadius: 16, marginBottom: 16 }}>
@@ -262,8 +249,11 @@ export default function CalendarScreen() {
 
           {selectedDay !== null && (
             <Animated.View entering={FadeInUp.duration(250)}>
+              <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 18, marginBottom: 4 }}>
+                Detalhes do dia
+              </Text>
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 18 }}>
+                <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 14 }}>
                   {selectedDay} de {MONTH_NAMES[month]}
                 </Text>
                 <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 13 }}>
@@ -289,7 +279,7 @@ export default function CalendarScreen() {
                 }}>
                   <Text style={{ fontSize: 28, marginBottom: 8 }}>✨</Text>
                   <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 14, textAlign: 'center' }}>
-                    Nenhum dado neste dia
+                    Sem dados neste dia
                   </Text>
                 </View>
               ) : activeTab === 'todos' ? (
@@ -327,6 +317,36 @@ export default function CalendarScreen() {
                   </View>
                 )
               )}
+            </Animated.View>
+          )}
+
+          {!loading && totalCrises > 0 && (
+            <Animated.View entering={FadeInUp.duration(300)} style={{ marginTop: selectedDay !== null ? 24 : 0 }}>
+              <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 18, marginBottom: 12 }}>
+                Resumo do mês
+              </Text>
+              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
+                <View style={{ flex: 1, backgroundColor: '#1E3A52', borderRadius: 16, padding: 16, alignItems: 'center' }}>
+                  <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 22 }}>{totalCrises}</Text>
+                  <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 9, marginTop: 2 }}>
+                    Número de crises
+                  </Text>
+                </View>
+                <View style={{ flex: 1, backgroundColor: '#1E3A52', borderRadius: 16, padding: 16, alignItems: 'center' }}>
+                  <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 22 }}>{criseDays}</Text>
+                  <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 9, marginTop: 2 }}>
+                    Número de dias afetados
+                  </Text>
+                </View>
+                {avgIntensity !== null && (
+                  <View style={{ flex: 1, backgroundColor: '#1E3A52', borderRadius: 16, padding: 16, alignItems: 'center' }}>
+                    <Text style={{ color: intensityColor(Math.round(parseFloat(avgIntensity))), fontFamily: 'Epilogue_700Bold', fontSize: 22 }}>
+                      {avgIntensity}
+                    </Text>
+                    <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 9, marginTop: 2 }}>intensidade média das crises</Text>
+                  </View>
+                )}
+              </View>
             </Animated.View>
           )}
 

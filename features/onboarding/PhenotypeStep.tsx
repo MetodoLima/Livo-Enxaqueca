@@ -43,14 +43,14 @@ const OPTIONS: Option[] = [
     label: '10 - 14 dias',
     sublabel: 'Com frequência',
     userType: 'episodic',
-    color: '#F5A623',
+    color: '#00BFA5',
   },
   {
     value: '16',
     label: '15 dias ou mais',
     sublabel: 'Quase todo dia',
     userType: 'chronic',
-    color: '#E85D75',
+    color: '#00BFA5',
   },
   {
     value: 'unknown',
@@ -137,48 +137,7 @@ export default function PhenotypeStep() {
           </Text>
         </View>
 
-        <View style={{ paddingHorizontal: 24, marginTop: 20, minHeight: 48 }}>
-          {selectedOption && selectedOption.userType ? (
-            <View
-              style={{
-                backgroundColor: selectedOption.color + '18',
-                borderRadius: 12,
-                borderWidth: 1,
-                borderColor: selectedOption.color + '40',
-                padding: 14,
-                flexDirection: 'row',
-                alignItems: 'center',
-                gap: 10,
-              }}
-            >
-              <View
-                style={{
-                  width: 8,
-                  height: 8,
-                  borderRadius: 4,
-                  backgroundColor: selectedOption.color,
-                }}
-              />
-              <Text
-                style={{
-                  fontSize: 13,
-                  color: selectedOption.color,
-                  fontWeight: '600',
-                  flex: 1,
-                  lineHeight: 18,
-                }}
-              >
-                {selectedOption.userType === 'chronic'
-                  ? 'Enxaqueca Crônica — o app vai adaptar seu acompanhamento.'
-                  : selectedOption.value === '12'
-                    ? 'Atenção: você está próximo do limiar crônico.'
-                    : 'Enxaqueca Episódica — foco em identificar seus gatilhos.'}
-              </Text>
-            </View>
-          ) : null}
-        </View>
-
-        <View style={{ paddingHorizontal: 24, marginTop: 12, gap: 12 }}>
+        <View style={{ paddingHorizontal: 24, marginTop: 24, gap: 12 }}>
           {OPTIONS.map((option) => {
             const isSelected = selected === option.value;
             const isUnknown = option.value === 'unknown';
