@@ -1,43 +1,30 @@
-import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  TextInput,
-  Image,
-  StyleSheet,
-  ActivityIndicator,
-  Alert,
-} from 'react-native';
 import Slider from '@react-native-community/slider';
-import {
-  Mic,
-  Zap,
-  Activity,
-  TrendingDown,
-  Bell,
-  Moon,
-  Droplets,
-  Send,
-  Check,
-} from 'lucide-react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
-import { Link } from 'expo-router';
-import { Colors } from '@/constants/Colors';
+import { useRouter } from 'expo-router';
+import { Activity, Bell, Check, Droplets, Mic, Moon, Send, TrendingDown, Zap } from 'lucide-react-native';
+import { useEffect, useState } from 'react';
+import { AccessibilityInfo, Alert, Image, View } from 'react-native';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import IconBadge from '@/components/ui/IconBadge';
+import Screen from '@/components/ui/Screen';
+import SectionDivider from '@/components/ui/SectionDivider';
+import Text from '@/components/ui/Text';
+import TextField from '@/components/ui/TextField';
+import { color } from '@/constants/Colors';
 import { MoodId } from '@/constants/data';
-import MoodSelector from '@/features/daily-record/MoodSelector';
 import { useAuth } from '@/contexts/AuthContext';
-import ScreenBackground from '@/components/ui/ScreenBackground';
-import { BlurView } from 'expo-blur';
-import { LinearGradient } from 'expo-linear-gradient';
-import { useDailyRecord } from '@/features/daily-record/useDailyRecord';
-import { crisisRepository } from '@/repositories';
 import { useSync } from '@/contexts/SyncContext';
+import MoodSelector from '@/features/daily-record/MoodSelector';
+import { useDailyRecord } from '@/features/daily-record/useDailyRecord';
 import { elapsedSince, formatSleep, formatWater, toLocalDateString } from '@/lib/format';
+import { crisisRepository } from '@/repositories';
+
+const SLEEP_TICKS = ['0h', '4h', '8h', '12h', '16h+'];
+const WATER_TICKS = ['0', '1L', '2L', '3L', '4L+'];
 
 export default function HomeScreen() {
   const { user } = useAuth();
+  const router = useRouter();
   const [selectedMood, setSelectedMood] = useState<MoodId | null>(null);
   const [relato, setRelato] = useState('');
   const [sonoLocal, setSonoLocal] = useState(0);
@@ -76,6 +63,11 @@ export default function HomeScreen() {
 
   const today = toLocalDateString(new Date());
   const { saving, saved, naFila, salvar } = useDailyRecord(today);
+  const savedMessage = naFila ? 'Salvo no aparelho' : 'Registrado!';
+
+  useEffect(() => {
+    if (saved) AccessibilityInfo.announceForAccessibility(savedMessage);
+  }, [saved, savedMessage]);
 
   const now = new Date();
   const greeting =
@@ -110,370 +102,187 @@ export default function HomeScreen() {
     selectedMood !== null;
 
   return (
-    <ScreenBackground>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 160 }}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={{ paddingHorizontal: 20, paddingTop: 20 }}>
-
-          <View className="flex-row justify-between items-center" style={{ marginBottom: 28 }}>
-            <View>
-              <Text className="text-[28px] text-white/60 font-epilogue-light">
-                {greeting},
-              </Text>
-              <Text className="text-[30px] text-white font-epilogue-bold" style={{ marginTop: -2 }}>
-                {user?.user_metadata?.name ? `${user.user_metadata.name}!` : 'Visitante!'}
-              </Text>
-            </View>
-            <TouchableOpacity style={styles.headerBtn}>
-              <Bell size={20} color={Colors.muted} />
-            </TouchableOpacity>
-          </View>
-
-          <Animated.View entering={FadeInUp.delay(100)} style={{ marginBottom: 28 }}>
-            <Text style={styles.sectionLabel}>Como você está hoje?</Text>
-            <MoodSelector
-              selected={selectedMood}
-              onSelect={(mood) => setSelectedMood(mood === selectedMood ? null : mood)}
-            />
-          </Animated.View>
-
-          <Animated.View entering={FadeInUp.delay(200)} style={{ marginBottom: 20 }}>
-
-            <View style={styles.mascotContainer}>
-              <Image
-                source={require('../../assets/images/IA-Livo.webp')}
-                style={styles.mascotImageAbsolute}
-                resizeMode="cover"
-              />
-              <View style={styles.mascotContent}>
-                <Text className="text-white text-2xl font-epilogue-bold text-center shadow-lg">
-                  Registre um evento
-                </Text>
-                <TouchableOpacity style={styles.micButton}>
-                  <Mic size={28} color="white" />
-                </TouchableOpacity>
-                <View style={styles.inputContainer}>
-                  <TextInput
-                    value={relato}
-                    onChangeText={setRelato}
-                    placeholder="O que aconteceu hoje?"
-                    placeholderTextColor={Colors.muted}
-                    multiline
-                    style={{
-                      flex: 1,
-                      color: 'white',
-                      fontFamily: 'Epilogue_400Regular',
-                      fontSize: 14,
-                      maxHeight: 80,
-                    }}
-                  />
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.rotinaCard}>
-              <BlurView
-                intensity={40}
-                tint="dark"
-                style={[
-                  StyleSheet.absoluteFillObject,
-                  { borderRadius: 28, borderTopLeftRadius: 0, borderTopRightRadius: 0 },
-                ]}
-              />
-              <LinearGradient
-                colors={['rgba(20, 60, 81, 0.92)', 'rgba(37, 183, 187, 0.18)']}
-                start={{ x: 0, y: 0 }}
-                end={{ x: 1, y: 1 }}
-                style={[
-                  StyleSheet.absoluteFillObject,
-                  { borderRadius: 28, borderTopLeftRadius: 0, borderTopRightRadius: 0 },
-                ]}
-              />
-
-              <View style={{ position: 'relative' }}>
-                <View style={styles.dividerRow}>
-                  <View style={styles.dividerLine} />
-                  <Text style={styles.dividerLabel}>rotina de hoje</Text>
-                  <View style={styles.dividerLine} />
-                </View>
-
-                <View style={styles.sliderBlock}>
-                  <View style={styles.sliderHeader}>
-                    <View style={styles.sliderIconRow}>
-                      <Moon size={16} color={Colors.purple ?? '#8B6FC0'} />
-                      <Text style={styles.sliderLabel}>Sono</Text>
-                    </View>
-                    <Text style={[styles.sliderValue, { color: sonoLocal > 0 ? (Colors.purple ?? '#8B6FC0') : Colors.muted }]}>
-                      {sonoLocal > 0 ? formatSleep(sonoLocal) : 'Não registrado'}
-                    </Text>
-                  </View>
-                  <Slider
-                    style={{ width: '100%', height: 40 }}
-                    minimumValue={0}
-                    maximumValue={16}
-                    step={0.5}
-                    value={sonoLocal}
-                    onValueChange={(v) => setSonoLocal(Math.round(v * 2) / 2)}
-                    minimumTrackTintColor={Colors.purple ?? '#8B6FC0'}
-                    maximumTrackTintColor="rgba(255,255,255,0.1)"
-                    thumbTintColor={Colors.purple ?? '#8B6FC0'}
-                  />
-                  <View style={styles.sliderTicks}>
-                    {['0h', '4h', '8h', '12h', '16h+'].map(t => (
-                      <Text key={t} style={styles.sliderTick}>{t}</Text>
-                    ))}
-                  </View>
-                </View>
-
-                <View style={styles.sliderBlock}>
-                  <View style={styles.sliderHeader}>
-                    <View style={styles.sliderIconRow}>
-                      <Droplets size={16} color={Colors.accent} />
-                      <Text style={styles.sliderLabel}>Água</Text>
-                    </View>
-                    <Text style={[styles.sliderValue, { color: aguaLocal > 0 ? Colors.accent : Colors.muted }]}>
-                      {aguaLocal > 0 ? formatWater(aguaLocal) : 'Não registrado'}
-                    </Text>
-                  </View>
-                  <Slider
-                    style={{ width: '100%', height: 40 }}
-                    minimumValue={0}
-                    maximumValue={4000}
-                    step={100}
-                    value={aguaLocal}
-                    onValueChange={(v) => setAguaLocal(Math.round(v / 100) * 100)}
-                    minimumTrackTintColor={Colors.accent}
-                    maximumTrackTintColor="rgba(255,255,255,0.1)"
-                    thumbTintColor={Colors.accent}
-                  />
-                  <View style={styles.sliderTicks}>
-                    {['0', '1L', '2L', '3L', '4L+'].map(t => (
-                      <Text key={t} style={styles.sliderTick}>{t}</Text>
-                    ))}
-                  </View>
-                </View>
-
-                <TouchableOpacity
-                  onPress={handleRegistrar}
-                  disabled={!temAlgumDado || saving}
-                  style={[
-                    styles.registrarBtn,
-                    {
-                      backgroundColor: saved
-                        ? '#10B981'
-                        : temAlgumDado
-                        ? Colors.accent
-                        : 'rgba(37, 183, 187, 0.2)',
-                      opacity: !temAlgumDado && !saving ? 0.5 : 1,
-                    },
-                  ]}
-                >
-                  {saving ? (
-                    <ActivityIndicator size="small" color="white" />
-                  ) : saved ? (
-                    <>
-                      <Check size={18} color="white" />
-                      <Text style={styles.registrarBtnText}>
-                        {naFila ? 'Salvo no aparelho' : 'Registrado!'}
-                      </Text>
-                    </>
-                  ) : (
-                    <>
-                      <Send size={18} color="white" />
-                      <Text style={styles.registrarBtnText}>Registrar</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
-              </View>
-            </View>
-          </Animated.View>
-
-          <Animated.View entering={FadeInUp.delay(300)}>
-            <View style={styles.widget}>
-              <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFillObject, { borderRadius: 28 }]} />
-              <LinearGradient
-                colors={['rgba(37, 183, 187, 0.75)', 'rgba(20, 60, 81, 0.4)']}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFillObject}
-              />
-              <View style={styles.widgetContent}>
-                <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                  <View style={styles.streakCircle}>
-                    <Text style={styles.streakNumber}>{streakInfo?.number ?? '–'}</Text>
-                  </View>
-                  <View style={{ marginLeft: 16, flex: 1 }}>
-                    <Text style={styles.widgetHeading}>Sem enxaqueca</Text>
-                    <Text style={styles.widgetSubtext}>
-                      {streakInfo ? streakInfo.label : 'Nenhuma crise registrada'}
-                    </Text>
-                  </View>
-                </View>
-                <Link href="/record-crisis" asChild>
-                  <TouchableOpacity style={styles.accentButton}>
-                    <Zap size={18} color="white" fill="white" />
-                    <Text style={styles.accentButtonText}>Registrar Crise</Text>
-                  </TouchableOpacity>
-                </Link>
-              </View>
-            </View>
-          </Animated.View>
-
-          <View style={styles.statsGridContainer}>
-            <Animated.View entering={FadeInUp.delay(400)} style={[styles.statWidget, styles.statCardLeft]}>
-              <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFillObject, { borderRadius: 24 }]} />
-              <LinearGradient
-                colors={['rgba(139, 163, 167, 0.75)', 'rgba(20, 60, 81, 0.4)']}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFillObject}
-              />
-              <View style={styles.statWidgetContent}>
-                <View style={[styles.statIconContainer, { backgroundColor: 'rgba(255, 255, 255, 0.15)' }]}>
-                  <Activity size={22} color="white" />
-                </View>
-                <Text style={[styles.statNumber, { color: 'white' }]}>{crisesThisMonth ?? '–'}</Text>
-                <Text style={[styles.statLabel, { color: 'white' }]}>Crises Mês</Text>
-              </View>
-            </Animated.View>
-
-            <Animated.View entering={FadeInUp.delay(500)} style={styles.statWidget}>
-              <BlurView intensity={40} tint="dark" style={[StyleSheet.absoluteFillObject, { borderRadius: 24 }]} />
-              <LinearGradient
-                colors={['rgba(20, 60, 81, 0.85)', 'rgba(37, 183, 187, 0.3)']}
-                start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
-                style={StyleSheet.absoluteFillObject}
-              />
-              <View style={styles.statWidgetContent}>
-                <View style={[styles.statIconContainer, { backgroundColor: 'rgba(255, 255, 255, 0.15)' }]}>
-                  <TrendingDown size={22} color="white" />
-                </View>
-                <Text style={[styles.statNumber, { color: 'white' }]}>{avgIntensity ?? '–'}</Text>
-                <Text style={[styles.statLabel, { color: 'white' }]}>Intensidade Média</Text>
-              </View>
-            </Animated.View>
-          </View>
-
+    <Screen scroll>
+      <View className="mb-8 mt-4 flex-row items-center justify-between gap-4">
+        <View className="flex-1">
+          <Text variant="heading" weight="regular" tone="muted" accessibilityRole="text">
+            {greeting},
+          </Text>
+          <Text variant="title">
+            {user?.user_metadata?.name ? `${user.user_metadata.name}!` : 'Visitante!'}
+          </Text>
         </View>
-      </ScrollView>
-    </ScreenBackground>
+        <View
+          importantForAccessibility="no-hide-descendants"
+          accessibilityElementsHidden
+          className="h-12 w-12 items-center justify-center rounded-full bg-surface-raised"
+        >
+          <Bell size={22} color={color.contentMuted} />
+        </View>
+      </View>
+
+      <Text variant="heading" className="mb-4 text-center">
+        Como você está hoje?
+      </Text>
+      <MoodSelector
+        selected={selectedMood}
+        onSelect={(mood) => setSelectedMood(mood === selectedMood ? null : mood)}
+      />
+
+      <Card className="mt-8">
+        <Image
+          source={require('../../assets/images/IA-Livo.webp')}
+          className="h-48 w-full rounded-md"
+          resizeMode="cover"
+          accessible={false}
+          accessibilityIgnoresInvertColors
+        />
+        <Text variant="title" className="mt-4 text-center">
+          Registre um evento
+        </Text>
+        <View className="mt-4 items-center">
+          <View
+            importantForAccessibility="no-hide-descendants"
+            accessibilityElementsHidden
+            className="h-20 w-20 items-center justify-center rounded-full border border-primary bg-primary-subtle"
+          >
+            <Mic size={28} color={color.primary} />
+          </View>
+        </View>
+        <TextField
+          label="Relato"
+          value={relato}
+          onChangeText={setRelato}
+          placeholder="O que aconteceu hoje?"
+          multiline
+          className="mt-4"
+        />
+
+        <SectionDivider label="Rotina de hoje" className="mb-4 mt-6" />
+
+        <View className="mb-4">
+          <View className="mb-1 flex-row items-center justify-between gap-3">
+            <View className="flex-row items-center gap-2">
+              <Moon size={18} color={color.secondary} />
+              <Text weight="semibold">Sono</Text>
+            </View>
+            <Text weight="semibold" tone={sonoLocal > 0 ? 'secondary' : 'muted'}>
+              {sonoLocal > 0 ? formatSleep(sonoLocal) : 'Não registrado'}
+            </Text>
+          </View>
+          <Slider
+            accessibilityLabel="Horas de sono"
+            style={{ width: '100%', height: 48 }}
+            minimumValue={0}
+            maximumValue={16}
+            step={0.5}
+            value={sonoLocal}
+            onValueChange={(v) => setSonoLocal(Math.round(v * 2) / 2)}
+            minimumTrackTintColor={color.secondary}
+            maximumTrackTintColor={color.line}
+            thumbTintColor={color.secondary}
+          />
+          <View className="flex-row justify-between px-1">
+            {SLEEP_TICKS.map((t) => (
+              <Text key={t} variant="caption" tone="muted">
+                {t}
+              </Text>
+            ))}
+          </View>
+        </View>
+
+        <View className="mb-4">
+          <View className="mb-1 flex-row items-center justify-between gap-3">
+            <View className="flex-row items-center gap-2">
+              <Droplets size={18} color={color.primary} />
+              <Text weight="semibold">Água</Text>
+            </View>
+            <Text weight="semibold" tone={aguaLocal > 0 ? 'primary' : 'muted'}>
+              {aguaLocal > 0 ? formatWater(aguaLocal) : 'Não registrado'}
+            </Text>
+          </View>
+          <Slider
+            accessibilityLabel="Água bebida"
+            style={{ width: '100%', height: 48 }}
+            minimumValue={0}
+            maximumValue={4000}
+            step={100}
+            value={aguaLocal}
+            onValueChange={(v) => setAguaLocal(Math.round(v / 100) * 100)}
+            minimumTrackTintColor={color.primary}
+            maximumTrackTintColor={color.line}
+            thumbTintColor={color.primary}
+          />
+          <View className="flex-row justify-between px-1">
+            {WATER_TICKS.map((t) => (
+              <Text key={t} variant="caption" tone="muted">
+                {t}
+              </Text>
+            ))}
+          </View>
+        </View>
+
+        <Button
+          title="Registrar"
+          variant="secondary"
+          icon={Send}
+          loading={saving}
+          disabled={!temAlgumDado}
+          onPress={handleRegistrar}
+          className="mt-2"
+        />
+        {saved ? (
+          <View className="mt-3 flex-row items-center justify-center gap-2">
+            <Check size={18} color={color.success} />
+            <Text weight="semibold" tone="success">
+              {savedMessage}
+            </Text>
+          </View>
+        ) : null}
+      </Card>
+
+      <Card className="mt-6">
+        <View className="flex-row items-center gap-4">
+          <View className="min-h-14 min-w-14 items-center justify-center rounded-full border-2 border-primary px-2">
+            <Text variant="heading" weight="bold">
+              {streakInfo?.number ?? '–'}
+            </Text>
+          </View>
+          <View className="flex-1">
+            <Text variant="heading">Sem enxaqueca</Text>
+            <Text variant="caption" tone="muted" className="mt-1">
+              {streakInfo ? streakInfo.label : 'Nenhuma crise registrada'}
+            </Text>
+          </View>
+        </View>
+        <Button
+          title="Registrar Crise"
+          icon={Zap}
+          onPress={() => router.push('/record-crisis')}
+          className="mt-4"
+        />
+      </Card>
+
+      <View className="mt-6 flex-row gap-3">
+        <Card className="flex-1 items-center">
+          <IconBadge icon={Activity} tone="primary" />
+          <Text variant="display" className="mt-2">
+            {crisesThisMonth ?? '–'}
+          </Text>
+          <Text variant="caption" weight="semibold" tone="muted" className="text-center">
+            Crises Mês
+          </Text>
+        </Card>
+        <Card className="flex-1 items-center">
+          <IconBadge icon={TrendingDown} tone="primary" />
+          <Text variant="display" className="mt-2">
+            {avgIntensity ?? '–'}
+          </Text>
+          <Text variant="caption" weight="semibold" tone="muted" className="text-center">
+            Intensidade Média
+          </Text>
+        </Card>
+      </View>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  headerBtn: {
-    width: 44, height: 44, borderRadius: 22,
-    backgroundColor: 'rgba(255, 255, 255, 0.06)',
-    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  sectionLabel: {
-    fontSize: 20, color: 'rgba(255, 255, 255, 0.95)',
-    fontFamily: 'Epilogue_600SemiBold', textAlign: 'center',
-    marginTop: 24, marginBottom: 20,
-  },
-  mascotContainer: {
-    width: '100%', aspectRatio: 1.1, borderRadius: 28,
-    borderBottomLeftRadius: 0, borderBottomRightRadius: 0,
-    overflow: 'hidden', backgroundColor: 'rgba(17, 47, 61, 0.9)',
-    borderWidth: 1, borderBottomWidth: 0,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
-  },
-  mascotImageAbsolute: {
-    position: 'absolute', top: 0, left: 0, right: 0, bottom: 0,
-    width: '100%', height: '100%', opacity: 0.7,
-  },
-  mascotContent: {
-    flex: 1, padding: 20, paddingTop: 36,
-    justifyContent: 'space-between', alignItems: 'center',
-  },
-  micButton: {
-    width: 76, height: 76, borderRadius: 38,
-    backgroundColor: 'rgba(37, 183, 187, 0.35)',
-    borderWidth: 1.5, borderColor: 'rgba(37, 183, 187, 0.7)',
-    alignItems: 'center', justifyContent: 'center',
-  },
-  inputContainer: {
-    width: '100%', borderRadius: 20, flexDirection: 'row',
-    alignItems: 'center', padding: 8, paddingLeft: 16,
-    backgroundColor: 'rgba(0, 0, 0, 0.35)',
-    borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.06)',
-  },
-  rotinaCard: {
-    borderRadius: 28, borderTopLeftRadius: 0, borderTopRightRadius: 0,
-    overflow: 'hidden', padding: 20, paddingTop: 16,
-    borderWidth: 1.5, borderTopWidth: 0,
-    borderColor: 'rgba(255, 255, 255, 0.15)',
-  },
-  dividerRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 20,
-  },
-  dividerLine: {
-    flex: 1, height: 1, backgroundColor: 'rgba(255, 255, 255, 0.1)',
-  },
-  dividerLabel: {
-    color: Colors.muted, fontFamily: 'Epilogue_600SemiBold',
-    fontSize: 10, letterSpacing: 1.5, textTransform: 'uppercase',
-  },
-  sliderBlock: { marginBottom: 16 },
-  sliderHeader: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    alignItems: 'center', marginBottom: 4,
-  },
-  sliderIconRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  sliderLabel: { color: 'white', fontFamily: 'Epilogue_600SemiBold', fontSize: 14 },
-  sliderValue: { fontFamily: 'Epilogue_700Bold', fontSize: 14 },
-  sliderTicks: {
-    flexDirection: 'row', justifyContent: 'space-between',
-    paddingHorizontal: 4, marginTop: -4,
-  },
-  sliderTick: { color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 10 },
-  registrarBtn: {
-    marginTop: 8, borderRadius: 16, paddingVertical: 14,
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-  },
-  registrarBtnText: { color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 15 },
-  widget: {
-    borderRadius: 28, overflow: 'hidden', marginBottom: 20,
-    borderWidth: 1.5, borderColor: 'rgba(255, 255, 255, 0.15)',
-  },
-  widgetContent: { padding: 24 },
-  widgetHeading: { fontSize: 17, color: '#FFFFFF', fontFamily: 'Epilogue_700Bold' },
-  widgetSubtext: {
-    fontSize: 13, color: Colors.muted,
-    fontFamily: 'Epilogue_400Regular', marginTop: 3,
-  },
-  streakCircle: {
-    width: 52, height: 52, borderRadius: 26,
-    borderWidth: 3, borderColor: Colors.accent,
-    alignItems: 'center', justifyContent: 'center',
-  },
-  streakNumber: { fontSize: 20, color: '#FFFFFF', fontFamily: 'Epilogue_700Bold' },
-  accentButton: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    backgroundColor: Colors.accent, paddingVertical: 14,
-    borderRadius: 16, marginTop: 18,
-  },
-  accentButtonText: {
-    color: '#FFFFFF', fontFamily: 'Epilogue_700Bold', fontSize: 15, marginLeft: 8,
-  },
-  statsGridContainer: { flexDirection: 'row', marginBottom: 20, width: '100%' },
-  statWidget: {
-    flex: 1, aspectRatio: 1, borderRadius: 24,
-    borderWidth: 1.5, borderColor: 'rgba(255, 255, 255, 0.15)', overflow: 'hidden',
-  },
-  statCardLeft: { marginRight: 12 },
-  statWidgetContent: {
-    flex: 1, padding: 16, alignItems: 'center', justifyContent: 'center',
-  },
-  statIconContainer: {
-    width: 44, height: 44, borderRadius: 14,
-    alignItems: 'center', justifyContent: 'center', marginBottom: 8,
-  },
-  statNumber: { fontSize: 34, fontFamily: 'Epilogue_700Bold', marginBottom: 2 },
-  statLabel: {
-    fontSize: 10, textAlign: 'center', textTransform: 'uppercase',
-    letterSpacing: 1.5, fontFamily: 'Epilogue_700Bold',
-  },
-});
