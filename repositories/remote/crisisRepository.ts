@@ -1,0 +1,150 @@
+import { supabase } from '@/lib/supabase';
+import type { Crisis, CrisisFilter, Phase } from '@/repositories/types';
+
+export type CrisePayload = {
+  id: string;
+  inicio_crise: string | null;
+  fim_crise: string | null;
+  updated_at: string;
+};
+
+export type FasePayload = {
+  id: string;
+  intensidade_dor: number | null;
+  regiao_dor: string | null;
+  lado: string | null;
+  nivel_incapacidade: string | null;
+  resumo: string | null;
+  sintomas: string[];
+  medicamentos: string[];
+  medicamentos_livres: string[];
+  fatores: string[];
+  updated_at: string;
+};
+
+const SELECT = `
+  id,
+  inicio_crise,
+  fim_crise,
+  registro_crise (
+    id,
+    intensidade_dor,
+    regiao_dor,
+    lado,
+    nivel_incapacidade,
+    resumo,
+    sintomas,
+    medicamentos,
+    medicamentos_livres,
+    fatores
+  )
+`;
+
+type FaseRow = {
+  id: string;
+  intensidade_dor: number | null;
+  regiao_dor: string | null;
+  lado: string | null;
+  nivel_incapacidade: string | null;
+  resumo: string | null;
+  sintomas: string[] | null;
+  medicamentos: string[] | null;
+  medicamentos_livres: string[] | null;
+  fatores: string[] | null;
+};
+
+type CriseRow = {
+  id: string;
+  inicio_crise: string | null;
+  fim_crise: string | null;
+  registro_crise: FaseRow[] | null;
+};
+
+function toPhase(row: FaseRow): Phase {
+  return {
+    id: row.id,
+    intensidadeDor: row.intensidade_dor ?? null,
+    regiaoDor: row.regiao_dor ?? null,
+    lado: row.lado ?? null,
+    nivelIncapacidade: row.nivel_incapacidade ?? null,
+    resumo: row.resumo ?? null,
+    sintomas: row.sintomas ?? [],
+    medicamentos: row.medicamentos ?? [],
+    medicamentosLivres: row.medicamentos_livres ?? [],
+    fatores: row.fatores ?? [],
+  };
+}
+
+function toCrisis(row: CriseRow): Crisis {
+  return {
+    id: row.id,
+    inicioCrise: row.inicio_crise ? new Date(row.inicio_crise) : null,
+    fimCrise: row.fim_crise ? new Date(row.fim_crise) : null,
+    fases: (Array.isArray(row.registro_crise) ? row.registro_crise : []).map(toPhase),
+    enviado: true,
+  };
+}
+
+export const crisisRepository = {
+  async list(filtro: CrisisFilter = {}): Promise<Crisis[]> {
+    let query = supabase.from('crise_enxaqueca').select(SELECT);
+
+    if (filtro.desde) query = query.gte('inicio_crise', filtro.desde.toISOString());
+    if (filtro.ate) query = query.lte('inicio_crise', filtro.ate.toISOString());
+    if (filtro.comecouAntesDe) {
+      query = query.lt('inicio_crise', filtro.comecouAntesDe.toISOString());
+    }
+    if (filtro.terminaApos) query = query.gte('fim_crise', filtro.terminaApos.toISOString());
+
+    const { data, error } = await query.order('inicio_crise', {
+      ascending: filtro.ordem !== 'desc',
+    });
+
+    if (error) throw error;
+    return ((data ?? []) as CriseRow[]).map(toCrisis);
+  },
+
+  async lastEndedAt(): Promise<Date | null> {
+    const { data, error } = await supabase
+      .from('crise_enxaqueca')
+      .select('fim_crise')
+      .not('fim_crise', 'is', null)
+      .order('fim_crise', { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (error) throw error;
+    return data?.fim_crise ? new Date(data.fim_crise) : null;
+  },
+
+  async countSince(data: Date): Promise<number> {
+    const { count, error } = await supabase
+      .from('crise_enxaqueca')
+      .select('id', { count: 'exact', head: true })
+      .gte('inicio_crise', data.toISOString());
+
+    if (error) throw error;
+    return count ?? 0;
+  },
+
+  async intensities(): Promise<number[]> {
+    const { data, error } = await supabase
+      .from('registro_crise')
+      .select('intensidade_dor')
+      .not('intensidade_dor', 'is', null);
+
+    if (error) throw error;
+    return (data ?? [])
+      .map((row: { intensidade_dor: number | null }) => row.intensidade_dor)
+      .filter((v): v is number => v != null);
+  },
+
+  async enviarCrise(crise: CrisePayload, fases: FasePayload[]): Promise<void> {
+    const { error } = await supabase.rpc('salvar_crise', {
+      p_crise: crise,
+      p_fases: fases,
+    });
+
+    if (error) throw new Error(`Erro ao salvar crise: ${error.message}`);
+  },
+};

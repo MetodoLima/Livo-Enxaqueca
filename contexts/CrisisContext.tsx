@@ -1,16 +1,15 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import React, { createContext, useContext, useState, useCallback, useEffect } from 'react';
+import React, { createContext, useContext, useState, useCallback, useEffect, useRef } from 'react';
+import { AppState } from 'react-native';
+import { useAuth } from '@/contexts/AuthContext';
 import { CrisisRecord, createEmptyCrisis } from '@/types/crisis';
 
-const STORAGE_KEY = 'livo:active-crisis';
+const STORAGE_KEY_PREFIX = 'livo:active-crisis:';
 
-// O slider de intensidade dispara updateActiveCrisis durante todo o arraste.
-// Sem espera, seriam dezenas de gravações por gesto.
+const LEGACY_STORAGE_KEY = 'livo:active-crisis';
+
 const PERSIST_DEBOUNCE_MS = 500;
 
-// ── Persistência ──────────────────────────────────────────────────────
-// JSON não tem tipo de data: o stringify vira ISO e o parse devolve string.
-// Sem reviver, crisisService quebra ao chamar toISOString na hora de gravar.
 type SerializedCrisis = Omit<CrisisRecord, 'startTime' | 'endTime'> & {
   startTime: string;
   endTime: string | null;
@@ -29,24 +28,28 @@ function reviveCrisis(stored: SerializedCrisis): CrisisRecord {
   };
 }
 
+function persist(key: string, activeCrisis: CrisisRecord | null, phases: CrisisRecord[]): void {
+  if (!activeCrisis && phases.length === 0) {
+    AsyncStorage.removeItem(key).catch((err) =>
+      console.error('Erro ao limpar crise em andamento:', err),
+    );
+    return;
+  }
+
+  AsyncStorage.setItem(key, JSON.stringify({ activeCrisis, phases })).catch((err) =>
+    console.error('Erro ao salvar crise em andamento:', err),
+  );
+}
+
 interface CrisisContextValue {
-  /** The current active (editable) crisis phase */
   activeCrisis: CrisisRecord | null;
-  /** Confirmed past phases of the same crisis episode */
   phases: CrisisRecord[];
-  /** Start a new crisis from the wizard */
   saveCrisis: (crisis: CrisisRecord) => void;
-  /** Update specific fields of the active crisis */
   updateActiveCrisis: (patch: Partial<CrisisRecord>) => void;
-  /** Confirm the current phase and start a new one */
   addPhase: () => void;
-  /** Remove a confirmed past phase by index */
   removePhase: (index: number) => void;
-  /** Clear the active crisis and all phases (finish/discard) */
   clearCrisis: () => void;
-  /** Whether there's an active crisis right now */
   hasActiveCrisis: boolean;
-  /** Whether the stored crisis was already read from the device */
   hydrated: boolean;
 }
 
@@ -63,55 +66,73 @@ const CrisisContext = createContext<CrisisContextValue>({
 });
 
 export function CrisisProvider({ children }: { children: React.ReactNode }) {
+  const { user } = useAuth();
+  const storageKey = user ? `${STORAGE_KEY_PREFIX}${user.id}` : null;
+
   const [activeCrisis, setActiveCrisis] = useState<CrisisRecord | null>(null);
   const [phases, setPhases] = useState<CrisisRecord[]>([]);
-  const [hydrated, setHydrated] = useState(false);
+  const [hydratedKey, setHydratedKey] = useState<string | null>(null);
+  const hydrated = storageKey !== null && hydratedKey === storageKey;
 
-  // Restaura a crise em andamento na abertura do app.
+  const pendingWrite = useRef<(() => void) | null>(null);
+
+  const flushPendingWrite = useCallback(() => {
+    const write = pendingWrite.current;
+    pendingWrite.current = null;
+    write?.();
+  }, []);
+
   useEffect(() => {
+    flushPendingWrite();
+    setActiveCrisis(null);
+    setPhases([]);
+    setHydratedKey(null);
+
+    if (!storageKey) return;
+
     let cancelled = false;
 
     (async () => {
       try {
-        const raw = await AsyncStorage.getItem(STORAGE_KEY);
+        AsyncStorage.removeItem(LEGACY_STORAGE_KEY).catch(() => undefined);
+
+        const raw = await AsyncStorage.getItem(storageKey);
         if (cancelled || !raw) return;
 
         const stored: StoredState = JSON.parse(raw);
         if (stored.activeCrisis) setActiveCrisis(reviveCrisis(stored.activeCrisis));
         if (stored.phases?.length) setPhases(stored.phases.map(reviveCrisis));
       } catch (err) {
-        // Registro corrompido não pode impedir o app de abrir.
         console.error('Erro ao restaurar crise em andamento:', err);
       } finally {
-        if (!cancelled) setHydrated(true);
+        if (!cancelled) setHydratedKey(storageKey);
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [storageKey, flushPendingWrite]);
 
-  // Grava a cada alteração, depois da restauração para não sobrescrever o
-  // que ainda não foi lido.
   useEffect(() => {
-    if (!hydrated) return;
+    if (!hydrated || !storageKey) return;
 
-    const timer = setTimeout(() => {
-      if (!activeCrisis && phases.length === 0) {
-        AsyncStorage.removeItem(STORAGE_KEY).catch((err) =>
-          console.error('Erro ao limpar crise em andamento:', err),
-        );
-        return;
-      }
-
-      AsyncStorage.setItem(STORAGE_KEY, JSON.stringify({ activeCrisis, phases })).catch((err) =>
-        console.error('Erro ao salvar crise em andamento:', err),
-      );
-    }, PERSIST_DEBOUNCE_MS);
+    pendingWrite.current = () => persist(storageKey, activeCrisis, phases);
+    const timer = setTimeout(flushPendingWrite, PERSIST_DEBOUNCE_MS);
 
     return () => clearTimeout(timer);
-  }, [activeCrisis, phases, hydrated]);
+  }, [activeCrisis, phases, hydrated, storageKey, flushPendingWrite]);
+
+  useEffect(() => {
+    const subscription = AppState.addEventListener('change', (nextState) => {
+      if (nextState !== 'active') flushPendingWrite();
+    });
+
+    return () => {
+      subscription.remove();
+      flushPendingWrite();
+    };
+  }, [flushPendingWrite]);
 
   const saveCrisis = useCallback((crisis: CrisisRecord) => {
     setActiveCrisis(crisis);
@@ -135,7 +156,6 @@ export function CrisisProvider({ children }: { children: React.ReactNode }) {
       return {
         ...createEmptyCrisis(),
         startTime: endTime,
-        // Pre-fill location and side from previous phase
         location: prev.location,
         side: prev.side,
       };
@@ -143,27 +163,26 @@ export function CrisisProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const clearCrisis = useCallback(() => {
+    pendingWrite.current = null;
     setActiveCrisis(null);
     setPhases([]);
-    // Apaga na hora em vez de esperar o debounce: se o app morrer nesse
-    // intervalo logo após finalizar, a crise já gravada voltaria na próxima
-    // abertura e poderia ser enviada de novo.
-    AsyncStorage.removeItem(STORAGE_KEY).catch((err) =>
+    if (!storageKey) return;
+    AsyncStorage.removeItem(storageKey).catch((err) =>
       console.error('Erro ao limpar crise em andamento:', err),
     );
-  }, []);
+  }, [storageKey]);
 
   return (
     <CrisisContext.Provider
       value={{
-        activeCrisis,
-        phases,
+        activeCrisis: hydrated ? activeCrisis : null,
+        phases: hydrated ? phases : [],
         saveCrisis,
         updateActiveCrisis,
         addPhase,
         removePhase,
         clearCrisis,
-        hasActiveCrisis: activeCrisis !== null,
+        hasActiveCrisis: hydrated && activeCrisis !== null,
         hydrated,
       }}
     >

@@ -1,12 +1,7 @@
 import Constants from 'expo-constants';
-import { Platform } from 'react-native';
 
-// Web sempre usa localhost. No Expo Go, hostUri aponta para o IP do dev server.
-// Fallback: 10.0.2.2 (emulador Android → host).
 const devHost =
-  Platform.OS === 'web'
-    ? 'localhost'
-    : typeof Constants.expoConfig?.hostUri === 'string'
+  typeof Constants.expoConfig?.hostUri === 'string'
     ? Constants.expoConfig.hostUri.split(':')[0]
     : '10.0.2.2';
 
@@ -134,12 +129,10 @@ export async function complementCrisis(
 
   if (audioUri) {
     if (audioUri.startsWith('blob:')) {
-      // Web: blob URL precisa ser convertida para Blob real
       const blobRes = await fetch(audioUri);
       const blob = await blobRes.blob();
       formData.append('file', blob, 'audio.webm');
     } else {
-      // Native: extensão do FormData do React Native
       formData.append('file', {
         uri: audioUri,
         name: 'audio.m4a',
@@ -152,7 +145,7 @@ export async function complementCrisis(
   }
 
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 300_000); // 5 min
+  const timeoutId = setTimeout(() => controller.abort(), 300_000);
 
   try {
     const response = await fetch(`${API_BASE_URL}/api/complement-crisis`, {

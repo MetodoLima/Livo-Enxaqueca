@@ -1,0 +1,365 @@
+import React, { useState } from 'react';
+import {
+  View,
+  Text,
+  TouchableOpacity,
+  TextInput,
+  ActivityIndicator,
+  StyleSheet,
+  Switch,
+} from 'react-native';
+import { Mic, Send } from 'lucide-react-native';
+import Animated, { FadeInUp } from 'react-native-reanimated';
+import { Colors } from '@/constants/Colors';
+import StepFooter from './StepFooter';
+import type { CrisisRecord, AiComplement } from '@/types/crisis';
+import { crisisToMigraineStructured, mergeAiResultIntoCrisis } from '@/types/crisis';
+import PulsingMic from '@/components/ui/PulsingMic';
+import { useCrisisAiComplement } from '@/hooks/useCrisisAiComplement';
+
+interface StepAiComplementProps {
+  data: CrisisRecord;
+  onChange: (patch: Partial<CrisisRecord>) => void;
+  onNext: () => void;
+}
+
+type SubStep = 'idle' | 'processing' | 'done';
+
+export default function StepAiComplement({ data, onChange, onNext }: StepAiComplementProps) {
+  const [subStep, setSubStep] = useState<SubStep>('idle');
+  const [text, setText] = useState('');
+  const [error, setError] = useState<string | null>(null);
+
+  const {
+    useLocalAi,
+    toggleLocalAi,
+    onDeviceAvailable,
+    audioAvailable,
+    isRecording,
+    recordSecs,
+    micError,
+    startRecording,
+    stopAndProcess: stopAndProcessAi,
+    submitText: submitTextAi,
+    stageLabel,
+    downloadProgress,
+  } = useCrisisAiComplement();
+
+  const fmtSecs = (s: number) =>
+    `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+
+  const stopAndProcess = async () => {
+    setSubStep('processing');
+    const preFilled = crisisToMigraineStructured(data);
+    const result = await stopAndProcessAi(preFilled);
+    if (!result) {
+      setError('Erro ao processar o áudio.');
+      setSubStep('idle');
+      return;
+    }
+    const complement: AiComplement = { audioUri: null, textNote: null, aiResult: result };
+    onChange({ ...mergeAiResultIntoCrisis(data, result.structured), aiComplement: complement });
+    setSubStep('done');
+  };
+
+  const submitText = async () => {
+    if (!text.trim()) return;
+    setError(null);
+    setSubStep('processing');
+    const preFilled = crisisToMigraineStructured(data);
+    const result = await submitTextAi(preFilled, text.trim());
+    if (!result) {
+      setError('Erro ao processar o texto.');
+      setSubStep('idle');
+      return;
+    }
+    const complement: AiComplement = { audioUri: null, textNote: text.trim(), aiResult: result };
+    onChange({ ...mergeAiResultIntoCrisis(data, result.structured), aiComplement: complement });
+    setSubStep('done');
+  };
+
+  if (subStep === 'processing') {
+    return (
+      <View style={styles.container}>
+        <View style={styles.centerContent}>
+          <ActivityIndicator size="large" color={Colors.accent} />
+          <Text style={styles.processingText}>Analisando...</Text>
+          <Text style={styles.processingSubText}>
+            {stageLabel ?? 'A IA está extraindo os dados do seu relato'}
+          </Text>
+          {downloadProgress != null && (
+            <View style={styles.progressTrack}>
+              <View style={[styles.progressFill, { width: `${Math.round(downloadProgress * 100)}%` }]} />
+            </View>
+          )}
+        </View>
+      </View>
+    );
+  }
+
+  if (subStep === 'done') {
+    return (
+      <View style={styles.container}>
+        <Animated.View entering={FadeInUp.duration(400)} style={styles.centerContent}>
+          <Text style={{ fontSize: 48, marginBottom: 12 }}>✅</Text>
+          <Text style={styles.doneTitle}>Detalhes adicionados!</Text>
+          {data.aiComplement?.aiResult?.structured.resumo && (
+            <Text style={styles.doneSummary}>
+              {data.aiComplement.aiResult.structured.resumo}
+            </Text>
+          )}
+        </Animated.View>
+        <StepFooter
+          onNext={onNext}
+          nextLabel="Finalizar registro"
+        />
+      </View>
+    );
+  }
+
+  return (
+    <View style={styles.container}>
+      <Animated.View entering={FadeInUp.duration(400)} style={styles.content}>
+        <Text style={styles.title}>Mais detalhes?</Text>
+        {isRecording && (
+          <Text style={styles.subtitle}>
+            {`Gravando  ${fmtSecs(recordSecs)}`}
+          </Text>
+        )}
+
+        {onDeviceAvailable && !isRecording && (
+          <View style={styles.localAiRow}>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.localAiLabel}>IA local (beta)</Text>
+              <Text style={styles.localAiHint}>
+                {useLocalAi ? 'Processa no aparelho, sem enviar dados' : 'Processa no servidor'}
+              </Text>
+            </View>
+            <Switch
+              value={useLocalAi}
+              onValueChange={toggleLocalAi}
+              trackColor={{ false: 'rgba(139,163,167,0.3)', true: Colors.accent }}
+            />
+          </View>
+        )}
+
+        {/* Mic area */}
+        {audioAvailable && (
+          <View style={styles.micArea}>
+            {isRecording ? (
+              <PulsingMic onStop={stopAndProcess} />
+            ) : (
+              <TouchableOpacity onPress={startRecording} style={styles.micBtn}>
+                <Mic size={32} color="white" />
+              </TouchableOpacity>
+            )}
+            <Text style={styles.micHint}>
+              {isRecording ? 'Toque para parar' : 'Toque para gravar'}
+            </Text>
+          </View>
+        )}
+
+        {audioAvailable && (
+          <View style={styles.divider}>
+            <View style={styles.dividerLine} />
+            <Text style={styles.dividerText}>ou escreva</Text>
+            <View style={styles.dividerLine} />
+          </View>
+        )}
+
+        <TextInput
+          value={text}
+          onChangeText={setText}
+          placeholder="Ex: Acordei com dor, tomei ibuprofeno, estresse no trabalho..."
+          placeholderTextColor={Colors.muted}
+          multiline
+          style={styles.textArea}
+          editable={!isRecording}
+        />
+
+        {(error || micError) && <Text style={styles.errorText}>{error || micError}</Text>}
+
+        {text.trim().length > 0 && !isRecording && (
+          <TouchableOpacity onPress={submitText} style={styles.sendBtn}>
+            <Send size={18} color="white" style={{ marginRight: 8 }} />
+            <Text style={styles.sendBtnText}>Analisar texto</Text>
+          </TouchableOpacity>
+        )}
+      </Animated.View>
+
+      <StepFooter
+        onNext={onNext}
+        nextLabel="Finalizar registro"
+        showSkip={subStep === 'idle' && !isRecording}
+        onSkip={onNext}
+        skipLabel="Pular"
+      />
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  content: {
+    flex: 1,
+  },
+  centerContent: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  title: {
+    fontSize: 26,
+    fontFamily: 'Epilogue_700Bold',
+    color: 'white',
+    marginBottom: 20,
+  },
+  localAiRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(139,163,167,0.18)',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 20,
+  },
+  localAiLabel: {
+    fontSize: 14,
+    fontFamily: 'Epilogue_600SemiBold',
+    color: 'white',
+  },
+  localAiHint: {
+    fontSize: 12,
+    fontFamily: 'Epilogue_400Regular',
+    color: Colors.muted,
+    marginTop: 2,
+  },
+  subtitle: {
+    fontSize: 15,
+    fontFamily: 'Epilogue_400Regular',
+    color: Colors.muted,
+    marginBottom: 28,
+  },
+
+  micArea: {
+    alignItems: 'center',
+    marginBottom: 28,
+  },
+  micBtn: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: Colors.accent,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: Colors.accent,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  micHint: {
+    color: Colors.muted,
+    fontSize: 12,
+    fontFamily: 'Epilogue_400Regular',
+    marginTop: 12,
+  },
+
+  divider: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  dividerLine: {
+    flex: 1,
+    height: 1,
+    backgroundColor: 'rgba(139,163,167,0.18)',
+  },
+  dividerText: {
+    color: Colors.muted,
+    fontSize: 12,
+    fontFamily: 'Epilogue_400Regular',
+    marginHorizontal: 12,
+  },
+
+  textArea: {
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(139,163,167,0.18)',
+    borderRadius: 16,
+    padding: 16,
+    color: 'white',
+    fontFamily: 'Epilogue_400Regular',
+    fontSize: 15,
+    minHeight: 100,
+    textAlignVertical: 'top',
+    marginBottom: 12,
+  },
+  errorText: {
+    color: '#EF4444',
+    fontSize: 13,
+    fontFamily: 'Epilogue_400Regular',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  sendBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: Colors.accent,
+    paddingVertical: 15,
+    borderRadius: 14,
+  },
+  sendBtnText: {
+    color: 'white',
+    fontSize: 15,
+    fontFamily: 'Epilogue_700Bold',
+  },
+
+  processingText: {
+    color: 'white',
+    fontSize: 18,
+    fontFamily: 'Epilogue_700Bold',
+    marginTop: 24,
+  },
+  processingSubText: {
+    color: Colors.muted,
+    fontSize: 13,
+    fontFamily: 'Epilogue_400Regular',
+    marginTop: 8,
+    textAlign: 'center',
+    paddingHorizontal: 32,
+  },
+  progressTrack: {
+    width: 200,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: 'rgba(139,163,167,0.3)',
+    marginTop: 16,
+    overflow: 'hidden',
+  },
+  progressFill: {
+    height: '100%',
+    borderRadius: 3,
+    backgroundColor: Colors.accent,
+  },
+
+  doneTitle: {
+    color: 'white',
+    fontSize: 22,
+    fontFamily: 'Epilogue_700Bold',
+    marginBottom: 8,
+  },
+  doneSummary: {
+    color: Colors.muted,
+    fontSize: 14,
+    fontFamily: 'Epilogue_400Regular',
+    textAlign: 'center',
+    paddingHorizontal: 24,
+    lineHeight: 22,
+  },
+});

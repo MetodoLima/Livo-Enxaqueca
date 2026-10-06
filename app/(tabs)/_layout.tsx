@@ -39,7 +39,6 @@ export default function TabLayout() {
         }}
       />
 
-      {/* ── Center circle button ── */}
       <Tabs.Screen
         name="crisis"
         options={{
