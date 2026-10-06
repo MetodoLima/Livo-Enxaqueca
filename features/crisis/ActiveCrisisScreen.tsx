@@ -2,7 +2,6 @@ import Card from '@/components/ui/Card';
 import { IntensityEditor, LocationEditor, MedicationsEditor, SymptomsEditor } from '@/features/crisis/components/EditModals';
 import { Colors } from '@/constants/Colors';
 import { useCrisis } from '@/contexts/CrisisContext';
-import { complementCrisis } from '@/services/api';
 import { crisisRepository, ehBancoLocalIndisponivel } from '@/repositories';
 import { tagStyles } from '@/features/crisis/components/tagStyles';
 import {
@@ -15,7 +14,7 @@ import {
   mergeAiResultIntoCrisis,
 } from '@/types/crisis';
 import PulsingMic from '@/components/ui/PulsingMic';
-import { audioAvailable, useAudioRecorder } from '@/hooks/useAudioRecorder';
+import { useCrisisAiComplement } from '@/hooks/useCrisisAiComplement';
 import { useRouter } from 'expo-router';
 import { Check, ChevronRight, Clock, Mic, Plus, Send, X, Zap } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
@@ -23,6 +22,7 @@ import {
   ActivityIndicator,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
@@ -45,11 +45,24 @@ export default function ActiveCrisisScreen() {
   const [erroAoFinalizar, setErroAoFinalizar] = useState<string | null>(null);
 
   const [showVoice, setShowVoice] = useState(false);
-  const [isProcessing, setIsProcessing] = useState(false);
   const [text, setText] = useState('');
-  const [error, setError] = useState<string | null>(null);
 
-  const { isRecording, recordSecs, error: micError, startRecording, stopRecording } = useAudioRecorder();
+  const {
+    useLocalAi,
+    toggleLocalAi,
+    onDeviceAvailable,
+    audioAvailable,
+    isRecording,
+    recordSecs,
+    micError,
+    startRecording,
+    stopAndProcess: stopAndProcessAi,
+    cancelRecording,
+    submitText: submitTextAi,
+    isProcessing,
+    stageLabel,
+    error,
+  } = useCrisisAiComplement();
 
   const [savedIntensity, setSavedIntensity] = useState<number | null>(null);
   const [ficouNaFila, setFicouNaFila] = useState(false);
@@ -125,43 +138,27 @@ export default function ActiveCrisisScreen() {
     `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 
   const stopAndProcess = async () => {
-    setError(null);
-    try {
-      const uri = await stopRecording();
-      if (!uri) throw new Error('URI inválido.');
-      setIsProcessing(true);
-      const preFilled = crisisToMigraineStructured(crisis);
-      const result = await complementCrisis(preFilled, uri, null);
-      updateActiveCrisis({
-        ...mergeAiResultIntoCrisis(crisis, result.structured),
-        aiComplement: { audioUri: uri, textNote: null, aiResult: result },
-      });
-      setIsProcessing(false);
-      setShowVoice(false);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Erro ao processar áudio.');
-      setIsProcessing(false);
-    }
+    const preFilled = crisisToMigraineStructured(crisis);
+    const result = await stopAndProcessAi(preFilled);
+    if (!result) return;
+    updateActiveCrisis({
+      ...mergeAiResultIntoCrisis(crisis, result.structured),
+      aiComplement: { audioUri: null, textNote: null, aiResult: result },
+    });
+    setShowVoice(false);
   };
 
   const submitText = async () => {
     if (!text.trim()) return;
-    setError(null);
-    setIsProcessing(true);
-    try {
-      const preFilled = crisisToMigraineStructured(crisis);
-      const result = await complementCrisis(preFilled, null, text.trim());
-      updateActiveCrisis({
-        ...mergeAiResultIntoCrisis(crisis, result.structured),
-        aiComplement: { audioUri: null, textNote: text.trim(), aiResult: result },
-      });
-      setText('');
-      setIsProcessing(false);
-      setShowVoice(false);
-    } catch (e: unknown) {
-      setError(e instanceof Error ? e.message : 'Erro ao processar texto.');
-      setIsProcessing(false);
-    }
+    const preFilled = crisisToMigraineStructured(crisis);
+    const result = await submitTextAi(preFilled, text.trim());
+    if (!result) return;
+    updateActiveCrisis({
+      ...mergeAiResultIntoCrisis(crisis, result.structured),
+      aiComplement: { audioUri: null, textNote: text.trim(), aiResult: result },
+    });
+    setText('');
+    setShowVoice(false);
   };
 
   const getDuration = () => {
@@ -409,7 +406,7 @@ export default function ActiveCrisisScreen() {
             <Card className="mb-4">
               <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
                 <Text style={[styles.cardLabel, { marginBottom: 0 }]}>Complementar registro</Text>
-                <TouchableOpacity onPress={() => { setShowVoice(false); if (isRecording) stopRecording(); }}>
+                <TouchableOpacity onPress={() => { setShowVoice(false); if (isRecording) cancelRecording(); }}>
                   <X size={20} color={Colors.muted} />
                 </TouchableOpacity>
               </View>
@@ -417,10 +414,28 @@ export default function ActiveCrisisScreen() {
               {isProcessing ? (
                 <View style={{ alignItems: 'center', paddingVertical: 24 }}>
                   <ActivityIndicator size="large" color={Colors.accent} />
-                  <Text style={[styles.cardLabel, { marginTop: 12 }]}>Analisando...</Text>
+                  <Text style={[styles.cardLabel, { marginTop: 12, textAlign: 'center' }]}>
+                    {stageLabel ?? 'Analisando...'}
+                  </Text>
                 </View>
               ) : (
                 <>
+                  {onDeviceAvailable && (
+                    <View style={styles.localAiRow}>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.localAiLabel}>IA local (beta)</Text>
+                        <Text style={styles.localAiHint}>
+                          {useLocalAi ? 'Processa no aparelho, sem enviar dados' : 'Processa no servidor'}
+                        </Text>
+                      </View>
+                      <Switch
+                        value={useLocalAi}
+                        onValueChange={toggleLocalAi}
+                        trackColor={{ false: 'rgba(139,163,167,0.3)', true: Colors.accent }}
+                      />
+                    </View>
+                  )}
+
                   {audioAvailable && (
                     <View style={{ alignItems: 'center', marginBottom: 20 }}>
                       {isRecording ? (
@@ -668,6 +683,27 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
+  localAiRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.04)',
+    borderWidth: 1,
+    borderColor: 'rgba(139,163,167,0.18)',
+    borderRadius: 14,
+    padding: 12,
+    marginBottom: 20,
+  },
+  localAiLabel: {
+    fontSize: 14,
+    fontFamily: 'Epilogue_600SemiBold',
+    color: 'white',
+  },
+  localAiHint: {
+    fontSize: 12,
+    fontFamily: 'Epilogue_400Regular',
+    color: Colors.muted,
+    marginTop: 2,
+  },
   micBtn: {
     width: 72,
     height: 72,
