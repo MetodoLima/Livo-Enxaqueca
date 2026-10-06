@@ -37,6 +37,26 @@
       "expo-audio",
       "expo-asset",
       [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "15.1"
+          },
+          "android": {
+            "extraProguardRules": "-keep class com.rnllama.** { *; }\n-keep class com.rnwhisper.** { *; }"
+          }
+        }
+      ],
+      [
+        "llama.rn",
+        {
+          "enableEntitlements": true,
+          "entitlementsProfile": "development",
+          "forceCxx20": true,
+          "enableOpenCLAndHexagon": true
+        }
+      ],
+      [
         "expo-sqlite",
         {
           "useSQLCipher": true
@@ -56,9 +76,9 @@
     "extra": {
       "router": {},
       "eas": {
-        "projectId": "bf202bbf-5b46-44d7-8312-b560f9a513f5"
+        "projectId": "53166223-e112-4a41-a4ed-613f5b2d278c"
       }
     },
-    "owner": "herikmario"
+    "owner": "vinlavor"
   }
 }
