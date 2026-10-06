@@ -51,3 +51,7 @@ venv/
 env/
 CLAUDE.md
 
+# benchmark de LLMs on-device
+benchmarks/ondevice-llm/models/
+benchmarks/ondevice-llm/results/
+

@@ -6,6 +6,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import { usePdfExport } from '@/features/profile/usePdfExport';
 import AppLockScreen from '@/features/app-lock/AppLockScreen';
 import { sessionRepository } from '@/repositories';
+import { useRouter } from 'expo-router';
 import { Bell as BellIcon, ChevronRight, FileText, LogOut, Moon as MoonIcon, Shield, User } from 'lucide-react-native';
 import React, { useState } from 'react';
 import { Alert, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
@@ -20,6 +21,7 @@ const menuItems = [
 ];
 
 export default function ProfileScreen() {
+  const router = useRouter();
   const { user } = useAuth();
   const [exportModalVisible, setExportModalVisible] = useState(false);
   const [appLockModalVisible, setAppLockModalVisible] = useState(false);
@@ -97,7 +99,16 @@ export default function ProfileScreen() {
           ))}
         </Animated.View>
 
-        <Animated.View entering={FadeInUp.delay(400)} className="mt-8 mb-10">
+        <Animated.View entering={FadeInUp.delay(350)} className="mt-6">
+          {/* Ferramenta interna de engenharia, não um recurso de usuário final —
+              ver app/dev-benchmark.tsx. Fica aqui só porque não há adb disponível
+              para abrir a rota por deep link nas builds de teste atuais. */}
+          <TouchableOpacity onPress={() => router.push('/dev-benchmark')} className="items-center py-3">
+            <Text className="text-[12px] text-muted font-epilogue">Benchmark on-device (interno)</Text>
+          </TouchableOpacity>
+        </Animated.View>
+
+        <Animated.View entering={FadeInUp.delay(400)} className="mt-2 mb-10">
           <TouchableOpacity onPress={handleLogout} className="flex-row items-center justify-center gap-2 py-4">
             <LogOut size={20} color="#EF4444" />
             <Text className="text-red-500 font-epilogue-bold">Sair da conta</Text>
