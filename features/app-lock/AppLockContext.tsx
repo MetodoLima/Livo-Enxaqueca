@@ -3,10 +3,15 @@ import {
   NO_PIN_ATTEMPTS,
   clearPinAttempts,
   createAppLockConfig,
+  clearLastUnlockedAt,
+  getLastUnlockedAt,
   getAppLockConfig,
   getPinAttempts,
+  isUnlockTimestampValid,
   recordPinFailure,
   removeAppLockConfig,
+  setAppLockEnabled,
+  setLastUnlockedAt,
   setBiometricEnabled,
   validateAppLockPin,
   type AppLockConfig,
@@ -16,7 +21,7 @@ import * as LocalAuthentication from 'expo-local-authentication';
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 
-const LOCK_GRACE_MS = 60 * 1000;
+export const LOCK_TIMEOUT_MS = 4 * 60 * 60 * 1000;
 
 export type AppLockStatus = 'loading' | 'configured' | 'locked' | 'unlocked';
 
@@ -30,6 +35,8 @@ type AppLockContextValue = {
   unlockWithPin: (pin: string) => Promise<boolean>;
   unlockWithBiometric: () => Promise<boolean>;
   setBiometric: (enabled: boolean) => Promise<void>;
+  setEnabled: (enabled: boolean) => Promise<void>;
+  enableWithPin: (pin: string) => Promise<boolean>;
   disable: () => Promise<void>;
 };
 
@@ -43,6 +50,8 @@ const AppLockContext = createContext<AppLockContextValue>({
   unlockWithPin: async () => false,
   unlockWithBiometric: async () => false,
   setBiometric: async () => {},
+  setEnabled: async () => {},
+  enableWithPin: async () => false,
   disable: async () => {},
 });
 
@@ -61,17 +70,25 @@ export function AppLockProvider({ children }: { children: React.ReactNode }) {
   const configRef = useRef<AppLockConfig | null>(null);
   const attemptsRef = useRef<PinAttempts>(NO_PIN_ATTEMPTS);
   const userIdRef = useRef<string | null>(null);
-  const leftForegroundAtRef = useRef<number | null>(null);
+  const lastUnlockedAtRef = useRef<number | null>(null);
 
   useEffect(() => {
     let cancelled = false;
+    const previousUserId = userIdRef.current;
     userIdRef.current = userId;
     configRef.current = null;
     attemptsRef.current = NO_PIN_ATTEMPTS;
+    lastUnlockedAtRef.current = null;
     setConfig(null);
     setPinLockedUntil(null);
     setBiometricAvailable(false);
     setStatus('loading');
+
+    if (previousUserId && previousUserId !== userId) {
+      void clearLastUnlockedAt(previousUserId).catch((error) => {
+        console.error('Não foi possível invalidar o desbloqueio anterior:', error);
+      });
+    }
 
     if (!userId) {
       setStatus('configured');
@@ -80,12 +97,17 @@ export function AppLockProvider({ children }: { children: React.ReactNode }) {
       };
     }
 
-    void Promise.all([getAppLockConfig(userId), getPinAttempts(userId)])
-      .then(async ([storedConfig, storedAttempts]) => {
+    void Promise.all([
+      getAppLockConfig(userId),
+      getPinAttempts(userId),
+      getLastUnlockedAt(userId),
+    ])
+      .then(async ([storedConfig, storedAttempts, storedLastUnlockedAt]) => {
         if (cancelled || userIdRef.current !== userId) return;
 
         configRef.current = storedConfig;
         attemptsRef.current = storedAttempts;
+        lastUnlockedAtRef.current = storedLastUnlockedAt;
         setConfig(storedConfig);
         setPinLockedUntil(storedAttempts.lockedUntil);
         if (!storedConfig) {
@@ -97,7 +119,19 @@ export function AppLockProvider({ children }: { children: React.ReactNode }) {
         const isEnrolled = hasHardware && await LocalAuthentication.isEnrolledAsync();
         if (!cancelled && userIdRef.current === userId) {
           setBiometricAvailable(isEnrolled);
-          setStatus('locked');
+          if (!storedConfig.enabled) {
+            lastUnlockedAtRef.current = null;
+            void clearLastUnlockedAt(userId).catch((error) => {
+              console.error('Não foi possível limpar o desbloqueio desativado:', error);
+            });
+            setStatus('configured');
+          } else {
+            setStatus(
+              isUnlockTimestampValid(storedLastUnlockedAt, Date.now(), LOCK_TIMEOUT_MS)
+                ? 'unlocked'
+                : 'locked',
+            );
+          }
         }
       })
       .catch((error) => {
@@ -112,21 +146,38 @@ export function AppLockProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const subscription = AppState.addEventListener('change', (nextState) => {
       if (nextState !== 'active') {
-        if (leftForegroundAtRef.current === null) leftForegroundAtRef.current = Date.now();
         setPrivacyCover(true);
         return;
       }
 
-      const leftAt = leftForegroundAtRef.current;
-      leftForegroundAtRef.current = null;
-      if (leftAt !== null && configRef.current) {
-        const elapsed = Date.now() - leftAt;
-        if (elapsed < 0 || elapsed >= LOCK_GRACE_MS) setStatus('locked');
+      if (configRef.current?.enabled) {
+        const unlocked = isUnlockTimestampValid(
+          lastUnlockedAtRef.current,
+          Date.now(),
+          LOCK_TIMEOUT_MS,
+        );
+        setStatus(unlocked ? 'unlocked' : 'locked');
+      } else if (configRef.current) {
+        setStatus('configured');
       }
       setPrivacyCover(false);
     });
 
     return () => subscription.remove();
+  }, []);
+
+  const markUnlocked = useCallback(async () => {
+    const currentUserId = userIdRef.current;
+    if (!currentUserId) throw new Error('É necessário estar autenticado para desbloquear o AppLock.');
+
+    const timestamp = Date.now();
+    await setLastUnlockedAt(currentUserId, timestamp);
+    if (userIdRef.current !== currentUserId) {
+      await clearLastUnlockedAt(currentUserId);
+      return;
+    }
+    lastUnlockedAtRef.current = timestamp;
+    setStatus('unlocked');
   }, []);
 
   const resetAttempts = useCallback(async () => {
@@ -154,8 +205,8 @@ export function AppLockProvider({ children }: { children: React.ReactNode }) {
     attemptsRef.current = NO_PIN_ATTEMPTS;
     setConfig(nextConfig);
     setPinLockedUntil(null);
-    setStatus('unlocked');
-  }, [biometricAvailable]);
+    await markUnlocked();
+  }, [biometricAvailable, markUnlocked]);
 
   const unlockWithPin = useCallback(async (pin: string): Promise<boolean> => {
     if (!configRef.current) return true;
@@ -168,7 +219,7 @@ export function AppLockProvider({ children }: { children: React.ReactNode }) {
     const valid = await validateAppLockPin(configRef.current, pin);
     if (valid) {
       await resetAttempts();
-      setStatus('unlocked');
+      await markUnlocked();
       return true;
     }
 
@@ -176,7 +227,7 @@ export function AppLockProvider({ children }: { children: React.ReactNode }) {
     attemptsRef.current = nextAttempts;
     setPinLockedUntil(nextAttempts.lockedUntil);
     return false;
-  }, [resetAttempts]);
+  }, [markUnlocked, resetAttempts]);
 
   const unlockWithBiometric = useCallback(async (): Promise<boolean> => {
     if (!configRef.current?.biometricEnabled || !biometricAvailable) return false;
@@ -188,23 +239,71 @@ export function AppLockProvider({ children }: { children: React.ReactNode }) {
     });
     if (result.success) {
       await resetAttempts();
-      setStatus('unlocked');
+      await markUnlocked();
     }
     return result.success;
-  }, [biometricAvailable, resetAttempts]);
+  }, [biometricAvailable, markUnlocked, resetAttempts]);
 
   const setBiometric = useCallback(async (enabled: boolean) => {
     if (!userIdRef.current || !configRef.current) return;
+    if (enabled && !configRef.current.enabled) {
+      throw new Error('Ative a segurança do aplicativo antes de ativar a biometria.');
+    }
+    if (enabled && !biometricAvailable) {
+      throw new Error('A biometria não está disponível neste dispositivo.');
+    }
     const nextConfig = await setBiometricEnabled(userIdRef.current, configRef.current, enabled);
     configRef.current = nextConfig;
     setConfig(nextConfig);
+  }, [biometricAvailable]);
+
+  const setEnabled = useCallback(async (enabled: boolean) => {
+    const currentUserId = userIdRef.current;
+    const currentConfig = configRef.current;
+    if (!currentUserId || !currentConfig) return;
+
+    const nextConfig = await setAppLockEnabled(currentUserId, currentConfig, enabled);
+    configRef.current = nextConfig;
+    setConfig(nextConfig);
+
+    if (!enabled) {
+      await clearLastUnlockedAt(currentUserId);
+      lastUnlockedAtRef.current = null;
+      setStatus('configured');
+    }
   }, []);
+
+  const enableWithPin = useCallback(async (pin: string): Promise<boolean> => {
+    const currentUserId = userIdRef.current;
+    const currentConfig = configRef.current;
+    if (!currentUserId || !currentConfig || currentConfig.enabled) return false;
+
+    const { lockedUntil } = attemptsRef.current;
+    if (lockedUntil !== null && lockedUntil > Date.now()) return false;
+
+    const valid = await validateAppLockPin(currentConfig, pin);
+    if (!valid) {
+      const nextAttempts = await recordPinFailure(currentUserId, attemptsRef.current);
+      attemptsRef.current = nextAttempts;
+      setPinLockedUntil(nextAttempts.lockedUntil);
+      return false;
+    }
+
+    await resetAttempts();
+    const nextConfig = await setAppLockEnabled(currentUserId, currentConfig, true);
+    configRef.current = nextConfig;
+    setConfig(nextConfig);
+    await markUnlocked();
+    return true;
+  }, [markUnlocked, resetAttempts]);
 
   const disable = useCallback(async () => {
     if (!userIdRef.current) return;
     await removeAppLockConfig(userIdRef.current);
+    await clearLastUnlockedAt(userIdRef.current);
     configRef.current = null;
     attemptsRef.current = NO_PIN_ATTEMPTS;
+    lastUnlockedAtRef.current = null;
     setConfig(null);
     setPinLockedUntil(null);
     setStatus('configured');
@@ -222,6 +321,8 @@ export function AppLockProvider({ children }: { children: React.ReactNode }) {
         unlockWithPin,
         unlockWithBiometric,
         setBiometric,
+        setEnabled,
+        enableWithPin,
         disable,
       }}
     >

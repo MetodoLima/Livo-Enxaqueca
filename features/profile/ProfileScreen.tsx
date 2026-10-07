@@ -3,6 +3,7 @@ import ExportModal from '@/features/profile/ExportModal';
 import ScreenBackground from '@/components/ui/ScreenBackground';
 import { Colors } from '@/constants/Colors';
 import { useAuth } from '@/contexts/AuthContext';
+import { useAppLock } from '@/features/app-lock/AppLockContext';
 import { usePdfExport } from '@/features/profile/usePdfExport';
 import AppLockScreen from '@/features/app-lock/AppLockScreen';
 import { sessionRepository } from '@/repositories';
@@ -23,6 +24,7 @@ export default function ProfileScreen() {
   const { user } = useAuth();
   const [exportModalVisible, setExportModalVisible] = useState(false);
   const [appLockModalVisible, setAppLockModalVisible] = useState(false);
+  const { config } = useAppLock();
   const { exportPdf, loading: pdfLoading } = usePdfExport();
 
   const handleExport = async (months: number) => {
@@ -112,7 +114,10 @@ export default function ProfileScreen() {
         onSelect={handleExport}
       />
       <Modal visible={appLockModalVisible} animationType="slide" onRequestClose={() => setAppLockModalVisible(false)}>
-        <AppLockScreen mode="setup" onClose={() => setAppLockModalVisible(false)} />
+        <AppLockScreen
+          mode={config ? 'manage' : 'setup'}
+          onClose={() => setAppLockModalVisible(false)}
+        />
       </Modal>
     </ScreenBackground>
   );
