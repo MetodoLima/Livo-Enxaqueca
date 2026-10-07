@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, SafeAreaView, ScrollView } from 'react-native';
+import { View, Text, TouchableOpacity, SafeAreaView, ScrollView, AccessibilityInfo } from 'react-native';
 import { X, Check } from 'lucide-react-native';
-import Animated, { ZoomIn } from 'react-native-reanimated';
+import Animated, { ZoomIn, useReducedMotion } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/Colors';
 
@@ -15,17 +15,26 @@ const INTENSITY_COLORS = [
 export default function EmergencyScreen() {
   const [intensity, setIntensity] = useState<number | null>(null);
   const [step, setStep] = useState<'intensity' | 'done'>('intensity');
+  const reduceMotion = useReducedMotion();
   const router = useRouter();
 
   const handleConfirm = () => {
     setStep('done');
+    AccessibilityInfo.announceForAccessibility(
+      `Crise registrada com intensidade ${intensity} de 10`
+    );
     setTimeout(() => router.back(), 1500);
   };
 
   if (step === 'done') {
     return (
-      <View className="flex-1 items-center justify-center bg-bg-dark px-6">
-        <Animated.View entering={ZoomIn} className="w-20 h-20 rounded-full bg-emerald-900/30 items-center justify-center mb-5">
+      <View
+        className="flex-1 items-center justify-center bg-bg-dark px-6"
+        accessible={true}
+        accessibilityLabel={`Crise registrada. Intensidade ${intensity} de 10.`}
+        accessibilityRole="alert"
+      >
+        <Animated.View entering={reduceMotion ? undefined : ZoomIn} className="w-20 h-20 rounded-full bg-emerald-900/30 items-center justify-center mb-5">
           <Check size={36} color="#10B981" />
         </Animated.View>
         <Text className="text-xl text-white mb-2 font-epilogue-bold">Crise registrada</Text>
@@ -44,21 +53,31 @@ export default function EmergencyScreen() {
         showsVerticalScrollIndicator={false}
       >
         <View className="flex-row items-center justify-between mt-3 mb-8">
-          <TouchableOpacity onPress={() => router.back()} className="p-2 -ml-2 rounded-xl">
+          <TouchableOpacity
+            onPress={() => router.back()}
+            className="p-2 -ml-2 rounded-xl"
+            style={{ minWidth: 44, minHeight: 44, alignItems: 'center', justifyContent: 'center' }}
+            accessibilityRole="button"
+            accessibilityLabel="Fechar registro rápido"
+          >
             <X size={24} color={Colors.muted} />
           </TouchableOpacity>
-          <Text className="text-base text-white font-epilogue-bold">Registrar crise</Text>
+          <Text className="text-base text-white font-epilogue-bold" accessibilityRole="header">Registrar crise</Text>
           <View className="w-10" />
         </View>
 
         <View className="flex-1 items-center justify-center -mt-20">
           <Text className="text-muted text-sm mb-3 font-epilogue">Intensidade da dor</Text>
-          <Text className="text-7xl text-accent mb-8 font-epilogue-bold">
+          <Text className="text-7xl text-accent mb-8 font-epilogue-bold" accessibilityLabel={`Intensidade: ${intensity ?? 'não selecionada'} de 10`}>
             {intensity || '–'}
             <Text className="text-xl text-muted font-epilogue">/10</Text>
           </Text>
 
-          <View className="flex-row flex-wrap justify-center gap-3 mb-10">
+          <View
+            className="flex-row flex-wrap justify-center gap-3 mb-10"
+            accessibilityRole="radiogroup"
+            accessibilityLabel="Selecione a intensidade da dor de 1 a 10"
+          >
             {INTENSITIES.map((n) => {
               const isActive = intensity === n;
               return (
@@ -68,10 +87,16 @@ export default function EmergencyScreen() {
                   className={`w-12 h-12 rounded-xl items-center justify-center ${
                     isActive ? 'shadow-lg' : 'bg-slate-800'
                   }`}
-                  style={isActive ? {
-                    backgroundColor: INTENSITY_COLORS[n - 1],
-                    transform: [{ scale: 1.1 }],
-                  } : undefined}
+                  style={[
+                    { minWidth: 48, minHeight: 48 },
+                    isActive ? {
+                      backgroundColor: INTENSITY_COLORS[n - 1],
+                      transform: [{ scale: 1.1 }],
+                    } : undefined,
+                  ]}
+                  accessibilityRole="radio"
+                  accessibilityLabel={`Intensidade ${n}`}
+                  accessibilityState={{ checked: isActive }}
                 >
                   <Text className={`font-epilogue-bold ${isActive ? 'text-white' : 'text-muted'}`}>
                     {n}
@@ -87,6 +112,10 @@ export default function EmergencyScreen() {
             className={`w-full py-5 rounded-3xl items-center ${
               intensity ? 'bg-accent shadow-lg' : 'bg-slate-800'
             }`}
+            style={{ minHeight: 56 }}
+            accessibilityRole="button"
+            accessibilityLabel={intensity ? 'Registrar crise agora' : 'Selecione a intensidade primeiro'}
+            accessibilityState={{ disabled: !intensity }}
           >
             <Text className={`text-lg font-epilogue-bold ${intensity ? 'text-white' : 'text-muted'}`}>
               {intensity ? 'Registrar agora' : 'Selecione a intensidade'}

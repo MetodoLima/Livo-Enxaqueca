@@ -2,7 +2,7 @@ import { useMemo } from 'react';
 import { View, Text, ScrollView, TouchableOpacity, SafeAreaView } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Clock } from 'lucide-react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
+import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
 import { Colors } from '@/constants/Colors';
 import {
   formatDateTime,
@@ -15,6 +15,7 @@ import { CrisisPhase } from '@/features/crisis/useCrisisCalendar';
 import PhaseDetailCard from '@/features/crisis/components/PhaseDetailCard';
 
 export default function CrisisDetailScreen() {
+  const reduceMotion = useReducedMotion();
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string; data: string }>();
 
@@ -60,11 +61,16 @@ export default function CrisisDetailScreen() {
       }}>
         <TouchableOpacity
           onPress={() => router.back()}
-          style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#1E3A52', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}
+          style={{ width: 44, height: 44, borderRadius: 22, backgroundColor: '#1E3A52', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}
+          accessibilityRole="button"
+          accessibilityLabel="Voltar"
         >
           <ArrowLeft size={18} color="white" />
         </TouchableOpacity>
-        <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 18, flex: 1 }}>
+        <Text
+          style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 18, flex: 1 }}
+          accessibilityRole="header"
+        >
           Detalhes da Crise
         </Text>
         {fases.length > 0 && (
@@ -81,7 +87,7 @@ export default function CrisisDetailScreen() {
         showsVerticalScrollIndicator={false}
       >
         <Animated.View
-          entering={FadeInDown.duration(350)}
+          entering={reduceMotion ? undefined : FadeInDown.duration(350)}
           style={{
             backgroundColor: `${color}15`,
             borderRadius: 24,
@@ -91,6 +97,8 @@ export default function CrisisDetailScreen() {
             borderWidth: 1,
             borderColor: `${color}30`,
           }}
+          accessible={true}
+          accessibilityLabel={`Pico de intensidade: ${maxIntensidade !== null ? `${maxIntensidade} de 10, ${label}` : 'não registrado'}`}
         >
           <Text style={{ fontSize: 52, marginBottom: 8 }}>{emoji}</Text>
           <Text style={{ color, fontFamily: 'Epilogue_700Bold', fontSize: 36 }}>
@@ -105,12 +113,14 @@ export default function CrisisDetailScreen() {
         </Animated.View>
 
         <Animated.View
-          entering={FadeInDown.delay(80).duration(300)}
+          entering={reduceMotion ? undefined : FadeInDown.delay(80).duration(300)}
           style={{ backgroundColor: '#112236', borderRadius: 20, padding: 20, marginBottom: 20 }}
+          accessible={true}
+          accessibilityLabel={`Início: ${formatDateTime(crisis.inicioCrise)}. Fim: ${crisis.fimCrise ? formatDateTime(crisis.fimCrise) : 'Em andamento'}. Duração: ${formatDuration(crisis.inicioCrise, crisis.fimCrise)}`}
         >
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }}>
             <Clock size={14} color={Colors.muted} />
-            <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_600SemiBold', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase' }}>
+            <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_600SemiBold', fontSize: 12, letterSpacing: 1, textTransform: 'uppercase' }}>
               Tempo
             </Text>
           </View>
@@ -139,7 +149,7 @@ export default function CrisisDetailScreen() {
         </Animated.View>
 
         {fases.length > 0 && (
-          <Animated.View entering={FadeInDown.delay(160).duration(300)}>
+          <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(160).duration(300)}>
             <Text style={{
               color: 'white',
               fontFamily: 'Epilogue_700Bold',

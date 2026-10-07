@@ -1,8 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeInUp, useReducedMotion } from 'react-native-reanimated';
 import { Colors } from '@/constants/Colors';
+import { HelpCircle } from 'lucide-react-native';
 import StepFooter from './StepFooter';
+import HelpModal from '../components/HelpModal';
 import { SYMPTOMS, type CrisisRecord, type SymptomId } from '@/types/crisis';
 
 interface StepSymptomsProps {
@@ -12,6 +14,9 @@ interface StepSymptomsProps {
 }
 
 export default function StepSymptoms({ data, onChange, onNext }: StepSymptomsProps) {
+  const reduceMotion = useReducedMotion();
+  const [showHelp, setShowHelp] = useState(false);
+
   const toggleSymptom = (id: SymptomId) => {
     const current = data.symptoms;
     const next = current.includes(id)
@@ -22,8 +27,17 @@ export default function StepSymptoms({ data, onChange, onNext }: StepSymptomsPro
 
   return (
     <View style={styles.container}>
-      <Animated.View entering={FadeInUp.duration(400)} style={styles.content}>
-        <Text style={styles.title}>Sintomas associados</Text>
+      <Animated.View entering={reduceMotion ? undefined : FadeInUp.duration(400)} style={styles.content}>
+        <View style={styles.headerRow}>
+          <Text style={[styles.title, { marginBottom: 0 }]} accessibilityRole="header">Sintomas associados</Text>
+          <TouchableOpacity 
+            onPress={() => setShowHelp(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Ajuda sobre os sintomas"
+          >
+            <HelpCircle size={24} color={Colors.muted} />
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.grid}>
           {SYMPTOMS.map((symptom, index) => {
@@ -31,7 +45,7 @@ export default function StepSymptoms({ data, onChange, onNext }: StepSymptomsPro
             return (
               <Animated.View
                 key={symptom.id}
-                entering={FadeInUp.delay(index * 60).duration(300)}
+                entering={reduceMotion ? undefined : FadeInUp.delay(index * 60).duration(300)}
               >
                 <TouchableOpacity
                   onPress={() => toggleSymptom(symptom.id)}
@@ -40,6 +54,10 @@ export default function StepSymptoms({ data, onChange, onNext }: StepSymptomsPro
                     styles.symptomBtn,
                     isActive && styles.symptomBtnActive,
                   ]}
+                  accessibilityRole="checkbox"
+                  accessibilityLabel={symptom.label}
+                  accessibilityState={{ checked: isActive }}
+                  accessibilityHint="Toque para selecionar ou desmarcar"
                 >
                   <Text style={styles.symptomEmoji}>{symptom.emoji}</Text>
                   <Text
@@ -57,8 +75,8 @@ export default function StepSymptoms({ data, onChange, onNext }: StepSymptomsPro
         </View>
 
         {data.symptoms.length > 0 && (
-          <Animated.View entering={FadeInUp.duration(200)} style={styles.countBadge}>
-            <Text style={styles.countText}>
+          <Animated.View entering={reduceMotion ? undefined : FadeInUp.duration(200)} style={styles.countBadge}>
+            <Text style={styles.countText} accessibilityLiveRegion="polite">
               {data.symptoms.length} selecionado{data.symptoms.length > 1 ? 's' : ''}
             </Text>
           </Animated.View>
@@ -66,6 +84,13 @@ export default function StepSymptoms({ data, onChange, onNext }: StepSymptomsPro
       </Animated.View>
 
       <StepFooter onNext={onNext} />
+
+      <HelpModal 
+        visible={showHelp} 
+        onClose={() => setShowHelp(false)} 
+        title="Sintomas" 
+        message="Selecione todos os sintomas que você está sentindo. Toque novamente para desmarcar." 
+      />
     </View>
   );
 }
@@ -77,6 +102,12 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
   },
   title: {
     fontSize: 26,
@@ -90,10 +121,17 @@ const styles = StyleSheet.create({
     color: Colors.muted,
     marginBottom: 28,
   },
+  helpText: {
+    fontSize: 13,
+    fontFamily: 'Epilogue_400Regular',
+    color: Colors.muted,
+    marginBottom: 20,
+    lineHeight: 20,
+  },
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 14,
     justifyContent: 'center',
   },
   symptomBtn: {

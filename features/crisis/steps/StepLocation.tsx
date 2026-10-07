@@ -1,6 +1,6 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeInUp, useReducedMotion } from 'react-native-reanimated';
 import { Colors } from '@/constants/Colors';
 import StepFooter from './StepFooter';
 import { LOCATIONS, SIDES, type CrisisRecord, type LocationId, type SideId } from '@/types/crisis';
@@ -12,6 +12,8 @@ interface StepLocationProps {
 }
 
 export default function StepLocation({ data, onChange, onNext }: StepLocationProps) {
+  const reduceMotion = useReducedMotion();
+
   const toggleLocation = (id: LocationId) => {
     onChange({ location: data.location === id ? null : id });
   };
@@ -22,10 +24,10 @@ export default function StepLocation({ data, onChange, onNext }: StepLocationPro
 
   return (
     <View style={styles.container}>
-      <Animated.View entering={FadeInUp.duration(400)} style={styles.content}>
-        <Text style={styles.title}>Onde dói?</Text>
+      <Animated.View entering={reduceMotion ? undefined : FadeInUp.duration(400)} style={styles.content}>
+        <Text style={styles.title} accessibilityRole="header">Onde dói?</Text>
 
-        <View style={styles.grid}>
+        <View style={styles.grid} accessibilityRole="radiogroup" accessibilityLabel="Localização da dor">
           {LOCATIONS.map((loc) => {
             const isActive = data.location === loc.id;
             return (
@@ -37,6 +39,9 @@ export default function StepLocation({ data, onChange, onNext }: StepLocationPro
                   styles.locationBtn,
                   isActive && styles.locationBtnActive,
                 ]}
+                accessibilityRole="radio"
+                accessibilityLabel={loc.label}
+                accessibilityState={{ checked: isActive }}
               >
                 <Text style={styles.locationEmoji}>{loc.emoji}</Text>
                 <Text
@@ -53,11 +58,12 @@ export default function StepLocation({ data, onChange, onNext }: StepLocationPro
         </View>
 
         {data.location && (
-          <Animated.View entering={FadeInUp.duration(300)} style={styles.sideSection}>
+          <Animated.View entering={reduceMotion ? undefined : FadeInUp.duration(300)} style={styles.sideSection}>
             <Text style={styles.sideTitle}>Qual lado?</Text>
-            <View style={styles.sideRow}>
+            <View style={styles.sideRow} accessibilityRole="radiogroup" accessibilityLabel="Lado da dor">
               {SIDES.map((side) => {
                 const isActive = data.side === side.id;
+                const isAmbos = side.id === 'bilateral';
                 return (
                   <TouchableOpacity
                     key={side.id}
@@ -65,8 +71,12 @@ export default function StepLocation({ data, onChange, onNext }: StepLocationPro
                     activeOpacity={0.7}
                     style={[
                       styles.sideBtn,
+                      isAmbos && styles.sideBtnAmbos,
                       isActive && styles.sideBtnActive,
                     ]}
+                    accessibilityRole="radio"
+                    accessibilityLabel={side.label}
+                    accessibilityState={{ checked: isActive }}
                   >
                     <Text
                       style={[
@@ -155,16 +165,25 @@ const styles = StyleSheet.create({
   },
   sideRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
     gap: 10,
   },
   sideBtn: {
-    flex: 1,
+    width: '47%',
     paddingVertical: 14,
     borderRadius: 14,
     backgroundColor: '#112236',
     borderWidth: 1.5,
     borderColor: '#1E3A52',
     alignItems: 'center',
+    minHeight: 48,
+    justifyContent: 'center',
+  },
+  sideBtnAmbos: {
+    minWidth: '60%',
+    width: 'auto',
+    paddingHorizontal: 24,
   },
   sideBtnActive: {
     backgroundColor: `${Colors.purple}18`,

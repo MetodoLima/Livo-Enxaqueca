@@ -65,6 +65,10 @@ export default function PastPhaseCard({
         onPress={() => setExpanded((v) => !v)}
         activeOpacity={0.7}
         style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
+        accessibilityRole="button"
+        accessibilityLabel={`Fase ${index + 1}: ${timeRange}${intensityConfig ? `, intensidade ${phase.intensity} de 10` : ''}${collapsedDetail ? `, ${collapsedDetail}` : ''}`}
+        accessibilityState={{ expanded }}
+        accessibilityHint={expanded ? 'Toque para colapsar detalhes' : 'Toque para expandir detalhes'}
       >
         <View style={{ flex: 1 }}>
           <Text style={phaseStyles.label}>Fase {index + 1}</Text>
@@ -154,7 +158,13 @@ export default function PastPhaseCard({
             </View>
           )}
 
-          <TouchableOpacity onPress={confirmDelete} style={phaseStyles.deleteBtn}>
+          <TouchableOpacity
+            onPress={confirmDelete}
+            style={phaseStyles.deleteBtn}
+            accessibilityRole="button"
+            accessibilityLabel={`Remover fase ${index + 1}`}
+            accessibilityHint="Será solicitada confirmação antes de remover"
+          >
             <Trash2 size={14} color="#EF4444" />
             <Text style={phaseStyles.deleteBtnText}>Remover esta fase</Text>
           </TouchableOpacity>
@@ -166,7 +176,7 @@ export default function PastPhaseCard({
 
 const phaseStyles = StyleSheet.create({
   label: {
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: 'Epilogue_700Bold',
     color: Colors.muted,
     textTransform: 'uppercase',
@@ -198,7 +208,7 @@ const phaseStyles = StyleSheet.create({
     marginBottom: 10,
   },
   rowLabel: {
-    fontSize: 10,
+    fontSize: 12,
     fontFamily: 'Epilogue_700Bold',
     color: Colors.muted,
     textTransform: 'uppercase',
@@ -215,10 +225,11 @@ const phaseStyles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     alignSelf: 'flex-start',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 10,
     backgroundColor: 'rgba(239,68,68,0.08)',
+    minHeight: 44,
   },
   deleteBtnText: {
     fontSize: 12,

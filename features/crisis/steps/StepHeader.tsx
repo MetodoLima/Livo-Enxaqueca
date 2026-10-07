@@ -4,6 +4,14 @@ import { X, ChevronLeft } from 'lucide-react-native';
 import { Colors } from '@/constants/Colors';
 import { TOTAL_STEPS } from '@/types/crisis';
 
+const STEP_NAMES: Record<number, string> = {
+  1: 'Horário',
+  2: 'Intensidade',
+  3: 'Localização',
+  4: 'Sintomas',
+  5: 'Medicamentos',
+};
+
 interface StepHeaderProps {
   currentStep: number;
   onBack: () => void;
@@ -11,12 +19,20 @@ interface StepHeaderProps {
 }
 
 export default function StepHeader({ currentStep, onBack, onClose }: StepHeaderProps) {
+  const stepName = STEP_NAMES[currentStep] ?? '';
+
   return (
     <View style={styles.container}>
       <TouchableOpacity
         onPress={currentStep === 1 ? onClose : onBack}
         style={styles.iconBtn}
         hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+        accessibilityRole="button"
+        accessibilityLabel={
+          currentStep === 1
+            ? 'Fechar registro de crise'
+            : `Voltar para ${STEP_NAMES[currentStep - 1] ?? 'passo anterior'}`
+        }
       >
         {currentStep === 1 ? (
           <X size={22} color={Colors.muted} />
@@ -25,18 +41,26 @@ export default function StepHeader({ currentStep, onBack, onClose }: StepHeaderP
         )}
       </TouchableOpacity>
 
-      <Text style={styles.stepText}>{currentStep}/{TOTAL_STEPS}</Text>
+      <Text
+        style={styles.stepText}
+        accessibilityRole="header"
+        accessibilityLabel={`Passo ${currentStep} de ${TOTAL_STEPS}: ${stepName}`}
+      >
+        {currentStep}/{TOTAL_STEPS} · {stepName}
+      </Text>
 
       {currentStep > 1 ? (
         <TouchableOpacity
           onPress={onClose}
           style={styles.iconBtn}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+          accessibilityRole="button"
+          accessibilityLabel="Fechar registro de crise"
         >
           <X size={22} color={Colors.muted} />
         </TouchableOpacity>
       ) : (
-        <View style={{ width: 40 }} />
+        <View style={{ width: 44 }} />
       )}
     </View>
   );
@@ -44,7 +68,13 @@ export default function StepHeader({ currentStep, onBack, onClose }: StepHeaderP
 
 export function ProgressBar({ currentStep }: { currentStep: number }) {
   return (
-    <View style={styles.progressRow}>
+    <View
+      style={styles.progressRow}
+      accessible={true}
+      accessibilityRole="progressbar"
+      accessibilityLabel={`Progresso: passo ${currentStep} de ${TOTAL_STEPS}`}
+      accessibilityValue={{ min: 1, max: TOTAL_STEPS, now: currentStep }}
+    >
       {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
         <View
           key={i}
@@ -67,8 +97,8 @@ const styles = StyleSheet.create({
     paddingBottom: 12,
   },
   iconBtn: {
-    width: 40,
-    height: 40,
+    width: 44,
+    height: 44,
     borderRadius: 12,
     alignItems: 'center',
     justifyContent: 'center',

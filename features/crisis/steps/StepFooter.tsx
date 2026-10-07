@@ -23,7 +23,13 @@ export default function StepFooter({
   return (
     <View style={styles.container}>
       {showSkip && onSkip && (
-        <TouchableOpacity onPress={onSkip} style={styles.skipBtn}>
+        <TouchableOpacity
+          onPress={onSkip}
+          style={styles.skipBtn}
+          accessibilityRole="button"
+          accessibilityLabel={skipLabel}
+          accessibilityHint="Pula esta etapa e avança para a próxima"
+        >
           <Text style={styles.skipText}>{skipLabel}</Text>
         </TouchableOpacity>
       )}
@@ -36,11 +42,15 @@ export default function StepFooter({
           disabled && styles.nextBtnDisabled,
           showSkip && { flex: 1 },
         ]}
+        accessibilityRole="button"
+        accessibilityLabel={nextLabel}
+        accessibilityState={{ disabled }}
+        accessibilityHint={disabled ? 'Preencha o campo acima para avançar' : 'Avança para a próxima etapa'}
       >
         <Text style={[styles.nextText, disabled && styles.nextTextDisabled]}>
           {nextLabel}
         </Text>
-        <ChevronRight size={20} color={disabled ? '#3A5A72' : 'white'} />
+        <ChevronRight size={20} color={disabled ? '#6B8A9E' : 'white'} />
       </TouchableOpacity>
     </View>
   );
@@ -52,7 +62,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 12,
     paddingTop: 16,
-    paddingBottom: 8,
+    paddingBottom: 24,
   },
   nextBtn: {
     flex: 1,
@@ -63,6 +73,7 @@ const styles = StyleSheet.create({
     paddingVertical: 18,
     borderRadius: 16,
     gap: 6,
+    minHeight: 56,
   },
   nextBtnDisabled: {
     backgroundColor: '#1E3A52',
@@ -73,7 +84,7 @@ const styles = StyleSheet.create({
     fontFamily: 'Epilogue_700Bold',
   },
   nextTextDisabled: {
-    color: '#3A5A72',
+    color: '#6B8A9E',
   },
   skipBtn: {
     paddingVertical: 18,
@@ -81,6 +92,8 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     borderWidth: 1,
     borderColor: '#1E3A52',
+    minHeight: 56,
+    justifyContent: 'center',
   },
   skipText: {
     color: Colors.muted,
