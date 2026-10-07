@@ -1,47 +1,59 @@
+import { useState } from 'react';
 import { Image, View } from 'react-native';
 import Card from '@/components/ui/Card';
 import Text from '@/components/ui/Text';
 import { MOODS, type MoodId } from '@/constants/data';
 
+const VAO = 4;
+const MOLDURA = 10;
+
 interface MoodSelectorProps {
   selected: MoodId | null;
   onSelect: (id: MoodId) => void;
-  showLabels?: boolean;
 }
 
-export default function MoodSelector({ selected, onSelect, showLabels = true }: MoodSelectorProps) {
+export default function MoodSelector({ selected, onSelect }: MoodSelectorProps) {
+  const [largura, setLargura] = useState(0);
+  const selecionado = MOODS.find((mood) => mood.id === selected);
+  const lado = Math.floor((largura - VAO * (MOODS.length - 1)) / MOODS.length);
+  const rosto = lado - MOLDURA;
+
   return (
-    <View className="flex-row gap-2">
-      {MOODS.map((mood) => {
-        const isSelected = selected === mood.id;
-        return (
-          <Card
-            key={mood.id}
-            padding="sm"
-            selected={isSelected}
-            onPress={() => onSelect(mood.id)}
-            accessibilityLabel={mood.label}
-            className="flex-1 items-center gap-2"
-          >
-            <Image
-              source={mood.image}
-              className="h-10 w-10"
-              resizeMode="contain"
-              accessibilityIgnoresInvertColors
-            />
-            {showLabels && (
-              <Text
-                variant="caption"
-                weight={isSelected ? 'semibold' : 'regular'}
-                tone={isSelected ? 'content' : 'muted'}
-                className="text-center"
+    <View className="gap-2">
+      <View
+        onLayout={(e) => setLargura(e.nativeEvent.layout.width)}
+        className="flex-row justify-between"
+      >
+        {largura > 0
+          ? MOODS.map((mood) => (
+              <Card
+                key={mood.id}
+                padding="xs"
+                selected={selected === mood.id}
+                onPress={() => onSelect(mood.id)}
+                accessibilityLabel={mood.label}
+                className="items-center justify-center"
+                style={{ width: lado, height: lado }}
               >
-                {mood.label}
-              </Text>
-            )}
-          </Card>
-        );
-      })}
+                <Image
+                  source={mood.image}
+                  style={{ width: rosto, height: rosto }}
+                  resizeMode="contain"
+                  accessibilityIgnoresInvertColors
+                />
+              </Card>
+            ))
+          : null}
+      </View>
+      <Text
+        variant="caption"
+        tone="muted"
+        importantForAccessibility="no"
+        accessibilityElementsHidden
+        className="text-center"
+      >
+        {selecionado ? selecionado.label : ' '}
+      </Text>
     </View>
   );
 }

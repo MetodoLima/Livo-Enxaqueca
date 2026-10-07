@@ -46,8 +46,19 @@ export function elapsedSince(date: Date, now: Date = new Date()): Elapsed {
 }
 
 export function formatSleep(hours: number): string {
-  const inteiras = Math.floor(hours);
-  return hours % 1 !== 0 ? `${inteiras}h 30min` : `${inteiras}h`;
+  return `${(Math.round(hours * 10) / 10).toString().replace('.', ',')} h`;
+}
+
+export type Horario = { hora: number; minuto: number };
+
+export function formatHorario({ hora, minuto }: Horario): string {
+  return `${String(hora).padStart(2, '0')}:${String(minuto).padStart(2, '0')}`;
+}
+
+export function duracaoSono(dormir: Horario, acordar: Horario): number {
+  let minutos = acordar.hora * 60 + acordar.minuto - (dormir.hora * 60 + dormir.minuto);
+  if (minutos < 0) minutos += 24 * 60;
+  return Math.round(minutos / 6) / 10;
 }
 
 export function formatWater(ml: number): string {

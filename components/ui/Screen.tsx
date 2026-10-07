@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
-import { ScrollView, StatusBar, View } from 'react-native';
+import { StatusBar, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { cssInterop } from 'nativewind';
+import KeyboardAwareScroll from '@/components/ui/KeyboardAwareScroll';
 
 cssInterop(SafeAreaView, { className: 'style' });
 
@@ -19,14 +20,9 @@ export default function Screen({ children, scroll = false, padded = true, classN
     <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-canvas">
       <StatusBar barStyle="light-content" />
       {scroll ? (
-        <ScrollView
-          className="flex-1"
-          contentContainerClassName={`grow pb-section ${padding} ${className}`}
-          showsVerticalScrollIndicator={false}
-          keyboardShouldPersistTaps="handled"
-        >
+        <KeyboardAwareScroll className="flex-1" contentContainerClassName={`grow pb-section ${padding} ${className}`}>
           {children}
-        </ScrollView>
+        </KeyboardAwareScroll>
       ) : (
         <View className={`flex-1 ${padding} ${className}`}>{children}</View>
       )}
