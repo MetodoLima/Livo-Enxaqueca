@@ -6,10 +6,11 @@ import {
   TextInput,
   ActivityIndicator,
   StyleSheet,
+  AccessibilityInfo,
   Switch,
 } from 'react-native';
 import { Mic, Send } from 'lucide-react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import Animated, { FadeInUp, useReducedMotion } from 'react-native-reanimated';
 import { Colors } from '@/constants/Colors';
 import StepFooter from './StepFooter';
 import type { CrisisRecord, AiComplement } from '@/types/crisis';
@@ -26,6 +27,7 @@ interface StepAiComplementProps {
 type SubStep = 'idle' | 'processing' | 'done';
 
 export default function StepAiComplement({ data, onChange, onNext }: StepAiComplementProps) {
+  const reduceMotion = useReducedMotion();
   const [subStep, setSubStep] = useState<SubStep>('idle');
   const [text, setText] = useState('');
   const [error, setError] = useState<string | null>(null);
@@ -50,11 +52,13 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
 
   const stopAndProcess = async () => {
     setSubStep('processing');
+    AccessibilityInfo.announceForAccessibility('Analisando seu áudio...');
     const preFilled = crisisToMigraineStructured(data);
     const result = await stopAndProcessAi(preFilled);
     if (!result) {
       setError('Erro ao processar o áudio.');
       setSubStep('idle');
+      AccessibilityInfo.announceForAccessibility('Erro ao processar áudio. Tente novamente.');
       return;
     }
     const complement: AiComplement = { audioUri: null, textNote: null, aiResult: result };
@@ -66,11 +70,13 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
     if (!text.trim()) return;
     setError(null);
     setSubStep('processing');
+    AccessibilityInfo.announceForAccessibility('Analisando seu texto...');
     const preFilled = crisisToMigraineStructured(data);
     const result = await submitTextAi(preFilled, text.trim());
     if (!result) {
       setError('Erro ao processar o texto.');
       setSubStep('idle');
+      AccessibilityInfo.announceForAccessibility('Erro ao processar texto. Tente novamente.');
       return;
     }
     const complement: AiComplement = { audioUri: null, textNote: text.trim(), aiResult: result };
@@ -81,7 +87,7 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
   if (subStep === 'processing') {
     return (
       <View style={styles.container}>
-        <View style={styles.centerContent}>
+        <View style={styles.centerContent} accessible={true} accessibilityLabel="Analisando seus dados. Aguarde.">
           <ActivityIndicator size="large" color={Colors.accent} />
           <Text style={styles.processingText}>Analisando...</Text>
           <Text style={styles.processingSubText}>
@@ -100,7 +106,7 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
   if (subStep === 'done') {
     return (
       <View style={styles.container}>
-        <Animated.View entering={FadeInUp.duration(400)} style={styles.centerContent}>
+        <Animated.View entering={reduceMotion ? undefined : FadeInUp.duration(400)} style={styles.centerContent}>
           <Text style={{ fontSize: 48, marginBottom: 12 }}>✅</Text>
           <Text style={styles.doneTitle}>Detalhes adicionados!</Text>
           {data.aiComplement?.aiResult?.structured.resumo && (
@@ -119,10 +125,10 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
 
   return (
     <View style={styles.container}>
-      <Animated.View entering={FadeInUp.duration(400)} style={styles.content}>
-        <Text style={styles.title}>Mais detalhes?</Text>
+      <Animated.View entering={reduceMotion ? undefined : FadeInUp.duration(400)} style={styles.content}>
+        <Text style={styles.title} accessibilityRole="header">Mais detalhes?</Text>
         {isRecording && (
-          <Text style={styles.subtitle}>
+          <Text style={styles.subtitle} accessibilityLiveRegion="polite">
             {`Gravando  ${fmtSecs(recordSecs)}`}
           </Text>
         )}
@@ -149,7 +155,13 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
             {isRecording ? (
               <PulsingMic onStop={stopAndProcess} />
             ) : (
-              <TouchableOpacity onPress={startRecording} style={styles.micBtn}>
+              <TouchableOpacity
+                onPress={startRecording}
+                style={styles.micBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Gravar áudio com detalhes da crise"
+                accessibilityHint="Toque para iniciar a gravação de voz"
+              >
                 <Mic size={32} color="white" />
               </TouchableOpacity>
             )}
@@ -175,12 +187,21 @@ export default function StepAiComplement({ data, onChange, onNext }: StepAiCompl
           multiline
           style={styles.textArea}
           editable={!isRecording}
+          accessibilityLabel="Detalhes adicionais da crise"
+          accessibilityHint="Escreva livremente sobre a crise para a IA extrair dados automaticamente"
         />
 
-        {(error || micError) && <Text style={styles.errorText}>{error || micError}</Text>}
+        {(error || micError) && (
+          <Text style={styles.errorText} accessibilityRole="alert">{error || micError}</Text>
+        )}
 
         {text.trim().length > 0 && !isRecording && (
-          <TouchableOpacity onPress={submitText} style={styles.sendBtn}>
+          <TouchableOpacity
+            onPress={submitText}
+            style={styles.sendBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Analisar texto escrito"
+          >
             <Send size={18} color="white" style={{ marginRight: 8 }} />
             <Text style={styles.sendBtnText}>Analisar texto</Text>
           </TouchableOpacity>
@@ -313,6 +334,7 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.accent,
     paddingVertical: 15,
     borderRadius: 14,
+    minHeight: 52,
   },
   sendBtnText: {
     color: 'white',

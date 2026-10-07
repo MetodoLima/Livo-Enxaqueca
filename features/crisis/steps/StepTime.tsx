@@ -1,17 +1,18 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
   TouchableOpacity,
   StyleSheet,
-  ScrollView,
   Modal,
+  AccessibilityInfo,
 } from 'react-native';
-import { Clock, ChevronUp, ChevronDown, Calendar } from 'lucide-react-native';
-import Animated, { FadeInUp, FadeIn } from 'react-native-reanimated';
+import { Clock, ChevronUp, ChevronDown, Calendar, AlertTriangle, HelpCircle } from 'lucide-react-native';
+import Animated, { FadeInUp, useReducedMotion } from 'react-native-reanimated';
 import { Colors } from '@/constants/Colors';
 import { formatTime } from '@/lib/format';
 import StepFooter from './StepFooter';
+import HelpModal from '../components/HelpModal';
 import type { CrisisRecord, TimePreset, EndTimePreset } from '@/types/crisis';
 
 interface StepTimeProps {
@@ -63,17 +64,23 @@ function TimePicker({
 
   return (
     <View style={pickerStyles.container}>
-      <Text style={pickerStyles.title}>Selecionar horário</Text>
+      <Text style={pickerStyles.title} accessibilityRole="header">Selecionar horário</Text>
 
       <View style={pickerStyles.row}>
         <View style={pickerStyles.column}>
           <TouchableOpacity
             onPress={() => nudge(setHour, hour, 24, 1)}
             style={pickerStyles.arrowBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Aumentar hora"
           >
             <ChevronUp size={28} color={Colors.muted} />
           </TouchableOpacity>
-          <View style={pickerStyles.valueBox}>
+          <View
+            style={pickerStyles.valueBox}
+            accessible={true}
+            accessibilityLabel={`Hora: ${String(hour).padStart(2, '0')}`}
+          >
             <Text style={pickerStyles.valueText}>
               {String(hour).padStart(2, '0')}
             </Text>
@@ -81,22 +88,30 @@ function TimePicker({
           <TouchableOpacity
             onPress={() => nudge(setHour, hour, 24, -1)}
             style={pickerStyles.arrowBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Diminuir hora"
           >
             <ChevronDown size={28} color={Colors.muted} />
           </TouchableOpacity>
           <Text style={pickerStyles.label}>Hora</Text>
         </View>
 
-        <Text style={pickerStyles.separator}>:</Text>
+        <Text style={pickerStyles.separator} importantForAccessibility="no">:</Text>
 
         <View style={pickerStyles.column}>
           <TouchableOpacity
             onPress={() => nudge(setMinute, minute, 60, 1)}
             style={pickerStyles.arrowBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Aumentar minuto"
           >
             <ChevronUp size={28} color={Colors.muted} />
           </TouchableOpacity>
-          <View style={pickerStyles.valueBox}>
+          <View
+            style={pickerStyles.valueBox}
+            accessible={true}
+            accessibilityLabel={`Minuto: ${String(minute).padStart(2, '0')}`}
+          >
             <Text style={pickerStyles.valueText}>
               {String(minute).padStart(2, '0')}
             </Text>
@@ -104,6 +119,8 @@ function TimePicker({
           <TouchableOpacity
             onPress={() => nudge(setMinute, minute, 60, -1)}
             style={pickerStyles.arrowBtn}
+            accessibilityRole="button"
+            accessibilityLabel="Diminuir minuto"
           >
             <ChevronDown size={28} color={Colors.muted} />
           </TouchableOpacity>
@@ -112,10 +129,20 @@ function TimePicker({
       </View>
 
       <View style={pickerStyles.actions}>
-        <TouchableOpacity onPress={onCancel} style={pickerStyles.cancelBtn}>
+        <TouchableOpacity
+          onPress={onCancel}
+          style={pickerStyles.cancelBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Cancelar seleção de horário"
+        >
           <Text style={pickerStyles.cancelText}>Cancelar</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={handleConfirm} style={pickerStyles.confirmBtn}>
+        <TouchableOpacity
+          onPress={handleConfirm}
+          style={pickerStyles.confirmBtn}
+          accessibilityRole="button"
+          accessibilityLabel={`Confirmar horário ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`}
+        >
           <Text style={pickerStyles.confirmText}>Confirmar</Text>
         </TouchableOpacity>
       </View>
@@ -168,53 +195,53 @@ function DatePicker({
 
   return (
     <View style={pickerStyles.container}>
-      <Text style={pickerStyles.title}>Selecionar data</Text>
+      <Text style={pickerStyles.title} accessibilityRole="header">Selecionar data</Text>
 
       <View style={pickerStyles.row}>
         <View style={pickerStyles.column}>
-          <TouchableOpacity onPress={() => nudgeDay(1)} style={pickerStyles.arrowBtn}>
+          <TouchableOpacity onPress={() => nudgeDay(1)} style={pickerStyles.arrowBtn} accessibilityRole="button" accessibilityLabel="Aumentar dia">
             <ChevronUp size={28} color={Colors.muted} />
           </TouchableOpacity>
-          <View style={pickerStyles.valueBox}>
+          <View style={pickerStyles.valueBox} accessible={true} accessibilityLabel={`Dia: ${String(day).padStart(2, '0')}`}>
             <Text style={pickerStyles.valueText}>
               {String(day).padStart(2, '0')}
             </Text>
           </View>
-          <TouchableOpacity onPress={() => nudgeDay(-1)} style={pickerStyles.arrowBtn}>
+          <TouchableOpacity onPress={() => nudgeDay(-1)} style={pickerStyles.arrowBtn} accessibilityRole="button" accessibilityLabel="Diminuir dia">
             <ChevronDown size={28} color={Colors.muted} />
           </TouchableOpacity>
           <Text style={pickerStyles.label}>Dia</Text>
         </View>
 
-        <Text style={pickerStyles.separator}>/</Text>
+        <Text style={pickerStyles.separator} importantForAccessibility="no">/</Text>
 
         <View style={pickerStyles.column}>
-          <TouchableOpacity onPress={() => nudgeMonth(1)} style={pickerStyles.arrowBtn}>
+          <TouchableOpacity onPress={() => nudgeMonth(1)} style={pickerStyles.arrowBtn} accessibilityRole="button" accessibilityLabel="Próximo mês">
             <ChevronUp size={28} color={Colors.muted} />
           </TouchableOpacity>
-          <View style={[pickerStyles.valueBox, { width: 88 }]}>
+          <View style={[pickerStyles.valueBox, { width: 88 }]} accessible={true} accessibilityLabel={`Mês: ${MONTHS[month]}`}>
             <Text style={[pickerStyles.valueText, { fontSize: 22 }]}>
               {MONTHS[month]}
             </Text>
           </View>
-          <TouchableOpacity onPress={() => nudgeMonth(-1)} style={pickerStyles.arrowBtn}>
+          <TouchableOpacity onPress={() => nudgeMonth(-1)} style={pickerStyles.arrowBtn} accessibilityRole="button" accessibilityLabel="Mês anterior">
             <ChevronDown size={28} color={Colors.muted} />
           </TouchableOpacity>
           <Text style={pickerStyles.label}>Mês</Text>
         </View>
 
-        <Text style={pickerStyles.separator}>/</Text>
+        <Text style={pickerStyles.separator} importantForAccessibility="no">/</Text>
 
         <View style={pickerStyles.column}>
-          <TouchableOpacity onPress={() => nudgeYear(1)} style={pickerStyles.arrowBtn}>
+          <TouchableOpacity onPress={() => nudgeYear(1)} style={pickerStyles.arrowBtn} accessibilityRole="button" accessibilityLabel="Próximo ano">
             <ChevronUp size={28} color={Colors.muted} />
           </TouchableOpacity>
-          <View style={pickerStyles.valueBox}>
+          <View style={pickerStyles.valueBox} accessible={true} accessibilityLabel={`Ano: ${year}`}>
             <Text style={[pickerStyles.valueText, { fontSize: 24 }]}>
               {year}
             </Text>
           </View>
-          <TouchableOpacity onPress={() => nudgeYear(-1)} style={pickerStyles.arrowBtn}>
+          <TouchableOpacity onPress={() => nudgeYear(-1)} style={pickerStyles.arrowBtn} accessibilityRole="button" accessibilityLabel="Ano anterior">
             <ChevronDown size={28} color={Colors.muted} />
           </TouchableOpacity>
           <Text style={pickerStyles.label}>Ano</Text>
@@ -222,10 +249,10 @@ function DatePicker({
       </View>
 
       <View style={pickerStyles.actions}>
-        <TouchableOpacity onPress={onCancel} style={pickerStyles.cancelBtn}>
+        <TouchableOpacity onPress={onCancel} style={pickerStyles.cancelBtn} accessibilityRole="button" accessibilityLabel="Cancelar seleção de data">
           <Text style={pickerStyles.cancelText}>Cancelar</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={handleConfirm} style={pickerStyles.confirmBtn}>
+        <TouchableOpacity onPress={handleConfirm} style={pickerStyles.confirmBtn} accessibilityRole="button" accessibilityLabel={`Confirmar data ${String(day).padStart(2, '0')} de ${MONTHS[month]} de ${year}`}>
           <Text style={pickerStyles.confirmText}>Confirmar</Text>
         </TouchableOpacity>
       </View>
@@ -259,7 +286,11 @@ const pickerStyles = StyleSheet.create({
     alignItems: 'center',
   },
   arrowBtn: {
-    padding: 8,
+    padding: 14,
+    minWidth: 48,
+    minHeight: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   valueBox: {
     width: 80,
@@ -283,7 +314,7 @@ const pickerStyles = StyleSheet.create({
     marginBottom: 28,
   },
   label: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: 'Epilogue_600SemiBold',
     color: Colors.muted,
     textTransform: 'uppercase',
@@ -302,6 +333,8 @@ const pickerStyles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#1E3A52',
     alignItems: 'center',
+    minHeight: 52,
+    justifyContent: 'center',
   },
   cancelText: {
     fontSize: 15,
@@ -314,6 +347,8 @@ const pickerStyles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: Colors.accent,
     alignItems: 'center',
+    minHeight: 52,
+    justifyContent: 'center',
   },
   confirmText: {
     fontSize: 15,
@@ -326,10 +361,12 @@ type PickerTarget = 'start' | 'end' | null;
 type PickerMode = 'time' | 'date';
 
 export default function StepTime({ data, onChange, onNext }: StepTimeProps) {
+  const reduceMotion = useReducedMotion();
   const [startPreset, setStartPreset] = useState<TimePreset>('now');
   const [endPreset, setEndPreset] = useState<EndTimePreset>('ongoing');
   const [pickerTarget, setPickerTarget] = useState<PickerTarget>(null);
   const [pickerMode, setPickerMode] = useState<PickerMode>('time');
+  const [showHelp, setShowHelp] = useState(false);
 
   const handleStartPreset = (preset: TimePreset) => {
     setStartPreset(preset);
@@ -357,16 +394,40 @@ export default function StepTime({ data, onChange, onNext }: StepTimeProps) {
   const handlePickerConfirm = (date: Date) => {
     if (pickerTarget === 'start') {
       onChange({ startTime: date });
+      // COGA: Validação temporal — avisar se início ficou depois do fim
+      if (data.endTime && date > data.endTime) {
+        AccessibilityInfo.announceForAccessibility(
+          'Atenção: a hora de início está após a hora de fim.'
+        );
+      }
     } else if (pickerTarget === 'end') {
       onChange({ endTime: date });
+      // COGA: Validação temporal — avisar se fim ficou antes do início
+      if (date < data.startTime) {
+        AccessibilityInfo.announceForAccessibility(
+          'Atenção: a hora de fim está antes da hora de início.'
+        );
+      }
     }
     setPickerTarget(null);
   };
 
+  // COGA: Validação temporal
+  const hasTimeConflict = data.endTime !== null && data.endTime < data.startTime;
+
   return (
     <View style={styles.container}>
-      <Animated.View entering={FadeInUp.duration(400)} style={styles.content}>
-        <Text style={styles.title}>Horário da crise</Text>
+      <Animated.View entering={reduceMotion ? undefined : FadeInUp.duration(400)} style={styles.content}>
+        <View style={styles.headerRow}>
+          <Text style={[styles.title, { marginBottom: 0 }]} accessibilityRole="header">Horário da crise</Text>
+          <TouchableOpacity 
+            onPress={() => setShowHelp(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Ajuda sobre o horário da crise"
+          >
+            <HelpCircle size={24} color={Colors.muted} />
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
@@ -379,6 +440,8 @@ export default function StepTime({ data, onChange, onNext }: StepTimeProps) {
               style={styles.dateTimeCard}
               onPress={() => { setPickerMode('date'); setPickerTarget('start'); }}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`Data de início: ${formatDate(data.startTime)}. Toque para alterar`}
             >
               <View style={styles.dateTimeCardHeader}>
                 <Calendar size={16} color={Colors.accent} />
@@ -391,6 +454,8 @@ export default function StepTime({ data, onChange, onNext }: StepTimeProps) {
               style={styles.dateTimeCard}
               onPress={() => { setPickerMode('time'); setPickerTarget('start'); }}
               activeOpacity={0.7}
+              accessibilityRole="button"
+              accessibilityLabel={`Hora de início: ${formatTime(data.startTime)}. Toque para alterar`}
             >
               <View style={styles.dateTimeCardHeader}>
                 <Clock size={16} color={Colors.accent} />
@@ -400,7 +465,7 @@ export default function StepTime({ data, onChange, onNext }: StepTimeProps) {
             </TouchableOpacity>
           </View>
 
-          <View style={styles.presetRow}>
+          <View style={styles.presetRow} accessibilityRole="radiogroup" accessibilityLabel="Hora de início">
             {([
               { key: 'now' as TimePreset, label: 'Agora mesmo' },
               { key: '1h_ago' as TimePreset, label: 'Há 1 hora' },
@@ -413,6 +478,9 @@ export default function StepTime({ data, onChange, onNext }: StepTimeProps) {
                   styles.presetBtn,
                   startPreset === key && styles.presetBtnActive,
                 ]}
+                accessibilityRole="radio"
+                accessibilityLabel={label}
+                accessibilityState={{ checked: startPreset === key }}
               >
                 <Text
                   style={[
@@ -439,6 +507,8 @@ export default function StepTime({ data, onChange, onNext }: StepTimeProps) {
                 style={[styles.dateTimeCard, styles.dateTimeCardOrange]}
                 onPress={() => { setPickerMode('date'); setPickerTarget('end'); }}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`Data de fim: ${formatDate(data.endTime)}. Toque para alterar`}
               >
                 <View style={styles.dateTimeCardHeader}>
                   <Calendar size={16} color={Colors.orange} />
@@ -451,6 +521,8 @@ export default function StepTime({ data, onChange, onNext }: StepTimeProps) {
                 style={[styles.dateTimeCard, styles.dateTimeCardOrange]}
                 onPress={() => { setPickerMode('time'); setPickerTarget('end'); }}
                 activeOpacity={0.7}
+                accessibilityRole="button"
+                accessibilityLabel={`Hora de fim: ${formatTime(data.endTime)}. Toque para alterar`}
               >
                 <View style={styles.dateTimeCardHeader}>
                   <Clock size={16} color={Colors.orange} />
@@ -460,13 +532,13 @@ export default function StepTime({ data, onChange, onNext }: StepTimeProps) {
               </TouchableOpacity>
             </View>
           ) : (
-            <View style={styles.ongoingBadge}>
+            <View style={styles.ongoingBadge} accessible={true} accessibilityLabel="Crise ainda em andamento">
               <View style={styles.ongoingDot} />
               <Text style={styles.ongoingText}>Ainda em curso</Text>
             </View>
           )}
 
-          <View style={styles.presetRow}>
+          <View style={styles.presetRow} accessibilityRole="radiogroup" accessibilityLabel="Hora de fim">
             {([
               { key: 'ongoing' as EndTimePreset, label: 'Ainda em curso' },
               { key: 'now' as EndTimePreset, label: 'Agora mesmo' },
@@ -479,6 +551,9 @@ export default function StepTime({ data, onChange, onNext }: StepTimeProps) {
                   styles.presetBtn,
                   endPreset === key && styles.presetBtnActive,
                 ]}
+                accessibilityRole="radio"
+                accessibilityLabel={label}
+                accessibilityState={{ checked: endPreset === key }}
               >
                 <Text
                   style={[
@@ -492,9 +567,26 @@ export default function StepTime({ data, onChange, onNext }: StepTimeProps) {
             ))}
           </View>
         </View>
+
+        {/* COGA: Aviso visual de conflito temporal */}
+        {hasTimeConflict && (
+          <View style={styles.timeWarning} accessible={true} accessibilityRole="alert">
+            <AlertTriangle size={16} color="#F59E0B" />
+            <Text style={styles.timeWarningText}>
+              Atenção: a hora de fim está antes da hora de início.
+            </Text>
+          </View>
+        )}
       </Animated.View>
 
       <StepFooter onNext={onNext} />
+
+      <HelpModal 
+        visible={showHelp} 
+        onClose={() => setShowHelp(false)} 
+        title="Horário da crise" 
+        message="Informe quando a dor começou. Se já passou, defina também o fim." 
+      />
 
       <Modal
         visible={pickerTarget !== null}
@@ -538,11 +630,24 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
   title: {
     fontSize: 26,
     fontFamily: 'Epilogue_700Bold',
     color: 'white',
     marginBottom: 20,
+  },
+  helpText: {
+    fontSize: 14,
+    fontFamily: 'Epilogue_400Regular',
+    color: Colors.muted,
+    marginBottom: 20,
+    lineHeight: 20,
   },
   subtitle: {
     fontSize: 15,
@@ -586,6 +691,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: `${Colors.accent}40`,
     padding: 14,
+    minHeight: 48,
   },
   dateTimeCardOrange: {
     borderColor: `${Colors.orange}40`,
@@ -597,7 +703,7 @@ const styles = StyleSheet.create({
     marginBottom: 6,
   },
   dateTimeCardLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: 'Epilogue_600SemiBold',
     color: Colors.accent,
     textTransform: 'uppercase',
@@ -649,11 +755,13 @@ const styles = StyleSheet.create({
   },
   presetBtn: {
     paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingVertical: 12,
     borderRadius: 12,
     backgroundColor: '#112236',
     borderWidth: 1,
     borderColor: '#1E3A52',
+    minHeight: 44,
+    justifyContent: 'center',
   },
   presetBtnActive: {
     backgroundColor: `${Colors.accent}20`,
@@ -672,5 +780,23 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.7)',
     justifyContent: 'center',
     alignItems: 'center',
+  },
+  timeWarning: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: 'rgba(245,158,11,0.12)',
+    borderWidth: 1,
+    borderColor: 'rgba(245,158,11,0.3)',
+  },
+  timeWarningText: {
+    fontSize: 13,
+    fontFamily: 'Epilogue_600SemiBold',
+    color: '#F59E0B',
+    flex: 1,
   },
 });

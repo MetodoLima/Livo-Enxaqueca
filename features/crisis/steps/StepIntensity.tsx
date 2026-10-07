@@ -1,8 +1,10 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, PanResponder } from 'react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import { View, Text, StyleSheet, Dimensions, PanResponder, AccessibilityInfo, TouchableOpacity } from 'react-native';
+import Animated, { FadeInUp, useReducedMotion } from 'react-native-reanimated';
 import { Colors } from '@/constants/Colors';
+import { HelpCircle } from 'lucide-react-native';
 import StepFooter from './StepFooter';
+import HelpModal from '../components/HelpModal';
 import { INTENSITY_CONFIG, type CrisisRecord } from '@/types/crisis';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
@@ -28,7 +30,9 @@ function positionToValue(y: number): number {
 }
 
 export default function StepIntensity({ data, onChange, onNext }: StepIntensityProps) {
+  const reduceMotion = useReducedMotion();
   const [value, setValue] = useState<number | null>(data.intensity);
+  const [showHelp, setShowHelp] = useState(false);
   const thumbYRef = useRef(valueToPosition(data.intensity ?? 5));
   const [thumbY, setThumbY] = useState(valueToPosition(data.intensity ?? 5));
   const startYRef = useRef(0);
@@ -65,6 +69,12 @@ export default function StepIntensity({ data, onChange, onNext }: StepIntensityP
         const finalValue = positionToValue(thumbYRef.current);
         setValue(finalValue);
         onChange({ intensity: finalValue });
+        const config = INTENSITY_CONFIG.find((c) => c.value === finalValue);
+        if (config) {
+          AccessibilityInfo.announceForAccessibility(
+            `Intensidade ${finalValue} de 10: ${config.label}`
+          );
+        }
       },
     })
   ).current;
@@ -73,10 +83,29 @@ export default function StepIntensity({ data, onChange, onNext }: StepIntensityP
 
   return (
     <View style={styles.container}>
-      <Animated.View entering={FadeInUp.duration(400)} style={styles.content}>
-        <Text style={styles.title}>Qual o nível da dor?</Text>
-
-        <View style={styles.sliderWrapper}>
+      <Animated.View entering={reduceMotion ? undefined : FadeInUp.duration(400)} style={styles.content}>
+        <View style={styles.headerRow}>
+          <Text style={[styles.title, { marginBottom: 0 }]} accessibilityRole="header">Qual o nível da dor?</Text>
+          <TouchableOpacity 
+            onPress={() => setShowHelp(true)}
+            accessibilityRole="button"
+            accessibilityLabel="Ajuda sobre o nível da dor"
+          >
+            <HelpCircle size={24} color={Colors.muted} />
+          </TouchableOpacity>
+        </View>
+        <View
+          style={styles.sliderWrapper}
+          accessible={true}
+          accessibilityRole="adjustable"
+          accessibilityLabel={
+            value !== null
+              ? `Nível de dor: ${value} de 10, ${currentConfig?.label ?? ''}`
+              : 'Nível de dor: não definido'
+          }
+          accessibilityValue={{ min: 0, max: 10, now: value ?? undefined }}
+          accessibilityHint="Arraste para cima ou para baixo para ajustar a intensidade da dor"
+        >
 
           <View
             style={[styles.track, { height: SLIDER_HEIGHT }]}
@@ -142,6 +171,13 @@ export default function StepIntensity({ data, onChange, onNext }: StepIntensityP
       </Animated.View>
 
       <StepFooter onNext={onNext} disabled={value === null} />
+
+      <HelpModal 
+        visible={showHelp} 
+        onClose={() => setShowHelp(false)} 
+        title="Nível da dor" 
+        message="Use a escala de 0 a 10. Arraste o controle ou toque na barra para posicionar." 
+      />
     </View>
   );
 }
@@ -154,12 +190,25 @@ const styles = StyleSheet.create({
   content: {
     flex: 1,
   },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 28,
+  },
   title: {
     fontSize: 22,
     fontFamily: 'Epilogue_700Bold',
     color: 'white',
     marginBottom: 28,
     lineHeight: 30,
+  },
+  helpText: {
+    fontSize: 13,
+    fontFamily: 'Epilogue_400Regular',
+    color: Colors.muted,
+    marginBottom: 20,
+    lineHeight: 20,
   },
   sliderWrapper: {
     flexDirection: 'row',
@@ -223,7 +272,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   labelText: {
-    fontSize: 9,
+    fontSize: 12,
     fontFamily: 'Epilogue_600SemiBold',
     color: Colors.muted,
     letterSpacing: 1,

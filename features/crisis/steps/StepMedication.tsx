@@ -7,10 +7,11 @@ import {
   StyleSheet,
   ScrollView,
 } from 'react-native';
-import { Plus, X } from 'lucide-react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
+import { Plus, X, HelpCircle } from 'lucide-react-native';
+import Animated, { FadeInUp, useReducedMotion } from 'react-native-reanimated';
 import { Colors } from '@/constants/Colors';
 import StepFooter from './StepFooter';
+import HelpModal from '../components/HelpModal';
 import { MEDICATIONS, type CrisisRecord, type MedicationId } from '@/types/crisis';
 
 interface StepMedicationProps {
@@ -20,7 +21,9 @@ interface StepMedicationProps {
 }
 
 export default function StepMedication({ data, onChange, onNext }: StepMedicationProps) {
+  const reduceMotion = useReducedMotion();
   const [customText, setCustomText] = useState('');
+  const [showHelp, setShowHelp] = useState(false);
 
   const toggleMedication = (id: MedicationId) => {
     const current = data.medications;
@@ -70,8 +73,42 @@ export default function StepMedication({ data, onChange, onNext }: StepMedicatio
   return (
     <View style={styles.container}>
       <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
-        <Animated.View entering={FadeInUp.duration(400)}>
-          <Text style={styles.title}>Tomou algum remédio?</Text>
+        <Animated.View entering={reduceMotion ? undefined : FadeInUp.duration(400)}>
+          <View style={styles.headerRow}>
+            <Text style={[styles.title, { marginBottom: 0 }]} accessibilityRole="header">Tomou algum remédio?</Text>
+            <TouchableOpacity 
+              onPress={() => setShowHelp(true)}
+              accessibilityRole="button"
+              accessibilityLabel="Ajuda sobre medicamentos"
+            >
+              <HelpCircle size={24} color={Colors.muted} />
+            </TouchableOpacity>
+          </View>
+
+          {/* COGA: "Não tomei nenhum" movido para o topo — opção mais provável durante crise severa */}
+          <Animated.View entering={reduceMotion ? undefined : FadeInUp.delay(50).duration(300)}>
+            <TouchableOpacity
+              onPress={() => toggleMedication('nenhum')}
+              activeOpacity={0.7}
+              style={[
+                styles.nenhumBtn,
+                data.medications.includes('nenhum') && styles.nenhumBtnActive,
+              ]}
+              accessibilityRole="checkbox"
+              accessibilityLabel="Não tomei nenhum remédio"
+              accessibilityState={{ checked: data.medications.includes('nenhum') }}
+            >
+              <Text style={styles.nenhumEmoji}>{nenhumMed.emoji}</Text>
+              <Text
+                style={[
+                  styles.nenhumLabel,
+                  data.medications.includes('nenhum') && styles.nenhumLabelActive,
+                ]}
+              >
+                Não tomei nenhum remédio
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
 
           <View style={styles.grid}>
             {regularMeds.map((med, index) => {
@@ -79,7 +116,7 @@ export default function StepMedication({ data, onChange, onNext }: StepMedicatio
               return (
                 <Animated.View
                   key={med.id}
-                  entering={FadeInUp.delay(index * 50).duration(300)}
+                  entering={reduceMotion ? undefined : FadeInUp.delay(index * 50).duration(300)}
                 >
                   <TouchableOpacity
                     onPress={() => toggleMedication(med.id)}
@@ -88,6 +125,10 @@ export default function StepMedication({ data, onChange, onNext }: StepMedicatio
                       styles.medCard,
                       isActive && styles.medCardActive,
                     ]}
+                    accessibilityRole="checkbox"
+                    accessibilityLabel={med.label}
+                    accessibilityState={{ checked: isActive }}
+                    accessibilityHint="Toque para selecionar ou desmarcar"
                   >
                     <Text style={styles.medEmoji}>{med.emoji}</Text>
                     <Text
@@ -105,7 +146,7 @@ export default function StepMedication({ data, onChange, onNext }: StepMedicatio
           </View>
 
           <Animated.View
-            entering={FadeInUp.delay(350).duration(300)}
+            entering={reduceMotion ? undefined : FadeInUp.delay(350).duration(300)}
             style={styles.customSection}
           >
             <Text style={styles.customLabel}>Outro remédio</Text>
@@ -118,6 +159,8 @@ export default function StepMedication({ data, onChange, onNext }: StepMedicatio
                 style={styles.customInput}
                 onSubmitEditing={addCustomMedication}
                 returnKeyType="done"
+                accessibilityLabel="Nome do medicamento personalizado"
+                accessibilityHint="Digite o nome e toque no botão de adicionar"
               />
               <TouchableOpacity
                 onPress={addCustomMedication}
@@ -126,6 +169,9 @@ export default function StepMedication({ data, onChange, onNext }: StepMedicatio
                   !customText.trim() && styles.addBtnDisabled,
                 ]}
                 disabled={!customText.trim()}
+                accessibilityRole="button"
+                accessibilityLabel="Adicionar medicamento"
+                accessibilityState={{ disabled: !customText.trim() }}
               >
                 <Plus size={20} color={customText.trim() ? 'white' : '#3A5A72'} />
               </TouchableOpacity>
@@ -133,14 +179,21 @@ export default function StepMedication({ data, onChange, onNext }: StepMedicatio
           </Animated.View>
 
           {data.customMedications.length > 0 && (
-            <Animated.View entering={FadeInUp.duration(200)} style={styles.customTags}>
+            <Animated.View entering={reduceMotion ? undefined : FadeInUp.duration(200)} style={styles.customTags}>
               {data.customMedications.map((name) => (
-                <View key={name} style={styles.customTag}>
+                <View
+                  key={name}
+                  style={styles.customTag}
+                  accessible={true}
+                  accessibilityLabel={`Medicamento: ${name}`}
+                >
                   <Text style={styles.customTagEmoji}>💊</Text>
                   <Text style={styles.customTagText}>{name}</Text>
                   <TouchableOpacity
                     onPress={() => removeCustomMedication(name)}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Remover ${name}`}
                   >
                     <X size={14} color={Colors.accent} />
                   </TouchableOpacity>
@@ -149,30 +202,9 @@ export default function StepMedication({ data, onChange, onNext }: StepMedicatio
             </Animated.View>
           )}
 
-          <Animated.View entering={FadeInUp.delay(400).duration(300)}>
-            <TouchableOpacity
-              onPress={() => toggleMedication('nenhum')}
-              activeOpacity={0.7}
-              style={[
-                styles.nenhumBtn,
-                data.medications.includes('nenhum') && styles.nenhumBtnActive,
-              ]}
-            >
-              <Text style={styles.nenhumEmoji}>{nenhumMed.emoji}</Text>
-              <Text
-                style={[
-                  styles.nenhumLabel,
-                  data.medications.includes('nenhum') && styles.nenhumLabelActive,
-                ]}
-              >
-                Não tomei nenhum remédio
-              </Text>
-            </TouchableOpacity>
-          </Animated.View>
-
           {totalSelected > 0 && (
-            <Animated.View entering={FadeInUp.duration(200)} style={styles.countBadge}>
-              <Text style={styles.countText}>
+            <Animated.View entering={reduceMotion ? undefined : FadeInUp.duration(200)} style={styles.countBadge}>
+              <Text style={styles.countText} accessibilityLiveRegion="polite">
                 {totalSelected} selecionado{totalSelected > 1 ? 's' : ''}
               </Text>
             </Animated.View>
@@ -181,6 +213,13 @@ export default function StepMedication({ data, onChange, onNext }: StepMedicatio
       </ScrollView>
 
       <StepFooter onNext={onNext} />
+
+      <HelpModal 
+        visible={showHelp} 
+        onClose={() => setShowHelp(false)} 
+        title="Medicamentos" 
+        message='Se não tomou, toque em "Não tomei nenhum". Você pode adicionar medicamentos personalizados abaixo.' 
+      />
     </View>
   );
 }
@@ -192,6 +231,12 @@ const styles = StyleSheet.create({
   },
   scroll: {
     flex: 1,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
   },
   title: {
     fontSize: 26,
@@ -205,11 +250,18 @@ const styles = StyleSheet.create({
     color: Colors.muted,
     marginBottom: 24,
   },
+  helpText: {
+    fontSize: 13,
+    fontFamily: 'Epilogue_400Regular',
+    color: Colors.muted,
+    marginBottom: 20,
+    lineHeight: 20,
+  },
 
   grid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 12,
+    gap: 14,
     justifyContent: 'center',
     marginBottom: 24,
   },
@@ -269,7 +321,8 @@ const styles = StyleSheet.create({
     color: 'white',
   },
   addBtn: {
-    width: 50,
+    width: 56,
+    minHeight: 48,
     borderRadius: 14,
     backgroundColor: Colors.accent,
     alignItems: 'center',
@@ -316,7 +369,8 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#1E3A52',
     borderStyle: 'dashed',
-    marginBottom: 16,
+    marginBottom: 20,
+    minHeight: 56,
   },
   nenhumBtnActive: {
     backgroundColor: `${Colors.muted}15`,

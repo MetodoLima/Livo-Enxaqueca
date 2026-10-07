@@ -26,10 +26,15 @@ function EditModal({ visible, onClose, title, children }: EditModalProps) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={ms.overlay}>
-        <View style={ms.sheet}>
+        <View style={ms.sheet} accessibilityViewIsModal={true}>
           <View style={ms.header}>
-            <Text style={ms.title}>{title}</Text>
-            <TouchableOpacity onPress={onClose} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
+            <Text style={ms.title} accessibilityRole="header">{title}</Text>
+            <TouchableOpacity
+              onPress={onClose}
+              hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+              accessibilityRole="button"
+              accessibilityLabel="Fechar"
+            >
               <X size={22} color={Colors.muted} />
             </TouchableOpacity>
           </View>
@@ -77,6 +82,9 @@ export function IntensityEditor({
             key={item.value}
             onPress={() => { onChange(item.value); onClose(); }}
             style={[es.row, active && { backgroundColor: `${item.color}18` }]}
+            accessibilityRole="radio"
+            accessibilityLabel={`Intensidade ${item.value}: ${item.label ?? ''} ${item.emoji}`}
+            accessibilityState={{ checked: active }}
           >
             <View style={[es.bar, { backgroundColor: item.color }]} />
             <Text style={[es.num, active && { color: item.color }]}>{item.value}</Text>
@@ -98,7 +106,7 @@ export function LocationEditor({
 }) {
   return (
     <EditModal visible={visible} onClose={onClose} title="Localização da dor">
-      <View style={es.grid}>
+      <View style={es.grid} accessibilityRole="radiogroup" accessibilityLabel="Localização">
         {LOCATIONS.map((loc) => {
           const active = location === loc.id;
           return (
@@ -106,6 +114,9 @@ export function LocationEditor({
               key={loc.id}
               onPress={() => onChange({ location: active ? null : loc.id })}
               style={[es.gridItem, active && es.gridItemActive]}
+              accessibilityRole="radio"
+              accessibilityLabel={loc.label}
+              accessibilityState={{ checked: active }}
             >
               <Text style={{ fontSize: 24 }}>{loc.emoji}</Text>
               <Text style={[es.gridLabel, active && { color: Colors.accent }]}>{loc.label}</Text>
@@ -114,7 +125,7 @@ export function LocationEditor({
         })}
       </View>
       <Text style={[es.sectionTitle, { marginTop: 20 }]}>Qual lado?</Text>
-      <View style={es.sideRow}>
+      <View style={es.sideRow} accessibilityRole="radiogroup" accessibilityLabel="Lado da dor">
         {SIDES.map((s) => {
           const active = side === s.id;
           return (
@@ -122,13 +133,21 @@ export function LocationEditor({
               key={s.id}
               onPress={() => { onChange({ side: active ? null : s.id }); }}
               style={[es.sideBtn, active && es.sideBtnActive]}
+              accessibilityRole="radio"
+              accessibilityLabel={s.label}
+              accessibilityState={{ checked: active }}
             >
               <Text style={[es.sideLabel, active && { color: Colors.accent }]}>{s.label}</Text>
             </TouchableOpacity>
           );
         })}
       </View>
-      <TouchableOpacity onPress={onClose} style={es.doneBtn}>
+      <TouchableOpacity
+        onPress={onClose}
+        style={es.doneBtn}
+        accessibilityRole="button"
+        accessibilityLabel="Confirmar localização"
+      >
         <Text style={es.doneBtnText}>Confirmar</Text>
       </TouchableOpacity>
     </EditModal>
@@ -155,6 +174,9 @@ export function SymptomsEditor({
               key={sym.id}
               onPress={() => toggle(sym.id)}
               style={[es.gridItem, active && es.gridItemActivePurple]}
+              accessibilityRole="checkbox"
+              accessibilityLabel={sym.label}
+              accessibilityState={{ checked: active }}
             >
               <Text style={{ fontSize: 24 }}>{sym.emoji}</Text>
               <Text style={[es.gridLabel, active && { color: Colors.purple }]}>{sym.label}</Text>
@@ -162,7 +184,12 @@ export function SymptomsEditor({
           );
         })}
       </View>
-      <TouchableOpacity onPress={onClose} style={es.doneBtn}>
+      <TouchableOpacity
+        onPress={onClose}
+        style={es.doneBtn}
+        accessibilityRole="button"
+        accessibilityLabel="Confirmar sintomas"
+      >
         <Text style={es.doneBtnText}>Confirmar</Text>
       </TouchableOpacity>
     </EditModal>
@@ -215,6 +242,20 @@ export function MedicationsEditor({
 
   return (
     <EditModal visible={visible} onClose={onClose} title="Medicamentos">
+      {/* COGA: "Nenhum" primeiro — opção mais provável durante crise severa */}
+      <TouchableOpacity
+        onPress={() => toggleMedication('nenhum')}
+        style={[mes.nenhumBtn, medications.includes('nenhum') && mes.nenhumBtnActive]}
+        accessibilityRole="checkbox"
+        accessibilityLabel="Não tomei nenhum remédio"
+        accessibilityState={{ checked: medications.includes('nenhum') }}
+      >
+        <Text style={{ fontSize: 20 }}>{nenhumMed.emoji}</Text>
+        <Text style={[mes.nenhumLabel, medications.includes('nenhum') && { color: 'white' }]}>
+          Não tomei nenhum remédio
+        </Text>
+      </TouchableOpacity>
+
       <View style={es.grid}>
         {regularMeds.map((med) => {
           const active = medications.includes(med.id);
@@ -223,6 +264,9 @@ export function MedicationsEditor({
               key={med.id}
               onPress={() => toggleMedication(med.id)}
               style={[es.gridItem, active && es.gridItemActive]}
+              accessibilityRole="checkbox"
+              accessibilityLabel={med.label}
+              accessibilityState={{ checked: active }}
             >
               <Text style={{ fontSize: 24 }}>{med.emoji}</Text>
               <Text style={[es.gridLabel, active && { color: Colors.accent }]}>{med.label}</Text>
@@ -242,11 +286,15 @@ export function MedicationsEditor({
             style={mes.customInput}
             onSubmitEditing={addCustom}
             returnKeyType="done"
+            accessibilityLabel="Nome do medicamento personalizado"
           />
           <TouchableOpacity
             onPress={addCustom}
             style={[mes.addBtn, !customText.trim() && mes.addBtnDisabled]}
             disabled={!customText.trim()}
+            accessibilityRole="button"
+            accessibilityLabel="Adicionar medicamento"
+            accessibilityState={{ disabled: !customText.trim() }}
           >
             <Plus size={20} color={customText.trim() ? 'white' : '#3A5A72'} />
           </TouchableOpacity>
@@ -256,12 +304,14 @@ export function MedicationsEditor({
       {customMedications.length > 0 && (
         <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
           {customMedications.map((name) => (
-            <View key={name} style={mes.customTag}>
+            <View key={name} style={mes.customTag} accessible={true} accessibilityLabel={`Medicamento: ${name}`}>
               <Text style={{ fontSize: 14 }}>💊</Text>
               <Text style={mes.customTagText}>{name}</Text>
               <TouchableOpacity
                 onPress={() => removeCustom(name)}
-                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                accessibilityRole="button"
+                accessibilityLabel={`Remover ${name}`}
               >
                 <X size={14} color={Colors.accent} />
               </TouchableOpacity>
@@ -271,16 +321,11 @@ export function MedicationsEditor({
       )}
 
       <TouchableOpacity
-        onPress={() => toggleMedication('nenhum')}
-        style={[mes.nenhumBtn, medications.includes('nenhum') && mes.nenhumBtnActive]}
+        onPress={onClose}
+        style={es.doneBtn}
+        accessibilityRole="button"
+        accessibilityLabel="Confirmar medicamentos"
       >
-        <Text style={{ fontSize: 20 }}>{nenhumMed.emoji}</Text>
-        <Text style={[mes.nenhumLabel, medications.includes('nenhum') && { color: 'white' }]}>
-          Não tomei nenhum remédio
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={onClose} style={es.doneBtn}>
         <Text style={es.doneBtnText}>Confirmar</Text>
       </TouchableOpacity>
     </EditModal>
@@ -288,11 +333,11 @@ export function MedicationsEditor({
 }
 
 const es = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', height: 42, borderRadius: 8 },
+  row: { flexDirection: 'row', alignItems: 'center', height: 44, borderRadius: 8, minHeight: 44 },
   bar: { width: 6, height: '100%', borderRadius: 3 },
   num: { width: 36, textAlign: 'center', fontSize: 16, fontFamily: 'Epilogue_700Bold', color: Colors.muted },
   emoji: { fontSize: 24, marginRight: 12 },
-  label: { fontSize: 11, fontFamily: 'Epilogue_700Bold', color: Colors.muted, letterSpacing: 1, flex: 1 },
+  label: { fontSize: 12, fontFamily: 'Epilogue_700Bold', color: Colors.muted, letterSpacing: 1, flex: 1 },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, justifyContent: 'center' },
   gridItem: {
     width: '30%', aspectRatio: 1.1, borderRadius: 18,
@@ -301,25 +346,27 @@ const es = StyleSheet.create({
   },
   gridItemActive: { backgroundColor: `${Colors.accent}15`, borderColor: Colors.accent },
   gridItemActivePurple: { backgroundColor: `${Colors.purple}15`, borderColor: Colors.purple },
-  gridLabel: { fontSize: 11, fontFamily: 'Epilogue_600SemiBold', color: Colors.muted, textAlign: 'center' },
+  gridLabel: { fontSize: 12, fontFamily: 'Epilogue_600SemiBold', color: Colors.muted, textAlign: 'center' },
   sectionTitle: { fontSize: 15, fontFamily: 'Epilogue_600SemiBold', color: 'white', marginBottom: 10, textAlign: 'center' },
   sideRow: { flexDirection: 'row', gap: 10 },
   sideBtn: {
     flex: 1, paddingVertical: 14, borderRadius: 14,
     backgroundColor: '#112236', borderWidth: 1.5, borderColor: '#1E3A52', alignItems: 'center',
+    minHeight: 48, justifyContent: 'center',
   },
   sideBtnActive: { backgroundColor: `${Colors.accent}15`, borderColor: Colors.accent },
   sideLabel: { fontSize: 14, fontFamily: 'Epilogue_600SemiBold', color: Colors.muted },
   doneBtn: {
     marginTop: 24, backgroundColor: Colors.accent,
     paddingVertical: 16, borderRadius: 14, alignItems: 'center',
+    minHeight: 52, justifyContent: 'center',
   },
   doneBtnText: { fontSize: 16, fontFamily: 'Epilogue_700Bold', color: 'white' },
 });
 
 const mes = StyleSheet.create({
   sectionLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontFamily: 'Epilogue_700Bold',
     color: Colors.muted,
     textTransform: 'uppercase',
@@ -338,7 +385,8 @@ const mes = StyleSheet.create({
     color: 'white',
   },
   addBtn: {
-    width: 50,
+    width: 56,
+    minHeight: 48,
     borderRadius: 14,
     backgroundColor: Colors.accent,
     alignItems: 'center',
@@ -374,7 +422,8 @@ const mes = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#1E3A52',
     borderStyle: 'dashed',
-    marginBottom: 4,
+    marginBottom: 16,
+    minHeight: 56,
   },
   nenhumBtnActive: {
     backgroundColor: `${Colors.muted}15`,

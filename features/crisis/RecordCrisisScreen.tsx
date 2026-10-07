@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -7,8 +7,10 @@ import {
   TouchableOpacity,
   Modal,
   StyleSheet,
+  AccessibilityInfo,
 } from 'react-native';
 import Animated, { FadeIn } from 'react-native-reanimated';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/Colors';
 import { createEmptyCrisis, type CrisisRecord } from '@/types/crisis';
@@ -23,12 +25,59 @@ import StepMedication from '@/features/crisis/steps/StepMedication';
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
+const STEP_NAMES: Record<number, string> = {
+  1: 'Horário',
+  2: 'Intensidade',
+  3: 'Localização',
+  4: 'Sintomas',
+  5: 'Medicamentos',
+};
+
+const DRAFT_KEY = 'crisis_draft';
+
 export default function RecordCrisisScreen() {
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [crisis, setCrisis] = useState<CrisisRecord>(createEmptyCrisis);
   const [showExitModal, setShowExitModal] = useState(false);
+  const [restored, setRestored] = useState(false);
   const router = useRouter();
   const { saveCrisis } = useCrisis();
+
+  // COGA: Restaurar rascunho ao montar
+  useEffect(() => {
+    (async () => {
+      try {
+        const raw = await AsyncStorage.getItem(DRAFT_KEY);
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          setCrisis({
+            ...parsed,
+            startTime: new Date(parsed.startTime),
+            endTime: parsed.endTime ? new Date(parsed.endTime) : null,
+          });
+          if (parsed._step) setCurrentStep(parsed._step);
+        }
+      } catch {}
+      setRestored(true);
+    })();
+  }, []);
+
+  // COGA: Salvar rascunho a cada mudança
+  useEffect(() => {
+    if (!restored) return;
+    AsyncStorage.setItem(DRAFT_KEY, JSON.stringify({ ...crisis, _step: currentStep })).catch(() => {});
+  }, [crisis, currentStep, restored]);
+
+  const clearDraft = useCallback(() => {
+    AsyncStorage.removeItem(DRAFT_KEY).catch(() => {});
+  }, []);
+
+  // COGA: Anunciar mudança de step para leitores de tela
+  useEffect(() => {
+    AccessibilityInfo.announceForAccessibility(
+      `Passo ${currentStep} de 5: ${STEP_NAMES[currentStep]}`
+    );
+  }, [currentStep]);
 
   const updateCrisis = useCallback((patch: Partial<CrisisRecord>) => {
     setCrisis((prev) => ({ ...prev, ...patch }));
@@ -36,9 +85,11 @@ export default function RecordCrisisScreen() {
 
   const handleConfirm = useCallback(() => {
     saveCrisis(crisis);
+    clearDraft();
+    AccessibilityInfo.announceForAccessibility('Crise registrada com sucesso!');
     router.dismiss();
     router.push('/(tabs)/crisis');
-  }, [crisis, router, saveCrisis]);
+  }, [crisis, router, saveCrisis, clearDraft]);
 
   const goNext = useCallback(() => {
     if (currentStep < 5) {
@@ -60,8 +111,9 @@ export default function RecordCrisisScreen() {
 
   const confirmExit = useCallback(() => {
     setShowExitModal(false);
+    clearDraft();
     router.back();
-  }, [router]);
+  }, [router, clearDraft]);
 
   const renderStep = () => {
     switch (currentStep) {
@@ -107,9 +159,9 @@ export default function RecordCrisisScreen() {
         onRequestClose={() => setShowExitModal(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={styles.modalCard}>
+          <View style={styles.modalCard} accessibilityViewIsModal={true}>
             <Text style={styles.modalEmoji}>⚠️</Text>
-            <Text style={styles.modalTitle}>Sair do registro?</Text>
+            <Text style={styles.modalTitle} accessibilityRole="header">Sair do registro?</Text>
             <Text style={styles.modalMessage}>
               Os dados desta crise não serão salvos.
             </Text>
@@ -118,6 +170,8 @@ export default function RecordCrisisScreen() {
               <TouchableOpacity
                 onPress={() => setShowExitModal(false)}
                 style={styles.modalBtnCancel}
+                accessibilityRole="button"
+                accessibilityLabel="Continuar preenchendo"
               >
                 <Text style={styles.modalBtnCancelText}>Continuar</Text>
               </TouchableOpacity>
@@ -125,6 +179,8 @@ export default function RecordCrisisScreen() {
               <TouchableOpacity
                 onPress={confirmExit}
                 style={styles.modalBtnExit}
+                accessibilityRole="button"
+                accessibilityLabel="Sair sem salvar os dados"
               >
                 <Text style={styles.modalBtnExitText}>Sair sem salvar</Text>
               </TouchableOpacity>
@@ -189,6 +245,8 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     backgroundColor: Colors.accent,
     alignItems: 'center',
+    minHeight: 52,
+    justifyContent: 'center',
   },
   modalBtnCancelText: {
     fontSize: 15,
@@ -202,6 +260,8 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#EF4444',
     alignItems: 'center',
+    minHeight: 52,
+    justifyContent: 'center',
   },
   modalBtnExitText: {
     fontSize: 15,
