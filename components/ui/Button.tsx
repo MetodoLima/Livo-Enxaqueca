@@ -38,6 +38,7 @@ export interface ButtonProps extends Omit<PressableProps, 'children' | 'style'> 
   size?: ButtonSize;
   icon?: LucideIcon;
   loading?: boolean;
+  done?: boolean;
   className?: string;
 }
 
@@ -47,12 +48,14 @@ export default function Button({
   size = 'lg',
   icon: Icon,
   loading = false,
+  done = false,
   disabled,
   className = '',
   accessibilityLabel,
   ...props
 }: ButtonProps) {
-  const inactive = disabled || loading;
+  const dimmed = !done && (disabled || loading);
+  const inactive = disabled || loading || done;
 
   return (
     <Pressable
@@ -60,7 +63,7 @@ export default function Button({
       accessibilityLabel={accessibilityLabel ?? title}
       accessibilityState={{ disabled: !!inactive, busy: loading }}
       disabled={inactive}
-      className={`flex-row items-center justify-center gap-2 rounded-md ${SIZE[size]} ${CONTAINER[variant]} ${inactive ? 'opacity-50' : 'active:opacity-80'} ${className}`}
+      className={`flex-row items-center justify-center gap-2 rounded-md ${SIZE[size]} ${CONTAINER[variant]} ${dimmed ? 'opacity-50' : inactive ? '' : 'active:opacity-80'} ${className}`}
       {...props}
     >
       {loading ? (

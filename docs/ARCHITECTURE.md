@@ -114,8 +114,23 @@ usa nada dele. Ele sai quando a última tela migrar.
 ### Primitivas
 
 `Text`, `Button`, `IconButton`, `Screen`, `Card`, `Chip`, `ScreenHeader`, `SectionDivider`,
-`EmptyState`, `LoadingState`, `ErrorState`, `TextField`, `ProgressSteps` e `IconBadge`, em
-`components/ui/`. Antes de montar algo à mão numa tela, veja se uma delas já resolve.
+`EmptyState`, `LoadingState`, `ErrorState`, `TextField`, `TimeField`, `TimeWheel`,
+`KeyboardAwareScroll`, `ProgressSteps` e `IconBadge`, em `components/ui/`. Antes de montar
+algo à mão numa tela, veja se uma delas já resolve.
+
+Alguns comportamentos que não aparecem no nome:
+
+- `TimeField` é o campo de horário. Mostra "--:--" até ser preenchido e, ao toque, abre um
+  diálogo flutuante sobre `scrim` com o `TimeWheel`. O diálogo só grava em "Confirmar";
+  fechar descarta.
+- `TimeWheel` é a roda circular de hora e minuto. Aceita toque no número vizinho, digitação
+  (toque no número do centro) e o ajuste do leitor de tela. Não exige arrastar.
+- `KeyboardAwareScroll` rola o campo em digitação para cima do teclado. O `Screen` com
+  `scroll` já usa; um diálogo com campo de texto também deve usar.
+- `Button` com `done` mostra uma confirmação no próprio botão: bloqueia o toque sem ficar
+  apagado. O texto da confirmação diz a verdade sobre o envio, ou seja, "Salvo no aparelho"
+  quando ficou na fila.
+- `TextField` aceita `accessory`, um elemento dentro do campo, à direita.
 
 ### Regras do design system
 
@@ -148,6 +163,10 @@ direto na tela, e proibido `hitSlop` para compensar alvo pequeno.
 DS8. **Texto nunca dentro de altura fixa.** Em contêiner que tem texto, use `min-h-*`,
 nunca `h-*` nem `max-h-*`. Proibido `allowFontScaling={false}` e `maxFontSizeMultiplier`.
 Toda tela migrada é testada com a fonte do sistema no máximo.
+
+Exceção: a roda do `TimeWheel` precisa de altura fixa por item para encaixar a rolagem. Essa
+altura é a base (48 ou 64) multiplicada pela escala de fonte do sistema, então cresce junto
+com o texto.
 
 DS9. **Espaçamento só da lista fechada.** Em `p`, `px`, `py`, `pt`, `pb`, `pl`, `pr`, `m`
 (e variações) e `gap`, os únicos valores aceitos são:
@@ -199,6 +218,11 @@ DS14. **Nenhum código pode assumir que o tema é escuro.** O plano é ter temas
 claro, escuro e alto contraste) e personalização de interface, incluindo desligar as
 animações do app, e os tokens são a camada que torna isso possível. Primitiva e tela se referem a papéis (`content`, `surface`), nunca
 a "texto claro" ou "fundo escuro".
+
+DS15. **Fileira de itens de mesma largura divide o espaço de forma explícita.** Calcule a
+largura de cada item a partir da largura medida da fileira. Não confie em `flex-1` com
+conteúdo de tamanho próprio, e nunca use largura percentual (`w-full`, `aspect-square`) em
+imagem dentro de item flexível: o item passa a medir a imagem, e a fileira estoura.
 
 ### O que falta para trocar de tema
 

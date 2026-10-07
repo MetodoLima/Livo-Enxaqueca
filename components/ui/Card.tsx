@@ -2,7 +2,7 @@ import type { ReactNode } from 'react';
 import { Pressable, View, type StyleProp, type ViewStyle } from 'react-native';
 
 export type CardVariant = 'default' | 'accent-border';
-export type CardPadding = 'sm' | 'md';
+export type CardPadding = 'xs' | 'sm' | 'md';
 
 export interface CardProps {
   children: ReactNode;
@@ -21,6 +21,7 @@ const VARIANT: Record<CardVariant, string> = {
 };
 
 const PADDING: Record<CardPadding, string> = {
+  xs: 'p-1',
   sm: 'p-3',
   md: 'p-6',
 };
