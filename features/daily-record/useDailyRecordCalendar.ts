@@ -1,9 +1,9 @@
 import { useState, useCallback } from 'react';
 import { useFocusEffect } from 'expo-router';
-import { dailyRecordRepository, type DailyRecord } from '@/repositories';
+import { listarRegistrosCombinados, type RegistroCombinado } from '@/features/daily-record/registrosCombinados';
 import { useSync } from '@/contexts/SyncContext';
 
-export type RegistroCalendarDay = DailyRecord;
+export type RegistroCalendarDay = RegistroCombinado;
 
 export function useDailyRecordCalendar(year: number, month: number) {
   const { ultimaAtualizacao } = useSync();
@@ -19,7 +19,7 @@ export function useDailyRecordCalendar(year: number, month: number) {
       const lastDay = new Date(year, month + 1, 0).getDate();
       const to = `${year}-${String(month + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
 
-      const registros = await dailyRecordRepository.listBetween(from, to);
+      const registros = await listarRegistrosCombinados(from, to);
 
       const map: Record<number, RegistroCalendarDay[]> = {};
       for (const registro of registros) {

@@ -22,7 +22,8 @@ import {
   toLocalDateString,
   type Horario,
 } from '@/lib/format';
-import { crisisRepository, dailyRecordRepository, type DailyRecord } from '@/repositories';
+import { listarRegistrosCombinados, type RegistroCombinado } from '@/features/daily-record/registrosCombinados';
+import { crisisRepository } from '@/repositories';
 import { useRouter } from 'expo-router';
 import { Bell, CalendarDays, Check, Droplets, FileText, Mic, Moon, Plus, Send, Smile, TrendingDown } from 'lucide-react-native';
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
@@ -39,9 +40,9 @@ const FAIXAS_AGUA = [
 const DORMIR_INICIAL: Horario = { hora: 23, minuto: 0 };
 const ACORDAR_INICIAL: Horario = { hora: 7, minuto: 0 };
 
-type Resumo = Pick<DailyRecord, 'humor' | 'horasSono' | 'mlAgua' | 'relato'>;
+type Resumo = Pick<RegistroCombinado, 'humor' | 'horasSono' | 'mlAgua' | 'relato'>;
 
-function resumir(registros: DailyRecord[]): Resumo {
+function resumir(registros: RegistroCombinado[]): Resumo {
   const resumo: Resumo = { humor: null, horasSono: null, mlAgua: null, relato: null };
   for (const r of registros) {
     if (r.humor !== null) resumo.humor = r.humor;
@@ -60,7 +61,7 @@ export default function HomeScreen() {
   const [dormir, setDormir] = useState<Horario | null>(null);
   const [acordar, setAcordar] = useState<Horario | null>(null);
   const [faixaAgua, setFaixaAgua] = useState<number | null>(null);
-  const [registrosHoje, setRegistrosHoje] = useState<DailyRecord[] | null>(null);
+  const [registrosHoje, setRegistrosHoje] = useState<RegistroCombinado[] | null>(null);
   const [acrescentando, setAcrescentando] = useState(false);
 
   const { ultimaAtualizacao } = useSync();
@@ -101,7 +102,7 @@ export default function HomeScreen() {
 
   const carregarRegistrosHoje = useCallback(async () => {
     try {
-      setRegistrosHoje(await dailyRecordRepository.listBetween(today, today));
+      setRegistrosHoje(await listarRegistrosCombinados(today, today));
     } catch {
       setRegistrosHoje([]);
     }
@@ -140,9 +141,10 @@ export default function HomeScreen() {
   const handleEnviar = async () => {
     const gravou = await salvar({
       relato: relato.trim() || null,
-      horasSono,
-      mlAgua: faixaAgua,
       humor: selectedMood,
+      dormiAs: dormir,
+      acordeiAs: acordar,
+      mlAgua: faixaAgua,
     });
 
     if (!gravou) {

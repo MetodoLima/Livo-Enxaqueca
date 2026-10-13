@@ -49,6 +49,32 @@ crises") e, principalmente, para valor calculado sobre poucos registros. Um padr
 três crises existe como número, mas não significa nada, e mostrar sem ressalva engana do
 mesmo jeito. Num app de saúde, isso pode mudar o comportamento de quem usa.
 
+## Registro do dia e momento
+
+O registro diário são duas coisas com ritmos diferentes, guardadas em duas tabelas.
+
+**Registro do dia** (`registro_diario`): sono e água. Uma linha por pessoa e por dia, com
+chave `(user_id, data)`. A linha é atualizada, não duplicada. O sono costuma entrar de
+manhã e a água à noite, e cada envio preenche só os campos informados.
+
+- `data` é a data local do aparelho, enviada pelo app. Nunca derive a data de um
+  timestamp no servidor: água registrada às 23h em Fortaleza cairia no dia seguinte em UTC.
+- O sono pertence ao dia em que a pessoa acordou. Quem dormiu às 23h do dia 10 e acordou às
+  7h do dia 11 tem esse sono no registro do dia 11.
+- A duração do sono não é gravada. Ficam `dormi_as` e `acordei_as`, e a duração sai de
+  `duracaoSono`, em `lib/format.ts`, que trata a virada da meia-noite.
+
+**Momento** (`registro_momento`): humor e relato. Várias linhas por dia, cada uma com
+`registrado_em`, a hora do aparelho no instante do registro, mesmo que o envio aconteça
+depois. O id é gerado no aparelho, e o envio só insere: um momento nunca é atualizado.
+
+**O humor de um momento pode ter sido herdado.** Ao registrar um momento, o seletor já vem
+marcado com o humor do momento anterior do mesmo dia, e a pessoa só muda se quiser. Por
+isso, o humor gravado num momento não foi necessariamente reafirmado pela pessoa naquele
+instante: humor igual em momentos seguidos pode ser só o seletor que ninguém mexeu. Quem
+analisar esses dados (insights, exportação, IA) precisa levar isso em conta. Na virada do
+dia nada é herdado.
+
 ## Regras
 
 1. **Rota só reexporta.** Um arquivo em `app/` tem uma linha:

@@ -6,6 +6,7 @@ const LOCAL_TABLES = [
   'crise_enxaqueca',
   'registro_crise',
   'registro_diario',
+  'registro_momento',
   'sync_state',
   'pendencias_orfas',
 ] as const;
@@ -14,11 +15,12 @@ const LOCAL_INDEXES = [
   'idx_registro_crise_crise_id',
   'idx_crise_enxaqueca_inicio',
   'idx_crise_enxaqueca_fim',
-  'idx_registro_diario_data',
   'idx_pendencias_orfas_dono',
   'idx_crise_enxaqueca_synced',
   'idx_registro_crise_synced',
   'idx_registro_diario_synced',
+  'idx_registro_momento_registrado_em',
+  'idx_registro_momento_synced',
 ] as const;
 
 type LocalTable = (typeof LOCAL_TABLES)[number];
@@ -253,32 +255,27 @@ export async function migratePlaintextDatabase(
     await source.closeAsync();
 
     temporary = await openEncrypted(temporaryName, encryptionKey);
+
+    for (const [table, snapshot] of snapshots) {
+      const exportedSnapshot = await snapshotTable(temporary, table, snapshot.columns);
+      if (
+        exportedSnapshot.rows !== snapshot.rows ||
+        exportedSnapshot.digest !== snapshot.digest
+      ) {
+        throw new Error(`Dados divergentes após a exportação da tabela ${table}.`);
+      }
+    }
+
     await applyMigrations(temporary, sourceVersion);
     await validateIntegrity(temporary);
 
     const resultTables: Record<string, { rows: number; digest: string }> = {};
-    for (const [table, snapshot] of snapshots) {
-      const migratedSnapshot = await snapshotTable(temporary, table, snapshot.columns);
-      if (
-        migratedSnapshot.rows !== snapshot.rows ||
-        migratedSnapshot.digest !== snapshot.digest
-      ) {
-        throw new Error(`Dados divergentes após a migração da tabela ${table}.`);
-      }
+    for (const table of LOCAL_TABLES) {
+      const migratedSnapshot = await snapshotTable(temporary, table);
       resultTables[table] = {
         rows: migratedSnapshot.rows,
         digest: migratedSnapshot.digest,
       };
-    }
-
-    for (const table of LOCAL_TABLES) {
-      if (!resultTables[table]) {
-        const migratedSnapshot = await snapshotTable(temporary, table);
-        resultTables[table] = {
-          rows: migratedSnapshot.rows,
-          digest: migratedSnapshot.digest,
-        };
-      }
     }
 
     return {

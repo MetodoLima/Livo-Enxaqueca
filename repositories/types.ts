@@ -43,28 +43,47 @@ export interface CrisisRepository {
 
 export type HumorId = 'terrible' | 'bad' | 'so-so' | 'okay' | 'great';
 
-export interface DailyRecord {
-  id: string;
+export interface RegistroDia {
   data: string;
-  relato: string | null;
-  horasSono: number | null;
+  dormiAs: string | null;
+  acordeiAs: string | null;
   mlAgua: number | null;
-  humor: HumorId | null;
   createdAt: string;
   enviado: boolean;
 }
 
-export interface NewDailyRecord {
-  data: string;
-  relato: string | null;
-  horasSono: number | null;
-  mlAgua: number | null;
-  humor: HumorId | null;
+export interface SonoDoDia {
+  dormiAs: string;
+  acordeiAs: string;
+}
+
+export interface RegistroDiaPatch {
+  sono?: SonoDoDia | null;
+  mlAgua?: number | null;
 }
 
 export interface DailyRecordRepository {
-  listBetween(de: string, ate: string): Promise<DailyRecord[]>;
-  save(registro: NewDailyRecord): Promise<SaveOutcome>;
+  listBetween(de: string, ate: string): Promise<RegistroDia[]>;
+  salvarDia(data: string, patch: RegistroDiaPatch): Promise<SaveOutcome>;
+}
+
+export interface Momento {
+  id: string;
+  registradoEm: string;
+  humor: HumorId | null;
+  relato: string | null;
+  enviado: boolean;
+}
+
+export interface NovoMomento {
+  humor: HumorId | null;
+  relato: string | null;
+}
+
+export interface MomentRepository {
+  listBetween(de: string, ate: string): Promise<Momento[]>;
+  ultimoDoDia(data: string): Promise<Momento | null>;
+  registrar(novo: NovoMomento): Promise<SaveOutcome>;
 }
 
 export interface SetupOption {
