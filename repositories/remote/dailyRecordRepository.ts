@@ -1,74 +1,68 @@
 import { supabase } from '@/lib/supabase';
-import type { DailyRecord, HumorId } from '@/repositories/types';
+import type { RegistroDia } from '@/repositories/types';
 import { userRepository } from './userRepository';
 
-export type RegistroDiarioPayload = {
-  id: string;
+export type RegistroDiaPayload = {
   data: string;
-  relato: string | null;
-  horasSono: number | null;
-  mlAgua: number | null;
-  humor: HumorId | null;
+  dormiAs?: string | null;
+  acordeiAs?: string | null;
+  mlAgua?: number | null;
   updatedAt: string;
 };
 
-type RegistroDiarioRow = {
-  id: string;
+type RegistroDiaRow = {
   data: string;
-  relato: string | null;
-  horas_sono: number | null;
+  dormi_as: string | null;
+  acordei_as: string | null;
   ml_agua: number | null;
-  humor: string | null;
   created_at: string;
 };
 
-function toDailyRecord(row: RegistroDiarioRow): DailyRecord {
+function semSegundos(horario: string | null): string | null {
+  return horario ? horario.slice(0, 5) : null;
+}
+
+function toRegistroDia(row: RegistroDiaRow): RegistroDia {
   return {
-    id: row.id,
     data: row.data,
-    relato: row.relato ?? null,
-    horasSono: row.horas_sono ?? null,
+    dormiAs: semSegundos(row.dormi_as),
+    acordeiAs: semSegundos(row.acordei_as),
     mlAgua: row.ml_agua ?? null,
-    humor: (row.humor ?? null) as HumorId | null,
-    createdAt: row.created_at,
+    createdAt: new Date(row.created_at).toISOString(),
     enviado: true,
   };
 }
 
 export const dailyRecordRepository = {
-  async listBetween(de: string, ate: string): Promise<DailyRecord[]> {
+  async listBetween(de: string, ate: string): Promise<RegistroDia[]> {
     const usuarioId = await userRepository.currentUsuarioId();
     if (usuarioId === null) return [];
 
     const { data, error } = await supabase
       .from('registro_diario')
-      .select('id, data, relato, horas_sono, ml_agua, humor, created_at')
+      .select('data, dormi_as, acordei_as, ml_agua, created_at')
       .eq('user_id', usuarioId)
       .gte('data', de)
       .lte('data', ate)
-      .order('created_at', { ascending: true });
+      .order('data', { ascending: true });
 
     if (error) throw error;
-    return (data ?? []).map(toDailyRecord);
+    return (data ?? []).map(toRegistroDia);
   },
 
-  async enviarRegistroDiario(
-    registro: RegistroDiarioPayload,
-    usuarioId: number,
-  ): Promise<void> {
-    const { error } = await supabase.from('registro_diario').upsert(
-      {
-        id: registro.id,
-        user_id: usuarioId,
-        data: registro.data,
-        relato: registro.relato,
-        horas_sono: registro.horasSono,
-        ml_agua: registro.mlAgua,
-        humor: registro.humor,
-        updated_at: registro.updatedAt,
-      },
-      { onConflict: 'id', ignoreDuplicates: true },
-    );
+  async enviarRegistroDia(registro: RegistroDiaPayload, usuarioId: number): Promise<void> {
+    const linha: Record<string, string | number | null> = {
+      user_id: usuarioId,
+      data: registro.data,
+      updated_at: registro.updatedAt,
+    };
+    if (registro.dormiAs !== undefined) linha.dormi_as = registro.dormiAs;
+    if (registro.acordeiAs !== undefined) linha.acordei_as = registro.acordeiAs;
+    if (registro.mlAgua !== undefined) linha.ml_agua = registro.mlAgua;
+
+    const { error } = await supabase
+      .from('registro_diario')
+      .upsert(linha, { onConflict: 'user_id,data' });
 
     if (error) throw error;
   },

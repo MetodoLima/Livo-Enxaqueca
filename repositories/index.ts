@@ -8,16 +8,17 @@ import { randomUUID } from 'expo-crypto';
 import { montarPacoteCrise } from './crisisPackage';
 import { crisisRepository as localCrisis } from './local/crisisRepository';
 import { dailyRecordRepository as localDailyRecord } from './local/dailyRecordRepository';
+import { momentRepository as localMoment } from './local/momentRepository';
 import { crisisRepository as remoteCrisis } from './remote/crisisRepository';
-import {
-  dailyRecordRepository as remoteDailyRecord,
-  type RegistroDiarioPayload,
-} from './remote/dailyRecordRepository';
+import { dailyRecordRepository as remoteDailyRecord } from './remote/dailyRecordRepository';
+import { momentRepository as remoteMoment, type MomentoPayload } from './remote/momentRepository';
 import { userRepository } from './remote/userRepository';
 import type {
   CrisisRepository,
   DailyRecordRepository,
-  NewDailyRecord,
+  MomentRepository,
+  NovoMomento,
+  RegistroDiaPatch,
   SaveOutcome,
 } from './types';
 
@@ -25,9 +26,9 @@ async function gravarEEnviar(
   gravarLocal: () => Promise<string>,
   enviarDireto: () => Promise<void>,
 ): Promise<SaveOutcome> {
-  let id: string;
+  let chave: string;
   try {
-    id = await gravarLocal();
+    chave = await gravarLocal();
   } catch {
     return gravarSemBancoLocal(enviarDireto);
   }
@@ -36,7 +37,7 @@ async function gravarEEnviar(
 
   try {
     await enviarPendentes();
-    return { enviado: !(await estaPendente(id)) };
+    return { enviado: !(await estaPendente(chave)) };
   } catch {
     return { enviado: false };
   }
@@ -71,15 +72,32 @@ export function ehBancoLocalIndisponivel(erro: unknown): boolean {
   );
 }
 
-async function estaPendente(id: string): Promise<boolean> {
+async function estaPendente(chave: string): Promise<boolean> {
   const db = await bancoDoUsuario();
   const linha = await db.getFirstAsync<{ total: number }>(
     `select
-       (select count(*) from crise_enxaqueca where id = ? and synced = 0) +
-       (select count(*) from registro_diario where id = ? and synced = 0) as total`,
-    [id, id],
+       (select count(*) from crise_enxaqueca  where id = ?   and synced = 0) +
+       (select count(*) from registro_momento where id = ?   and synced = 0) +
+       (select count(*) from registro_diario  where data = ? and synced = 0) as total`,
+    [chave, chave, chave],
   );
   return (linha?.total ?? 0) > 0;
+}
+
+async function usuarioIdObrigatorio(): Promise<number> {
+  const usuarioId = await userRepository.currentUsuarioId();
+  if (usuarioId === null) throw new Error('Perfil do usuario nao encontrado');
+  return usuarioId;
+}
+
+const HORARIO = /^\d{2}:\d{2}$/;
+
+function validarSono(patch: RegistroDiaPatch): void {
+  const sono = patch.sono;
+  if (!sono) return;
+  if (!HORARIO.test(sono.dormiAs) || !HORARIO.test(sono.acordeiAs)) {
+    throw new Error('Horario de sono invalido');
+  }
 }
 
 export const crisisRepository: CrisisRepository = {
@@ -98,23 +116,45 @@ export const crisisRepository: CrisisRepository = {
 
 export const dailyRecordRepository: DailyRecordRepository = {
   listBetween: localDailyRecord.listBetween,
-  save: (novo: NewDailyRecord) => {
-    const registro: RegistroDiarioPayload = {
+  salvarDia: async (data: string, patch: RegistroDiaPatch) => {
+    validarSono(patch);
+    const agora = new Date().toISOString();
+    return gravarEEnviar(
+      () => localDailyRecord.salvarDia(data, patch, agora),
+      async () =>
+        remoteDailyRecord.enviarRegistroDia(
+          {
+            data,
+            dormiAs: patch.sono === undefined ? undefined : (patch.sono?.dormiAs ?? null),
+            acordeiAs: patch.sono === undefined ? undefined : (patch.sono?.acordeiAs ?? null),
+            mlAgua: patch.mlAgua,
+            updatedAt: agora,
+          },
+          await usuarioIdObrigatorio(),
+        ),
+    );
+  },
+};
+
+export const momentRepository: MomentRepository = {
+  listBetween: localMoment.listBetween,
+  ultimoDoDia: localMoment.ultimoDoDia,
+  registrar: async (novo: NovoMomento) => {
+    const relato = novo.relato?.trim() || null;
+    if (novo.humor === null && relato === null) {
+      throw new Error('Momento sem humor e sem relato');
+    }
+    const agora = new Date().toISOString();
+    const momento: MomentoPayload = {
       id: randomUUID(),
-      data: novo.data,
-      relato: novo.relato,
-      horasSono: novo.horasSono,
-      mlAgua: novo.mlAgua,
+      registradoEm: agora,
       humor: novo.humor,
-      updatedAt: new Date().toISOString(),
+      relato,
+      updatedAt: agora,
     };
     return gravarEEnviar(
-      () => localDailyRecord.save(registro),
-      async () => {
-        const usuarioId = await userRepository.currentUsuarioId();
-        if (usuarioId === null) throw new Error('Perfil do usuario nao encontrado');
-        await remoteDailyRecord.enviarRegistroDiario(registro, usuarioId);
-      },
+      () => localMoment.registrar(momento),
+      async () => remoteMoment.enviarMomento(momento, await usuarioIdObrigatorio()),
     );
   },
 };
@@ -128,11 +168,14 @@ export type {
   Crisis,
   CrisisFilter,
   CrisisRepository,
-  DailyRecord,
   DailyRecordRepository,
   HumorId,
-  NewDailyRecord,
+  MomentRepository,
+  Momento,
+  NovoMomento,
   Phase,
+  RegistroDia,
+  RegistroDiaPatch,
   SessionRepository,
   SetupAnswer,
   SetupOption,
@@ -140,5 +183,6 @@ export type {
   SaveOutcome,
   SetupRepository,
   SignUpOutcome,
+  SonoDoDia,
   UserRepository,
 } from './types';

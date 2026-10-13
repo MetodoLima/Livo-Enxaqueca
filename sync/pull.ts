@@ -2,6 +2,7 @@ import { abrirBancoDoUsuario, restaurarQuarentena, usuarioAtual } from '@/db/own
 import { getSyncValue, setSyncValue } from '@/db/syncState';
 import { crisisRepository as remoteCrisisRepository } from '@/repositories/remote/crisisRepository';
 import { dailyRecordRepository as remoteDailyRecordRepository } from '@/repositories/remote/dailyRecordRepository';
+import { momentRepository as remoteMomentRepository } from '@/repositories/remote/momentRepository';
 import { userRepository } from '@/repositories/remote/userRepository';
 import { notificarDadosLocais } from './notify';
 
@@ -18,9 +19,10 @@ export async function pullFromServer(): Promise<PullResult> {
     return { replicou: false, motivo: 'sem-perfil' };
   }
 
-  const [crises, registros] = await Promise.all([
+  const [crises, registros, momentos] = await Promise.all([
     remoteCrisisRepository.list(),
     remoteDailyRecordRepository.listBetween(DATA_MINIMA, DATA_MAXIMA),
+    remoteMomentRepository.listAll(),
   ]);
 
   await db.withTransactionAsync(async () => {
@@ -33,6 +35,7 @@ export async function pullFromServer(): Promise<PullResult> {
     await db.runAsync('delete from registro_crise where synced = 1');
     await db.runAsync('delete from crise_enxaqueca where synced = 1');
     await db.runAsync('delete from registro_diario where synced = 1');
+    await db.runAsync('delete from registro_momento where synced = 1');
 
     const agora = new Date().toISOString();
 
@@ -75,18 +78,25 @@ export async function pullFromServer(): Promise<PullResult> {
     for (const registro of registros) {
       await db.runAsync(
         `insert or ignore into registro_diario
-           (id, data, relato, horas_sono, ml_agua, humor, created_at, updated_at, synced)
-         values (?, ?, ?, ?, ?, ?, ?, ?, 1)`,
+           (data, dormi_as, acordei_as, ml_agua, created_at, updated_at, synced)
+         values (?, ?, ?, ?, ?, ?, 1)`,
         [
-          registro.id,
           registro.data,
-          registro.relato,
-          registro.horasSono,
+          registro.dormiAs,
+          registro.acordeiAs,
           registro.mlAgua,
-          registro.humor,
           registro.createdAt || null,
           agora,
         ],
+      );
+    }
+
+    for (const momento of momentos) {
+      await db.runAsync(
+        `insert or ignore into registro_momento
+           (id, registrado_em, humor, relato, updated_at, synced)
+         values (?, ?, ?, ?, ?, 1)`,
+        [momento.id, momento.registradoEm, momento.humor, momento.relato, agora],
       );
     }
   });

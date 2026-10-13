@@ -55,6 +55,18 @@ export function formatHorario({ hora, minuto }: Horario): string {
   return `${String(hora).padStart(2, '0')}:${String(minuto).padStart(2, '0')}`;
 }
 
+export function lerHorario(texto: string | null): Horario | null {
+  if (!texto) return null;
+  const [hora, minuto] = texto.split(':').map(Number);
+  if (!Number.isInteger(hora) || !Number.isInteger(minuto)) return null;
+  return { hora, minuto };
+}
+
+export function inicioDoDiaLocal(data: string): Date {
+  const [ano, mes, dia] = data.split('-').map(Number);
+  return new Date(ano, mes - 1, dia);
+}
+
 export function duracaoSono(dormir: Horario, acordar: Horario): number {
   let minutos = acordar.hora * 60 + acordar.minuto - (dormir.hora * 60 + dormir.minuto);
   if (minutos < 0) minutos += 24 * 60;

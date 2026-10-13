@@ -1,15 +1,15 @@
 import { useState, useCallback } from 'react';
-import { dailyRecordRepository, type HumorId } from '@/repositories';
+import { formatHorario, type Horario } from '@/lib/format';
+import { dailyRecordRepository, momentRepository, type HumorId, type SaveOutcome } from '@/repositories';
 
 export type { HumorId };
 
 export interface RegistroEvento {
-  id?: string;
-  data: string;
   relato: string | null;
-  horasSono: number | null;
-  mlAgua: number | null;
   humor: HumorId | null;
+  dormiAs: Horario | null;
+  acordeiAs: Horario | null;
+  mlAgua: number | null;
 }
 
 export function useDailyRecord(data: string) {
@@ -17,20 +17,30 @@ export function useDailyRecord(data: string) {
   const [saved, setSaved] = useState(false);
   const [naFila, setNaFila] = useState(false);
 
-  const salvar = useCallback(async (patch: Omit<RegistroEvento, 'id' | 'data'>): Promise<boolean> => {
+  const salvar = useCallback(async (registro: RegistroEvento): Promise<boolean> => {
     setSaving(true);
     setSaved(false);
     setNaFila(false);
     try {
-      const { enviado } = await dailyRecordRepository.save({
-        data,
-        relato: patch.relato,
-        horasSono: patch.horasSono,
-        mlAgua: patch.mlAgua,
-        humor: patch.humor,
-      });
+      const resultados: SaveOutcome[] = [];
 
-      setNaFila(!enviado);
+      if (registro.humor !== null || registro.relato?.trim()) {
+        resultados.push(await momentRepository.registrar({ humor: registro.humor, relato: registro.relato }));
+      }
+
+      const temSono = registro.dormiAs !== null && registro.acordeiAs !== null;
+      if (temSono || registro.mlAgua !== null) {
+        resultados.push(
+          await dailyRecordRepository.salvarDia(data, {
+            ...(temSono
+              ? { sono: { dormiAs: formatHorario(registro.dormiAs!), acordeiAs: formatHorario(registro.acordeiAs!) } }
+              : {}),
+            ...(registro.mlAgua !== null ? { mlAgua: registro.mlAgua } : {}),
+          }),
+        );
+      }
+
+      setNaFila(resultados.some((r) => !r.enviado));
       setSaved(true);
       setTimeout(() => {
         setSaved(false);
