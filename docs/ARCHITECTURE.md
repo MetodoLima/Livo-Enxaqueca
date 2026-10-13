@@ -141,7 +141,7 @@ usa nada dele. Ele sai quando a última tela migrar.
 
 `Text`, `Button`, `IconButton`, `Screen`, `Card`, `Chip`, `ScreenHeader`, `SectionDivider`,
 `EmptyState`, `LoadingState`, `ErrorState`, `TextField`, `TimeField`, `TimeWheel`,
-`KeyboardAwareScroll`, `ProgressSteps` e `IconBadge`, em `components/ui/`. Antes de montar
+`KeyboardAwareScroll`, `Dialog`, `ProgressSteps` e `IconBadge`, em `components/ui/`. Antes de montar
 algo à mão numa tela, veja se uma delas já resolve.
 
 Alguns comportamentos que não aparecem no nome:
@@ -157,6 +157,16 @@ Alguns comportamentos que não aparecem no nome:
   apagado. O texto da confirmação diz a verdade sobre o envio, ou seja, "Salvo no aparelho"
   quando ficou na fila.
 - `TextField` aceita `accessory`, um elemento dentro do campo, à direita.
+- `Dialog` é o diálogo flutuante sobre `scrim`: título, conteúdo e rodapé, tudo dentro da
+  área rolável, para os botões continuarem alcançáveis com a fonte do sistema no máximo. Ao
+  abrir, o foco do leitor de tela vai para o título; ao fechar, volta para o elemento passado
+  em `returnFocusTo`. O `TimeField` ainda monta o próprio diálogo e deve migrar para o
+  `Dialog`.
+- `Card` aceita `surface="raised"`, com fundo `surface-raised`, e `ref`.
+- `TimeWheel` aceita `visibleItems` (3 ou 5) e `onInteraction`, que avisa quando a pessoa
+  mexeu na roda. A roda sempre mostra um número, então um valor que a pessoa precisa
+  informar só conta como preenchido depois de `onInteraction`: valor que ninguém escolheu
+  não é dado da pessoa.
 
 ### Regras do design system
 
@@ -190,9 +200,9 @@ DS8. **Texto nunca dentro de altura fixa.** Em contêiner que tem texto, use `mi
 nunca `h-*` nem `max-h-*`. Proibido `allowFontScaling={false}` e `maxFontSizeMultiplier`.
 Toda tela migrada é testada com a fonte do sistema no máximo.
 
-Exceção: a roda do `TimeWheel` precisa de altura fixa por item para encaixar a rolagem. Essa
-altura é a base (48 ou 64) multiplicada pela escala de fonte do sistema, então cresce junto
-com o texto.
+Exceção: a roda do `TimeWheel` precisa de altura fixa por item para encaixar a rolagem, e o
+número usa altura de linha igual à do item para ficar centralizado. Essa altura é a base (48
+ou 64) multiplicada pela escala de fonte do sistema, então cresce junto com o texto.
 
 DS9. **Espaçamento só da lista fechada.** Em `p`, `px`, `py`, `pt`, `pb`, `pl`, `pr`, `m`
 (e variações) e `gap`, os únicos valores aceitos são:
@@ -249,6 +259,10 @@ DS15. **Fileira de itens de mesma largura divide o espaço de forma explícita.*
 largura de cada item a partir da largura medida da fileira. Não confie em `flex-1` com
 conteúdo de tamanho próprio, e nunca use largura percentual (`w-full`, `aspect-square`) em
 imagem dentro de item flexível: o item passa a medir a imagem, e a fileira estoura.
+
+DS16. **Controle desabilitado diz por quê.** Botão desabilitado leva no `accessibilityHint`
+o que falta para habilitá-lo. Sem isso, quem usa leitor de tela toca, nada acontece e não há
+explicação.
 
 ### O que falta para trocar de tema
 
