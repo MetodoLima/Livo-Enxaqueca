@@ -1,46 +1,25 @@
 import { useState, useCallback } from 'react';
-import { formatHorario, type Horario } from '@/lib/format';
-import { dailyRecordRepository, momentRepository, type HumorId, type SaveOutcome } from '@/repositories';
+import { momentRepository, type HumorId } from '@/repositories';
 
 export type { HumorId };
 
-export interface RegistroEvento {
-  relato: string | null;
+export interface NovoMomentoDaTela {
   humor: HumorId | null;
-  dormiAs: Horario | null;
-  acordeiAs: Horario | null;
-  mlAgua: number | null;
+  relato: string | null;
 }
 
-export function useDailyRecord(data: string) {
+export function useDailyRecord() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [naFila, setNaFila] = useState(false);
 
-  const salvar = useCallback(async (registro: RegistroEvento): Promise<boolean> => {
+  const salvar = useCallback(async (momento: NovoMomentoDaTela): Promise<boolean> => {
     setSaving(true);
     setSaved(false);
     setNaFila(false);
     try {
-      const resultados: SaveOutcome[] = [];
-
-      if (registro.humor !== null || registro.relato?.trim()) {
-        resultados.push(await momentRepository.registrar({ humor: registro.humor, relato: registro.relato }));
-      }
-
-      const temSono = registro.dormiAs !== null && registro.acordeiAs !== null;
-      if (temSono || registro.mlAgua !== null) {
-        resultados.push(
-          await dailyRecordRepository.salvarDia(data, {
-            ...(temSono
-              ? { sono: { dormiAs: formatHorario(registro.dormiAs!), acordeiAs: formatHorario(registro.acordeiAs!) } }
-              : {}),
-            ...(registro.mlAgua !== null ? { mlAgua: registro.mlAgua } : {}),
-          }),
-        );
-      }
-
-      setNaFila(resultados.some((r) => !r.enviado));
+      const { enviado } = await momentRepository.registrar(momento);
+      setNaFila(!enviado);
       setSaved(true);
       setTimeout(() => {
         setSaved(false);
@@ -48,12 +27,12 @@ export function useDailyRecord(data: string) {
       }, 3000);
       return true;
     } catch (err) {
-      console.error('Erro ao salvar registro:', err);
+      console.error('Erro ao salvar momento:', err);
       return false;
     } finally {
       setSaving(false);
     }
-  }, [data]);
+  }, []);
 
   return { saving, saved, naFila, salvar };
 }
