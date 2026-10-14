@@ -1,0 +1,61 @@
+# O EAS Build usa este arquivo no lugar do .gitignore quando ele existe, então as
+# regras abaixo replicam o .gitignore (para não reintroduzir node_modules etc. no
+# pacote enviado) e acrescentam diretórios grandes que não pertencem ao build do app.
+
+# dependencies
+node_modules/
+
+# Expo
+.expo/
+dist/
+web-build/
+
+# Native
+.kotlin/
+*.orig.*
+*.jks
+*.p8
+*.p12
+*.key
+*.mobileprovision
+
+# Metro
+.metro-health-check*
+
+# debug
+npm-debug.*
+yarn-debug.*
+yarn-error.*
+
+# macOS
+.DS_Store
+*.pem
+
+# .env
+.env
+.env*.local
+
+# typescript
+*.tsbuildinfo
+
+# generated native folders
+/ios
+/android
+
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.venv/
+venv/
+env/
+
+# Fora do escopo do app React Native: backend FastAPI local e o submódulo whisper.cpp
+# nativo (o app mobile usa o whisper via whisper.rn, instalado em node_modules — não
+# precisa deste diretório). O .gitignore não exclui livo-ai/whisper.cpp porque é um
+# submódulo git já rastreado; aqui excluímos explicitamente.
+livo-ai/
+
+# Harness de benchmark de LLMs embarcados (inclui ~6GB de modelos baixados), usado só
+# para comparar modelos localmente — não faz parte do app nem do seu build nativo.
+benchmarks/
