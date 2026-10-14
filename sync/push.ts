@@ -7,6 +7,7 @@ import {
   type FasePayload,
 } from '@/repositories/remote/crisisRepository';
 import { dailyRecordRepository as remoteDailyRecordRepository } from '@/repositories/remote/dailyRecordRepository';
+import { momentRepository as remoteMomentRepository } from '@/repositories/remote/momentRepository';
 import { userRepository } from '@/repositories/remote/userRepository';
 import type { HumorId } from '@/repositories/types';
 import { notificarDadosLocais } from './notify';
@@ -66,13 +67,21 @@ type PendenteFase = {
   updated_at: string;
 };
 
-type PendenteRegistro = {
-  id: string;
+type PendenteDia = {
   data: string;
-  relato: string | null;
-  horas_sono: number | null;
+  dormi_as: string | null;
+  acordei_as: string | null;
   ml_agua: number | null;
+  updated_at: string;
+  tentativas: number;
+  ultima_tentativa_em: string | null;
+};
+
+type PendenteMomento = {
+  id: string;
+  registrado_em: string;
   humor: string | null;
+  relato: string | null;
   updated_at: string;
   tentativas: number;
   ultima_tentativa_em: string | null;
@@ -95,7 +104,8 @@ export async function pushToServer(): Promise<PushResult> {
   let enviados = 0;
 
   enviados += await enviarCrises(db, dono);
-  enviados += await enviarRegistrosDiarios(db, dono, usuarioId);
+  enviados += await enviarRegistrosDoDia(db, dono, usuarioId);
+  enviados += await enviarMomentos(db, dono, usuarioId);
 
   notificarDadosLocais();
 
@@ -161,21 +171,20 @@ async function enviarCrises(db: SQLiteDatabase, dono: string): Promise<number> {
       });
       enviados += 1;
     } catch (erro) {
-      await registrarFalha(db, 'crise_enxaqueca', crise.id, erro);
+      await registrarFalha(db, 'crise_enxaqueca', 'id', crise.id, erro);
     }
   }
 
   return enviados;
 }
 
-async function enviarRegistrosDiarios(
+async function enviarRegistrosDoDia(
   db: SQLiteDatabase,
   dono: string,
   usuarioId: number,
 ): Promise<number> {
-  const pendentes = await db.getAllAsync<PendenteRegistro>(
-    `select id, data, relato, horas_sono, ml_agua, humor, updated_at, tentativas,
-            ultima_tentativa_em
+  const pendentes = await db.getAllAsync<PendenteDia>(
+    `select data, dormi_as, acordei_as, ml_agua, updated_at, tentativas, ultima_tentativa_em
        from registro_diario
       where synced = 0
       order by data asc`,
@@ -188,26 +197,69 @@ async function enviarRegistrosDiarios(
     if (!podeTentar(registro.tentativas, registro.ultima_tentativa_em)) continue;
 
     try {
-      await remoteDailyRecordRepository.enviarRegistroDiario(
+      await remoteDailyRecordRepository.enviarRegistroDia(
         {
-          id: registro.id,
           data: registro.data,
-          relato: registro.relato,
-          horasSono: registro.horas_sono,
+          dormiAs: registro.dormi_as,
+          acordeiAs: registro.acordei_as,
           mlAgua: registro.ml_agua,
-          humor: (registro.humor ?? null) as HumorId | null,
           updatedAt: registro.updated_at,
         },
         usuarioId,
       );
 
       await db.runAsync(
-        'update registro_diario set synced = 1, ultimo_erro = null where id = ?',
-        [registro.id],
+        `update registro_diario
+            set synced = 1, ultimo_erro = null
+          where data = ? and updated_at = ?`,
+        [registro.data, registro.updated_at],
       );
       enviados += 1;
     } catch (erro) {
-      await registrarFalha(db, 'registro_diario', registro.id, erro);
+      await registrarFalha(db, 'registro_diario', 'data', registro.data, erro);
+    }
+  }
+
+  return enviados;
+}
+
+async function enviarMomentos(
+  db: SQLiteDatabase,
+  dono: string,
+  usuarioId: number,
+): Promise<number> {
+  const pendentes = await db.getAllAsync<PendenteMomento>(
+    `select id, registrado_em, humor, relato, updated_at, tentativas, ultima_tentativa_em
+       from registro_momento
+      where synced = 0
+      order by registrado_em asc`,
+  );
+
+  let enviados = 0;
+
+  for (const momento of pendentes) {
+    if (usuarioAtual() !== dono) break;
+    if (!podeTentar(momento.tentativas, momento.ultima_tentativa_em)) continue;
+
+    try {
+      await remoteMomentRepository.enviarMomento(
+        {
+          id: momento.id,
+          registradoEm: momento.registrado_em,
+          humor: (momento.humor ?? null) as HumorId | null,
+          relato: momento.relato,
+          updatedAt: momento.updated_at,
+        },
+        usuarioId,
+      );
+
+      await db.runAsync(
+        'update registro_momento set synced = 1, ultimo_erro = null where id = ?',
+        [momento.id],
+      );
+      enviados += 1;
+    } catch (erro) {
+      await registrarFalha(db, 'registro_momento', 'id', momento.id, erro);
     }
   }
 
@@ -216,8 +268,9 @@ async function enviarRegistrosDiarios(
 
 async function registrarFalha(
   db: SQLiteDatabase,
-  tabela: 'crise_enxaqueca' | 'registro_diario',
-  id: string,
+  tabela: 'crise_enxaqueca' | 'registro_diario' | 'registro_momento',
+  coluna: 'id' | 'data',
+  chave: string,
   erro: unknown,
 ): Promise<void> {
   await db.runAsync(
@@ -225,8 +278,8 @@ async function registrarFalha(
         set tentativas = tentativas + 1,
             ultima_tentativa_em = ?,
             ultimo_erro = ?
-      where id = ?`,
-    [new Date().toISOString(), mensagemCurta(erro), id],
+      where ${coluna} = ?`,
+    [new Date().toISOString(), mensagemCurta(erro), chave],
   );
 }
 

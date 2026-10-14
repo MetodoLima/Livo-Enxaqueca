@@ -77,6 +77,43 @@ export const MIGRACOES: string[] = [
   create index if not exists idx_registro_crise_synced  on registro_crise(synced);
   create index if not exists idx_registro_diario_synced on registro_diario(synced);
   `,
+
+  `
+  drop table if exists registro_diario;
+  delete from pendencias_orfas where tabela = 'registro_diario';
+  delete from sync_state where key = 'lastPulledAt';
+
+  create table registro_diario (
+    data                text primary key not null,
+    dormi_as            text,
+    acordei_as          text,
+    ml_agua             integer,
+    created_at          text,
+    updated_at          text not null,
+    deleted_at          text,
+    synced              integer not null default 1,
+    tentativas          integer not null default 0,
+    ultima_tentativa_em text,
+    ultimo_erro         text
+  );
+
+  create table registro_momento (
+    id                  text primary key not null,
+    registrado_em       text not null,
+    humor               text,
+    relato              text,
+    updated_at          text not null,
+    deleted_at          text,
+    synced              integer not null default 1,
+    tentativas          integer not null default 0,
+    ultima_tentativa_em text,
+    ultimo_erro         text
+  );
+
+  create index if not exists idx_registro_diario_synced         on registro_diario(synced);
+  create index if not exists idx_registro_momento_registrado_em on registro_momento(registrado_em);
+  create index if not exists idx_registro_momento_synced        on registro_momento(synced);
+  `,
 ];
 
 export const SCHEMA_VERSION = MIGRACOES.length;

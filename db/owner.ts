@@ -59,6 +59,7 @@ async function assumirBanco(db: SQLiteDatabase, usuario: string): Promise<void> 
         `delete from registro_crise;
          delete from crise_enxaqueca;
          delete from registro_diario;
+         delete from registro_momento;
          delete from sync_state where key = 'lastPulledAt';`,
       );
     }
@@ -94,7 +95,19 @@ async function quarentenar(db: SQLiteDatabase, dono: string): Promise<void> {
     await db.runAsync(
       `insert or replace into pendencias_orfas (id, dono, tabela, payload, criado_em)
        values (?, ?, 'registro_diario', ?, ?)`,
-      [registro.id as string, dono, JSON.stringify(registro), agora],
+      [`registro_diario:${dono}:${registro.data as string}`, dono, JSON.stringify(registro), agora],
+    );
+  }
+
+  const momentos = await db.getAllAsync<Record<string, unknown>>(
+    'select * from registro_momento where synced = 0',
+  );
+
+  for (const momento of momentos) {
+    await db.runAsync(
+      `insert or replace into pendencias_orfas (id, dono, tabela, payload, criado_em)
+       values (?, ?, 'registro_momento', ?, ?)`,
+      [momento.id as string, dono, JSON.stringify(momento), agora],
     );
   }
 }
@@ -119,8 +132,12 @@ export async function restaurarQuarentena(db: SQLiteDatabase, dono: string): Pro
       for (const fase of dados.fases ?? []) {
         await inserirLinha(db, 'registro_crise', fase);
       }
+    } else if (orfa.tabela === 'registro_diario') {
+      await inserirLinha(db, 'registro_diario', dados, 'replace');
+    } else if (orfa.tabela === 'registro_momento') {
+      await inserirLinha(db, 'registro_momento', dados);
     } else {
-      await inserirLinha(db, 'registro_diario', dados);
+      continue;
     }
 
     await db.runAsync('delete from pendencias_orfas where id = ? and dono = ?', [
@@ -130,7 +147,7 @@ export async function restaurarQuarentena(db: SQLiteDatabase, dono: string): Pro
   }
 }
 
-type TabelaRestauravel = 'crise_enxaqueca' | 'registro_crise' | 'registro_diario';
+type TabelaRestauravel = 'crise_enxaqueca' | 'registro_crise' | 'registro_diario' | 'registro_momento';
 
 const COLUNA_VALIDA = /^[a-z_]+$/;
 
@@ -138,13 +155,14 @@ async function inserirLinha(
   db: SQLiteDatabase,
   tabela: TabelaRestauravel,
   linha: Record<string, unknown>,
+  conflito: 'ignore' | 'replace' = 'ignore',
 ): Promise<void> {
   const colunas = Object.keys(linha).filter((c) => COLUNA_VALIDA.test(c));
   if (colunas.length === 0) return;
 
   const marcadores = colunas.map(() => '?').join(', ');
   await db.runAsync(
-    `insert or ignore into ${tabela} (${colunas.join(', ')}) values (${marcadores})`,
+    `insert or ${conflito} into ${tabela} (${colunas.join(', ')}) values (${marcadores})`,
     colunas.map((c) => linha[c] as string | number | null),
   );
 }

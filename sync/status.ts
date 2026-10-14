@@ -23,6 +23,8 @@ export async function lerEstadoDaFila(): Promise<EstadoDaFila> {
          select updated_at from crise_enxaqueca where synced = 0
          union all
          select updated_at from registro_diario where synced = 0
+         union all
+         select updated_at from registro_momento where synced = 0
        ) as pendentes`,
   );
 
