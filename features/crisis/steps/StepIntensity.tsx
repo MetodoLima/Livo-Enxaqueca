@@ -13,12 +13,12 @@ const THUMB_SIZE = 48;
 const EVEN_VALUES = [0, 2, 4, 6, 8, 10];
 
 const INTENSITY_ICONS: Record<number, any> = {
-  0:  require('@/assets/images/crisis/locations/intensity/SemDor.png'),
-  2:  require('@/assets/images/crisis/locations/intensity/Leve.png'),
-  4:  require('@/assets/images/crisis/locations/intensity/Incomoda.png'),
-  6:  require('@/assets/images/crisis/locations/intensity/Forte.png'),
-  8:  require('@/assets/images/crisis/locations/intensity/MuitoForte.png'),
-  10: require('@/assets/images/crisis/locations/intensity/Insuportave.png'),
+  0:  require('@/assets/images/crisis/intensity/SemDor.png'),
+  2:  require('@/assets/images/crisis/intensity/Leve.png'),
+  4:  require('@/assets/images/crisis/intensity/Incomoda.png'),
+  6:  require('@/assets/images/crisis/intensity/Forte.png'),
+  8:  require('@/assets/images/crisis/intensity/MuitoForte.png'),
+  10: require('@/assets/images/crisis/intensity/Insuportave.png'),
 };
 
 interface StepIntensityProps {
