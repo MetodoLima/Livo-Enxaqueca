@@ -1,9 +1,8 @@
 import React, { useRef, useState } from 'react';
-import { View, Text, StyleSheet, Dimensions, PanResponder, AccessibilityInfo, TouchableOpacity } from 'react-native';
+import { View, Text, Image, StyleSheet, Dimensions, PanResponder, AccessibilityInfo, TouchableOpacity } from 'react-native';
 import Animated, { FadeInUp, useReducedMotion } from 'react-native-reanimated';
 import { Colors } from '@/constants/Colors';
 import { HelpCircle } from 'lucide-react-native';
-import StepFooter from './StepFooter';
 import HelpModal from '../components/HelpModal';
 import { INTENSITY_CONFIG, type CrisisRecord } from '@/types/crisis';
 
@@ -12,6 +11,15 @@ const SLIDER_HEIGHT = SCREEN_HEIGHT * 0.52;
 const SLIDER_WIDTH = 48;
 const THUMB_SIZE = 48;
 const EVEN_VALUES = [0, 2, 4, 6, 8, 10];
+
+const INTENSITY_ICONS: Record<number, any> = {
+  0:  require('@/assets/images/crisis/locations/intensity/SemDor.png'),
+  2:  require('@/assets/images/crisis/locations/intensity/Leve.png'),
+  4:  require('@/assets/images/crisis/locations/intensity/Incomoda.png'),
+  6:  require('@/assets/images/crisis/locations/intensity/Forte.png'),
+  8:  require('@/assets/images/crisis/locations/intensity/MuitoForte.png'),
+  10: require('@/assets/images/crisis/locations/intensity/Insuportave.png'),
+};
 
 interface StepIntensityProps {
   data: CrisisRecord;
@@ -150,11 +158,28 @@ export default function StepIntensity({ data, onChange, onNext }: StepIntensityP
                     Math.abs(curr - value) < Math.abs(prev - value) ? curr : prev
                   ) === item.value;
 
+                const icon = INTENSITY_ICONS[item.value];
+                const isLarge = [6, 8, 10].includes(item.value);
+
                 return (
                   <View key={item.value} style={styles.labelRow}>
-                    <Text style={[styles.labelEmoji, !isActive && { opacity: 0.4 }]}>
-                      {item.emoji}
-                    </Text>
+                    <View style={styles.iconContainer}>
+                      {icon ? (
+                        <Image
+                          source={icon}
+                          style={[
+                            styles.labelIcon,
+                            isLarge && styles.labelIconLarge,
+                            !isActive && { opacity: 0.4 },
+                          ]}
+                          resizeMode="contain"
+                        />
+                      ) : (
+                        <Text style={[styles.labelEmoji, !isActive && { opacity: 0.4 }]}>
+                          {item.emoji}
+                        </Text>
+                      )}
+                    </View>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.labelNumber, isActive && { color: currentColor }]}>
                         {item.value}
@@ -169,8 +194,6 @@ export default function StepIntensity({ data, onChange, onNext }: StepIntensityP
           </View>
         </View>
       </Animated.View>
-
-      <StepFooter onNext={onNext} disabled={value === null} />
 
       <HelpModal 
         visible={showHelp} 
@@ -259,6 +282,20 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 10,
     height: SLIDER_HEIGHT / 6,
+  },
+  iconContainer: {
+    width: 44,
+    height: 44,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  labelIcon: {
+    width: 32,
+    height: 32,
+  },
+  labelIconLarge: {
+    width: 42,
+    height: 42,
   },
   labelEmoji: {
     fontSize: 20,

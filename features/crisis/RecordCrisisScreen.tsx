@@ -17,6 +17,7 @@ import { createEmptyCrisis, type CrisisRecord } from '@/types/crisis';
 import { useCrisis } from '@/contexts/CrisisContext';
 
 import StepHeader, { ProgressBar } from '@/features/crisis/steps/StepHeader';
+import StepFooter from '@/features/crisis/steps/StepFooter';
 import StepTime from '@/features/crisis/steps/StepTime';
 import StepIntensity from '@/features/crisis/steps/StepIntensity';
 import StepLocation from '@/features/crisis/steps/StepLocation';
@@ -134,23 +135,31 @@ export default function RecordCrisisScreen() {
 
   return (
     <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bgDark }}>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
+      <View style={styles.headerArea}>
         <StepHeader
           currentStep={currentStep}
           onBack={goBack}
           onClose={handleClose}
         />
         <ProgressBar currentStep={currentStep} />
+      </View>
 
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={styles.scrollContent}
+        showsVerticalScrollIndicator={false}
+        keyboardShouldPersistTaps="handled"
+      >
         <Animated.View key={currentStep} entering={FadeIn.duration(300)} style={{ flex: 1 }}>
           {renderStep()}
         </Animated.View>
       </ScrollView>
+
+      <StepFooter
+        onBack={currentStep === 1 ? handleClose : goBack}
+        onNext={goNext}
+        disabled={currentStep === 2 && crisis.intensity === null}
+      />
 
       <Modal
         visible={showExitModal}
@@ -193,10 +202,13 @@ export default function RecordCrisisScreen() {
 }
 
 const styles = StyleSheet.create({
+  headerArea: {
+    paddingHorizontal: 24,
+  },
   scrollContent: {
     flexGrow: 1,
     paddingHorizontal: 24,
-    paddingBottom: 40,
+    paddingBottom: 24,
   },
 
   modalOverlay: {

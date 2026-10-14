@@ -3,7 +3,6 @@ import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import Animated, { FadeInUp, useReducedMotion } from 'react-native-reanimated';
 import { Colors } from '@/constants/Colors';
 import { HelpCircle } from 'lucide-react-native';
-import StepFooter from './StepFooter';
 import HelpModal from '../components/HelpModal';
 import { SYMPTOMS, type CrisisRecord, type SymptomId } from '@/types/crisis';
 
@@ -82,8 +81,6 @@ export default function StepSymptoms({ data, onChange, onNext }: StepSymptomsPro
           </Animated.View>
         )}
       </Animated.View>
-
-      <StepFooter onNext={onNext} />
 
       <HelpModal 
         visible={showHelp} 

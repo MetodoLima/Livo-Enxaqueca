@@ -11,7 +11,6 @@ import { Clock, ChevronUp, ChevronDown, Calendar, AlertTriangle, HelpCircle } fr
 import Animated, { FadeInUp, useReducedMotion } from 'react-native-reanimated';
 import { Colors } from '@/constants/Colors';
 import { formatTime } from '@/lib/format';
-import StepFooter from './StepFooter';
 import HelpModal from '../components/HelpModal';
 import type { CrisisRecord, TimePreset, EndTimePreset } from '@/types/crisis';
 
@@ -578,8 +577,6 @@ export default function StepTime({ data, onChange, onNext }: StepTimeProps) {
           </View>
         )}
       </Animated.View>
-
-      <StepFooter onNext={onNext} />
 
       <HelpModal 
         visible={showHelp} 

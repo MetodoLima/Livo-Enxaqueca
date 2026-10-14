@@ -1,10 +1,12 @@
 import React from 'react';
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { ChevronRight } from 'lucide-react-native';
+import { ChevronRight, ChevronLeft } from 'lucide-react-native';
 import { Colors } from '@/constants/Colors';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 interface StepFooterProps {
   onNext: () => void;
+  onBack?: () => void;
   nextLabel?: string;
   disabled?: boolean;
   showSkip?: boolean;
@@ -14,17 +16,35 @@ interface StepFooterProps {
 
 export default function StepFooter({
   onNext,
+  onBack,
   nextLabel = 'Avançar',
   disabled = false,
   showSkip = false,
   onSkip,
   skipLabel = 'Pular',
 }: StepFooterProps) {
+  const insets = useSafeAreaInsets();
+  const bottomPadding = Math.max(insets.bottom + 28, 52);
+
   return (
-    <View style={styles.container}>
+    <View style={[styles.container, { paddingBottom: bottomPadding }]}>
+      {onBack && (
+        <TouchableOpacity
+          onPress={onBack}
+          activeOpacity={0.7}
+          style={styles.backBtn}
+          accessibilityRole="button"
+          accessibilityLabel="Voltar"
+          accessibilityHint="Volta para a etapa anterior"
+        >
+          <ChevronLeft size={24} color="white" />
+        </TouchableOpacity>
+      )}
+
       {showSkip && onSkip && (
         <TouchableOpacity
           onPress={onSkip}
+          activeOpacity={0.7}
           style={styles.skipBtn}
           accessibilityRole="button"
           accessibilityLabel={skipLabel}
@@ -37,10 +57,11 @@ export default function StepFooter({
       <TouchableOpacity
         onPress={onNext}
         disabled={disabled}
+        activeOpacity={0.8}
         style={[
           styles.nextBtn,
           disabled && styles.nextBtnDisabled,
-          showSkip && { flex: 1 },
+          !onBack && !showSkip && { flex: 1 },
         ]}
         accessibilityRole="button"
         accessibilityLabel={nextLabel}
@@ -61,11 +82,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
+    paddingHorizontal: 24,
     paddingTop: 16,
     paddingBottom: 24,
+    backgroundColor: Colors.bgDark,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255, 255, 255, 0.05)',
+  },
+  backBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#16313F',
+    borderWidth: 1.5,
+    borderColor: '#1E3A52',
+    borderRadius: 16,
+    minHeight: 56,
   },
   nextBtn: {
-    flex: 1,
+    flex: 2,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',

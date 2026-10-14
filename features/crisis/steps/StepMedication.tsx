@@ -10,7 +10,6 @@ import {
 import { Plus, X, HelpCircle } from 'lucide-react-native';
 import Animated, { FadeInUp, useReducedMotion } from 'react-native-reanimated';
 import { Colors } from '@/constants/Colors';
-import StepFooter from './StepFooter';
 import HelpModal from '../components/HelpModal';
 import { MEDICATIONS, type CrisisRecord, type MedicationId } from '@/types/crisis';
 
@@ -72,7 +71,7 @@ export default function StepMedication({ data, onChange, onNext }: StepMedicatio
 
   return (
     <View style={styles.container}>
-      <ScrollView style={styles.scroll} showsVerticalScrollIndicator={false}>
+      <View style={styles.scroll}>
         <Animated.View entering={reduceMotion ? undefined : FadeInUp.duration(400)}>
           <View style={styles.headerRow}>
             <Text style={[styles.title, { marginBottom: 0 }]} accessibilityRole="header">Tomou algum remédio?</Text>
@@ -210,9 +209,7 @@ export default function StepMedication({ data, onChange, onNext }: StepMedicatio
             </Animated.View>
           )}
         </Animated.View>
-      </ScrollView>
-
-      <StepFooter onNext={onNext} />
+      </View>
 
       <HelpModal 
         visible={showHelp} 

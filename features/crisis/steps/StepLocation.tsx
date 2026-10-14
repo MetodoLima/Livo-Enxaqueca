@@ -1,9 +1,16 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
+import { View, Text, Image, TouchableOpacity, StyleSheet } from 'react-native';
 import Animated, { FadeInUp, useReducedMotion } from 'react-native-reanimated';
 import { Colors } from '@/constants/Colors';
-import StepFooter from './StepFooter';
 import { LOCATIONS, SIDES, type CrisisRecord, type LocationId, type SideId } from '@/types/crisis';
+
+export const LOCATION_ICONS: Record<LocationId, any> = {
+  frontal: require('@/assets/images/crisis/locations/Frontal.png'),
+  temporal: require('@/assets/images/crisis/locations/Temporal.png'),
+  occipital: require('@/assets/images/crisis/locations/Nuca.png'),
+  atras_olhos: require('@/assets/images/crisis/locations/AtrasOlhos.png'),
+  difusa: require('@/assets/images/crisis/locations/Difusa.png'),
+};
 
 interface StepLocationProps {
   data: CrisisRecord;
@@ -30,6 +37,7 @@ export default function StepLocation({ data, onChange, onNext }: StepLocationPro
         <View style={styles.grid} accessibilityRole="radiogroup" accessibilityLabel="Localização da dor">
           {LOCATIONS.map((loc) => {
             const isActive = data.location === loc.id;
+            const icon = LOCATION_ICONS[loc.id];
             return (
               <TouchableOpacity
                 key={loc.id}
@@ -43,7 +51,15 @@ export default function StepLocation({ data, onChange, onNext }: StepLocationPro
                 accessibilityLabel={loc.label}
                 accessibilityState={{ checked: isActive }}
               >
-                <Text style={styles.locationEmoji}>{loc.emoji}</Text>
+                {icon ? (
+                  <Image
+                    source={icon}
+                    style={[styles.locationIcon, !isActive && { opacity: 0.85 }]}
+                    resizeMode="contain"
+                  />
+                ) : (
+                  <Text style={styles.locationEmoji}>{loc.emoji}</Text>
+                )}
                 <Text
                   style={[
                     styles.locationLabel,
@@ -93,8 +109,6 @@ export default function StepLocation({ data, onChange, onNext }: StepLocationPro
           </Animated.View>
         )}
       </Animated.View>
-
-      <StepFooter onNext={onNext} />
     </View>
   );
 }
@@ -128,18 +142,23 @@ const styles = StyleSheet.create({
   },
   locationBtn: {
     width: '45%',
-    aspectRatio: 1.4,
+    aspectRatio: 1.32,
     borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.03)',
     borderWidth: 1.5,
     borderColor: '#1E3A52',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 8,
+    paddingVertical: 8,
   },
   locationBtnActive: {
     backgroundColor: `${Colors.accent}15`,
     borderColor: Colors.accent,
+  },
+  locationIcon: {
+    width: 46,
+    height: 46,
   },
   locationEmoji: {
     fontSize: 28,
@@ -154,13 +173,13 @@ const styles = StyleSheet.create({
   },
 
   sideSection: {
-    marginTop: 24,
+    marginTop: 12,
   },
   sideTitle: {
     fontSize: 16,
     fontFamily: 'Epilogue_600SemiBold',
     color: 'white',
-    marginBottom: 12,
+    marginBottom: 10,
     textAlign: 'center',
   },
   sideRow: {

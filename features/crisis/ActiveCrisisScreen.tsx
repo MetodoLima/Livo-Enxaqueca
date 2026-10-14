@@ -22,6 +22,7 @@ import {
   AccessibilityInfo,
   ActivityIndicator,
   Alert,
+  Image,
   ScrollView,
   StyleSheet,
   Switch,
@@ -30,6 +31,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { LOCATION_ICONS } from './steps/StepLocation';
 import ScreenBackground from '@/components/ui/ScreenBackground';
 import Animated, { FadeInUp, ZoomIn, useReducedMotion } from 'react-native-reanimated';
 import PastPhaseCard from '@/features/crisis/components/PastPhaseCard';
@@ -353,7 +355,15 @@ export default function ActiveCrisisScreen() {
               <Text style={styles.cardLabel}>Localização</Text>
               {locationData ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
-                  <Text style={{ fontSize: 22 }}>{locationData.emoji}</Text>
+                  {LOCATION_ICONS[locationData.id] ? (
+                    <Image
+                      source={LOCATION_ICONS[locationData.id]}
+                      style={{ width: 24, height: 24 }}
+                      resizeMode="contain"
+                    />
+                  ) : (
+                    <Text style={{ fontSize: 22 }}>{locationData.emoji}</Text>
+                  )}
                   <Text style={styles.smallValue}>{locationData.label}</Text>
                 </View>
               ) : (
@@ -640,7 +650,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 16,
+    paddingTop: 40,
     paddingBottom: 24,
   },
   headerTitle: {

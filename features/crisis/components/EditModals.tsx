@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, Modal, ScrollView, StyleSheet, TextInput } from 'react-native';
+import { View, Text, Image, TouchableOpacity, Modal, ScrollView, StyleSheet, TextInput } from 'react-native';
 import { Plus, X } from 'lucide-react-native';
 import { Colors } from '@/constants/Colors';
+import { LOCATION_ICONS } from '../steps/StepLocation';
 import {
   INTENSITY_CONFIG,
   LOCATIONS,
@@ -109,6 +110,7 @@ export function LocationEditor({
       <View style={es.grid} accessibilityRole="radiogroup" accessibilityLabel="Localização">
         {LOCATIONS.map((loc) => {
           const active = location === loc.id;
+          const icon = LOCATION_ICONS[loc.id];
           return (
             <TouchableOpacity
               key={loc.id}
@@ -118,7 +120,11 @@ export function LocationEditor({
               accessibilityLabel={loc.label}
               accessibilityState={{ checked: active }}
             >
-              <Text style={{ fontSize: 24 }}>{loc.emoji}</Text>
+              {icon ? (
+                <Image source={icon} style={{ width: 34, height: 34 }} resizeMode="contain" />
+              ) : (
+                <Text style={{ fontSize: 24 }}>{loc.emoji}</Text>
+              )}
               <Text style={[es.gridLabel, active && { color: Colors.accent }]}>{loc.label}</Text>
             </TouchableOpacity>
           );
