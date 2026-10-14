@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import {
   Pressable,
   ScrollView,
@@ -13,12 +13,13 @@ import Text from '@/components/ui/Text';
 import { color } from '@/constants/Colors';
 import type { Horario } from '@/lib/format';
 
-const VISIVEIS = 5;
 const COPIAS = 3;
+const FOLGA = 12;
 
 type Coluna = 'hora' | 'minuto';
 
 export type TimeWheelSize = 'md' | 'lg';
+export type TimeWheelVisibleItems = 3 | 5;
 
 const ITEM: Record<TimeWheelSize, number> = { md: 48, lg: 64 };
 const COLUNA: Record<TimeWheelSize, string> = { md: 'w-16', lg: 'w-24' };
@@ -28,30 +29,128 @@ const DIGITACAO: Record<TimeWheelSize, string> = { md: 'text-heading', lg: 'text
 const pad = (n: number) => String(n).padStart(2, '0');
 const modulo = (n: number, total: number) => ((n % total) + total) % total;
 
+interface ItemProps {
+  numero: number;
+  atual: boolean;
+  altura: number;
+  size: TimeWheelSize;
+}
+
+const ItemDaRoda = memo(function ItemDaRoda({ numero, atual, altura, size }: ItemProps) {
+  return (
+    <Text
+      variant={NUMERO[size]}
+      weight={atual ? 'bold' : 'regular'}
+      tone={atual ? 'content' : 'muted'}
+      className="text-center"
+      style={{ height: altura, lineHeight: altura }}
+    >
+      {pad(numero)}
+    </Text>
+  );
+});
+
 interface ColunaProps {
   total: number;
   valor: number;
   altura: number;
+  visiveis: TimeWheelVisibleItems;
   size: TimeWheelSize;
   rotulo: string;
+  dica?: string;
   falado: (n: number) => string;
   editando: boolean;
   onChange: (n: number) => void;
   onEditar: () => void;
   onDigitado: (n: number | null, completo: boolean) => void;
+  onInteragir: () => void;
 }
 
-function ColunaDaRoda({ total, valor, altura, size, rotulo, falado, editando, onChange, onEditar, onDigitado }: ColunaProps) {
+function ColunaDaRoda({
+  total,
+  valor,
+  altura,
+  visiveis,
+  size,
+  rotulo,
+  dica,
+  falado,
+  editando,
+  onChange,
+  onEditar,
+  onDigitado,
+  onInteragir,
+}: ColunaProps) {
+  const meio = Math.floor(visiveis / 2);
   const scrollRef = useRef<ScrollView>(null);
   const indice = useRef(total + valor);
   const [texto, setTexto] = useState(pad(valor));
   const faixaRef = useRef<View>(null);
   const revelar = useRevelarAcimaDoTeclado();
-  const itens = Array.from({ length: total * COPIAS }, (_, i) => i);
+  const quantidade = total * COPIAS;
+  const [centros, setCentros] = useState<number[]>([total + valor]);
+  const centrosRef = useRef(centros);
+  const pendente = useRef<{ alvo: number; animado: boolean } | null>(null);
+
+  const definirCentros = (novos: number[]) => {
+    centrosRef.current = novos;
+    setCentros(novos);
+  };
+
+  const lista = useMemo(() => {
+    const raio = FOLGA + meio;
+    const incluidos = new Set<number>();
+    for (const c of centros) {
+      for (let i = Math.max(0, c - raio); i <= Math.min(quantidade - 1, c + raio); i += 1) incluidos.add(i);
+    }
+    const elementos = [];
+    let vazioDesde = -1;
+    for (let i = 0; i <= quantidade; i += 1) {
+      const dentro = i < quantidade && incluidos.has(i);
+      if (!dentro && i < quantidade) {
+        if (vazioDesde < 0) vazioDesde = i;
+        continue;
+      }
+      if (vazioDesde >= 0) {
+        elementos.push(<View key={`vazio-${vazioDesde}`} style={{ height: (i - vazioDesde) * altura }} />);
+        vazioDesde = -1;
+      }
+      if (dentro) {
+        const numero = modulo(i, total);
+        elementos.push(
+          <ItemDaRoda key={i} numero={numero} atual={numero === valor} altura={altura} size={size} />,
+        );
+      }
+    }
+    return elementos;
+  }, [centros, quantidade, meio, total, valor, altura, size]);
+
+  const dentroDaJanela = (alvo: number) =>
+    centrosRef.current.some((c) => Math.abs(alvo - c) <= FOLGA - meio);
 
   const irPara = (alvo: number, animado: boolean) => {
     indice.current = alvo;
-    scrollRef.current?.scrollTo({ y: alvo * altura, animated: animado });
+    if (dentroDaJanela(alvo)) {
+      scrollRef.current?.scrollTo({ y: alvo * altura, animated: animado });
+      return;
+    }
+    pendente.current = { alvo, animado: false };
+    definirCentros([centrosRef.current[0], alvo]);
+  };
+
+  useEffect(() => {
+    const salto = pendente.current;
+    if (!salto) return;
+    pendente.current = null;
+    scrollRef.current?.scrollTo({ y: salto.alvo * altura, animated: salto.animado });
+    definirCentros([salto.alvo]);
+  }, [centros, altura]);
+
+  const acompanhar = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (pendente.current) return;
+    const atual = Math.round(e.nativeEvent.contentOffset.y / altura);
+    const [centro] = centrosRef.current;
+    if (centrosRef.current.length > 1 || Math.abs(atual - centro) > FOLGA / 2) definirCentros([atual]);
   };
 
   useEffect(() => {
@@ -64,17 +163,28 @@ function ColunaDaRoda({ total, valor, altura, size, rotulo, falado, editando, on
     revelar(faixaRef);
   }, [editando, revelar]);
 
+  const editar = () => {
+    onInteragir();
+    onEditar();
+  };
+
   const mover = (passos: number) => {
-    const base = total + modulo(indice.current, total);
-    if (base !== indice.current) irPara(base, false);
-    irPara(base + passos, true);
-    onChange(modulo(base + passos, total));
+    onInteragir();
+    const alvo = indice.current + passos;
+    irPara(alvo, true);
+    onChange(modulo(alvo, total));
+    if (alvo < total || alvo >= total * 2) {
+      setTimeout(() => {
+        if (indice.current === alvo) irPara(total + modulo(alvo, total), false);
+      }, 350);
+    }
   };
 
   const assentar = (e: NativeSyntheticEvent<NativeScrollEvent>) => {
     const parado = Math.round(e.nativeEvent.contentOffset.y / altura);
     const novo = modulo(parado, total);
     indice.current = parado;
+    onInteragir();
     if (parado < total || parado >= total * 2) irPara(total + novo, false);
     if (novo !== valor) onChange(novo);
   };
@@ -90,20 +200,20 @@ function ColunaDaRoda({ total, valor, altura, size, rotulo, falado, editando, on
       accessibilityRole="adjustable"
       accessibilityLabel={rotulo}
       accessibilityValue={{ text: falado(valor) }}
-      accessibilityHint="Toque duas vezes para digitar"
+      accessibilityHint={dica ? `${dica}. Toque duas vezes para digitar` : 'Toque duas vezes para digitar'}
       accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }, { name: 'activate' }]}
       onAccessibilityAction={(e) => {
         if (e.nativeEvent.actionName === 'increment') mover(1);
         if (e.nativeEvent.actionName === 'decrement') mover(-1);
-        if (e.nativeEvent.actionName === 'activate') onEditar();
+        if (e.nativeEvent.actionName === 'activate') editar();
       }}
       className={COLUNA[size]}
-      style={{ height: altura * VISIVEIS }}
+      style={{ height: altura * visiveis }}
     >
       <View
         pointerEvents="none"
         className="absolute left-0 right-0 items-center justify-end rounded-md border border-line-strong bg-surface-raised pb-2"
-        style={{ top: altura * 2, height: altura }}
+        style={{ top: altura * meio, height: altura }}
       >
         <View className="w-8 border-b border-content-muted" />
       </View>
@@ -117,36 +227,28 @@ function ColunaDaRoda({ total, valor, altura, size, rotulo, falado, editando, on
         decelerationRate="fast"
         contentOffset={{ x: 0, y: (total + valor) * altura }}
         onLayout={() => irPara(indice.current, false)}
+        scrollEventThrottle={16}
+        onScroll={acompanhar}
         onMomentumScrollEnd={assentar}
         onScrollEndDrag={(e) => {
           if (!e.nativeEvent.velocity?.y) assentar(e);
         }}
       >
-        <View style={{ height: altura * 2 }} />
-        {itens.map((i) => {
-          const numero = modulo(i, total);
-          const atual = numero === valor;
-          return (
-            <Pressable
-              key={i}
-              onPress={() => {
-                const passos = i - indice.current;
-                if (passos === 0) onEditar();
-                else mover(passos);
-              }}
-              className="items-center justify-center"
-              style={{ height: altura }}
-            >
-              <Text variant={NUMERO[size]} weight={atual ? 'bold' : 'regular'} tone={atual ? 'content' : 'muted'}>
-                {pad(numero)}
-              </Text>
-            </Pressable>
-          );
-        })}
-        <View style={{ height: altura * 2 }} />
+        <View style={{ height: altura * meio }} />
+        <Pressable
+          onPress={(e) => {
+            const tocado = Math.floor(e.nativeEvent.locationY / altura);
+            const passos = tocado - indice.current;
+            if (passos === 0) editar();
+            else mover(passos);
+          }}
+        >
+          <View pointerEvents="none">{lista}</View>
+        </Pressable>
+        <View style={{ height: altura * meio }} />
       </ScrollView>
       {editando ? (
-        <View ref={faixaRef} className="absolute left-0 right-0" style={{ top: altura * 2, height: altura }}>
+        <View ref={faixaRef} className="absolute left-0 right-0" style={{ top: altura * meio, height: altura }}>
           <TextInput
             accessibilityLabel={`${rotulo}, digitar`}
             autoFocus
@@ -178,10 +280,22 @@ export interface TimeWheelProps {
   onChange: (horario: Horario) => void;
   label: string;
   size?: TimeWheelSize;
+  visibleItems?: TimeWheelVisibleItems;
+  hint?: string;
+  onInteraction?: () => void;
   className?: string;
 }
 
-export default function TimeWheel({ value, onChange, label, size = 'md', className = '' }: TimeWheelProps) {
+export default function TimeWheel({
+  value,
+  onChange,
+  label,
+  size = 'md',
+  visibleItems = 5,
+  hint,
+  onInteraction,
+  className = '',
+}: TimeWheelProps) {
   const { fontScale } = useWindowDimensions();
   const altura = Math.round(ITEM[size] * Math.max(1, fontScale));
   const [editando, setEditando] = useState<Coluna | null>(null);
@@ -201,7 +315,10 @@ export default function TimeWheel({ value, onChange, label, size = 'md', classNa
         total={24}
         valor={value.hora}
         altura={altura}
+        visiveis={visibleItems}
         size={size}
+        dica={hint}
+        onInteragir={() => onInteraction?.()}
         rotulo={`${label}, hora`}
         falado={(n) => `${n} ${n === 1 ? 'hora' : 'horas'}`}
         editando={editando === 'hora'}
@@ -216,7 +333,10 @@ export default function TimeWheel({ value, onChange, label, size = 'md', classNa
         total={60}
         valor={value.minuto}
         altura={altura}
+        visiveis={visibleItems}
         size={size}
+        dica={hint}
+        onInteragir={() => onInteraction?.()}
         rotulo={`${label}, minuto`}
         falado={(n) => `${n} ${n === 1 ? 'minuto' : 'minutos'}`}
         editando={editando === 'minuto'}
