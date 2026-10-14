@@ -16,6 +16,12 @@ try {
 
 export const onDeviceAvailable = !!(_stt && _llm);
 
+// _stt pode estar disponível mesmo quando _llm falha ao carregar (ver bloco try/catch
+// acima) — usado por fluxos que só precisam de voz-para-texto, sem extração estruturada.
+export const sttAvailable = !!_stt;
+
+export const STT_MODEL_SIZE_LABEL = '~150MB';
+
 export type OnDeviceStage =
   | 'downloading-stt'
   | 'downloading-llm'
@@ -72,4 +78,23 @@ export async function complementFromTextOnDevice(text: string): Promise<Migraine
 
   const structured = await _llm.extractStructuredFromText(text);
   return { timestamp: new Date().toISOString(), transcript: text, structured };
+}
+
+// Variantes STT-only, para fluxos de ditado que só preenchem um campo de texto
+// (ver hooks/useVoiceToText.ts) e não precisam baixar o modelo de LLM.
+export function isSttModelDownloaded(): boolean {
+  return !!_stt && _stt.isModelDownloaded();
+}
+
+export async function ensureSttModelReady(onProgress?: (fraction: number) => void): Promise<void> {
+  if (!_stt) throw new Error('Módulo de voz indisponível neste build.');
+  if (!_stt.isModelDownloaded()) {
+    await _stt.downloadModel(onProgress);
+  }
+  await _stt.loadModel();
+}
+
+export async function transcribeOnly(wavUri: string): Promise<string> {
+  if (!_stt) throw new Error('Módulo de voz indisponível neste build.');
+  return _stt.transcribe(wavUri);
 }

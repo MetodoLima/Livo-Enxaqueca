@@ -13,6 +13,7 @@ import { useDailyRecord } from '@/features/daily-record/useDailyRecord';
 import DayTile from '@/features/home/components/DayTile';
 import SleepDialog from '@/features/home/components/SleepDialog';
 import WaterDialog from '@/features/home/components/WaterDialog';
+import { useVoiceToText } from '@/hooks/useVoiceToText';
 import {
   duracaoSono,
   elapsedSince,
@@ -25,16 +26,21 @@ import {
   type Horario,
 } from '@/lib/format';
 import { crisisRepository, dailyRecordRepository, momentRepository, type RegistroDia } from '@/repositories';
+import { isSttModelDownloaded, STT_MODEL_SIZE_LABEL } from '@/services/onDeviceComplement';
 import { useRouter } from 'expo-router';
-import { Bell, CalendarDays, Check, Droplets, Mic, Moon, Send, TrendingDown } from 'lucide-react-native';
+import { Bell, CalendarDays, Check, Droplets, Mic, Moon, Send, StopCircle, TrendingDown } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, Alert, Image, View } from 'react-native';
+import { AccessibilityInfo, ActivityIndicator, Alert, Image, TouchableOpacity, View } from 'react-native';
 
 const VAO_DOS_CARTOES = 12;
 
 function falarLitros(ml: number): string {
   const texto = formatLitros(ml).replace(' L', '');
   return `${texto} ${texto === '1' ? 'litro' : 'litros'}`;
+}
+
+function fmtSecs(s: number): string {
+  return `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
 }
 
 export default function HomeScreen() {
@@ -61,6 +67,41 @@ export default function HomeScreen() {
 
   const { saving, saved, naFila, salvar } = useDailyRecord();
   const savedMessage = naFila ? 'Salvo no aparelho' : 'Enviado';
+
+  const {
+    available: voiceAvailable,
+    isRecording: isRecordingVoice,
+    recordSecs,
+    isTranscribing,
+    downloadProgress,
+    error: voiceError,
+    startRecording: startVoiceRecording,
+    stopAndTranscribe,
+  } = useVoiceToText();
+
+  const handleMicPress = async () => {
+    if (isRecordingVoice) {
+      const transcript = await stopAndTranscribe();
+      if (transcript) {
+        setRelato((prev) => (prev.trim() ? `${prev.trim()} ${transcript}` : transcript));
+      }
+      return;
+    }
+
+    if (!isSttModelDownloaded()) {
+      Alert.alert(
+        'Baixar modelo de voz?',
+        `A transcrição por voz baixa o modelo Whisper (${STT_MODEL_SIZE_LABEL}) na primeira vez que for usada. Isso pode demorar e consumir dados móveis.`,
+        [
+          { text: 'Cancelar', style: 'cancel' },
+          { text: 'Gravar', onPress: () => startVoiceRecording() },
+        ],
+      );
+      return;
+    }
+
+    await startVoiceRecording();
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -244,15 +285,47 @@ export default function HomeScreen() {
             onChangeText={setRelato}
             placeholder="O que está acontecendo?"
             multiline
+            editable={!isRecordingVoice && !isTranscribing}
+            hint={
+              isRecordingVoice
+                ? `Gravando ${fmtSecs(recordSecs)}`
+                : isTranscribing
+                  ? downloadProgress != null
+                    ? `Baixando modelo de voz... ${Math.round(downloadProgress * 100)}%`
+                    : 'Transcrevendo áudio...'
+                  : undefined
+            }
+            error={voiceError ?? undefined}
             className="mt-6"
             accessory={
-              <View
-                importantForAccessibility="no-hide-descendants"
-                accessibilityElementsHidden
-                className="h-10 w-10 items-center justify-center rounded-full bg-primary-subtle"
-              >
-                <Mic size={20} color={color.primary} />
-              </View>
+              voiceAvailable ? (
+                <TouchableOpacity
+                  onPress={handleMicPress}
+                  disabled={isTranscribing}
+                  accessibilityRole="button"
+                  accessibilityLabel={isRecordingVoice ? 'Parar gravação e transcrever relato' : 'Gravar relato por voz'}
+                  accessibilityHint={
+                    isRecordingVoice ? undefined : 'Grava sua voz e transcreve automaticamente para o campo de relato'
+                  }
+                  className={`h-10 w-10 items-center justify-center rounded-full ${isRecordingVoice ? 'bg-danger' : 'bg-primary-subtle'}`}
+                >
+                  {isTranscribing ? (
+                    <ActivityIndicator size="small" color={color.primary} />
+                  ) : isRecordingVoice ? (
+                    <StopCircle size={20} color="white" />
+                  ) : (
+                    <Mic size={20} color={color.primary} />
+                  )}
+                </TouchableOpacity>
+              ) : (
+                <View
+                  importantForAccessibility="no-hide-descendants"
+                  accessibilityElementsHidden
+                  className="h-10 w-10 items-center justify-center rounded-full bg-primary-subtle"
+                >
+                  <Mic size={20} color={color.primary} />
+                </View>
+              )
             }
           />
 
