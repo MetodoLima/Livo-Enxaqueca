@@ -10,7 +10,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { ArrowLeft, Moon, Droplets, FileText, Smile } from 'lucide-react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { Colors } from '@/constants/Colors';
-import { formatDateTime, formatSleep, formatWater, moodEmoji, moodLabel } from '@/lib/format';
+import { formatDateTime, formatLitros, formatSleep, moodEmoji, moodLabel } from '@/lib/format';
 
 const HUMOR_COLOR: Record<string, string> = {
   terrible: '#EF4444', bad: '#F97316', 'so-so': '#EAB308', okay: '#22C55E', great: '#10B981',
@@ -146,7 +146,7 @@ export default function DailyRecordDetailScreen() {
               {registro.mlAgua !== null && (
                 <Row
                   label="Água"
-                  value={formatWater(registro.mlAgua)}
+                  value={formatLitros(registro.mlAgua)}
                   valueColor={Colors.accent}
                 />
               )}

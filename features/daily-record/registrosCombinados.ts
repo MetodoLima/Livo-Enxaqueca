@@ -58,7 +58,9 @@ export async function listarRegistrosCombinados(de: string, ate: string): Promis
     momentRepository.listBetween(de, ate),
   ]);
 
-  return [...dias.map(doDia), ...momentos.map(doMomento)].sort((a, b) =>
+  const diasComValor = dias.map(doDia).filter((d) => d.horasSono !== null || d.mlAgua !== null);
+
+  return [...diasComValor, ...momentos.map(doMomento)].sort((a, b) =>
     a.createdAt.localeCompare(b.createdAt),
   );
 }
