@@ -156,6 +156,10 @@ Alguns comportamentos que não aparecem no nome:
 - `Button` com `done` mostra uma confirmação no próprio botão: bloqueia o toque sem ficar
   apagado. O texto da confirmação diz a verdade sobre o envio, ou seja, "Salvo no aparelho"
   quando ficou na fila.
+- `Button` com `shape="pill"` tem os cantos totalmente arredondados, para a ação principal
+  dentro de um cartão ilustrado, como o cartão de crise da Home. O padrão é `shape="rounded"`.
+  A forma vem sempre da prop, nunca de `rounded-*` no `className`, porque não há garantia de
+  qual classe vence.
 - `TextField` aceita `accessory`, um elemento dentro do campo, à direita.
 - `Dialog` é o diálogo flutuante sobre `scrim`: título, conteúdo e rodapé, tudo dentro da
   área rolável, para os botões continuarem alcançáveis com a fonte do sistema no máximo. Ao
