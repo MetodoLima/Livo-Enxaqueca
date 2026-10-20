@@ -4,11 +4,16 @@ import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import { Colors } from '@/constants/Colors';
 import { RegistroCalendarDay } from '@/features/daily-record/useDailyRecordCalendar';
-import { formatSleep, formatWater, moodEmoji, moodLabel } from '@/lib/format';
+import { formatLitros, formatSleep, moodEmoji, moodLabel } from '@/lib/format';
 
 export default function DailyRecordListItem({ registro, index }: { registro: RegistroCalendarDay; index: number }) {
   const router = useRouter();
   const hora = new Date(registro.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+  const rotina = [
+    registro.horasSono !== null && `${formatSleep(registro.horasSono)} sono`,
+    registro.mlAgua !== null && `${formatLitros(registro.mlAgua)} água`,
+  ].filter(Boolean).join(' · ');
+  const primeiraLinhaDoRelato = registro.relato?.trim().split('\n')[0] || null;
 
   return (
     <Animated.View entering={FadeInDown.delay(index * 60).duration(250)}>
@@ -45,17 +50,16 @@ export default function DailyRecordListItem({ registro, index }: { registro: Reg
                 {moodLabel(registro.humor)}
               </Text>
             </Text>
-          ) : (
-            <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 13 }}>
-              Sem humor registrado
+          ) : primeiraLinhaDoRelato ? (
+            <Text numberOfLines={1} style={{ color: 'white', fontFamily: 'Epilogue_400Regular', fontSize: 14 }}>
+              {primeiraLinhaDoRelato}
             </Text>
-          )}
-          <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 12, marginTop: 3 }}>
-            {[
-              registro.horasSono !== null && `${formatSleep(registro.horasSono)} sono`,
-              registro.mlAgua !== null && `${formatWater(registro.mlAgua)} água`,
-            ].filter(Boolean).join(' · ') || 'Sem dados de rotina'}
-          </Text>
+          ) : null}
+          {rotina ? (
+            <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 12, marginTop: registro.humor || primeiraLinhaDoRelato ? 3 : 0 }}>
+              {rotina}
+            </Text>
+          ) : null}
         </View>
 
         {!registro.enviado && (
