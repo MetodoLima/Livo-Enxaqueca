@@ -1,7 +1,7 @@
 import { Colors } from '@/constants/Colors';
 import { crisisRepository } from '@/repositories';
 import { useSync } from '@/contexts/SyncContext';
-import { elapsedSince } from '@/lib/format';
+import { tempoSemEnxaqueca } from '@/lib/format';
 import { useRouter } from 'expo-router';
 import { ChevronDown, Zap } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
@@ -13,7 +13,7 @@ export default function CrisisEmptyState() {
   const reduceMotion = useReducedMotion();
   const router = useRouter();
   const { ultimaAtualizacao } = useSync();
-  const [timeSinceLabel, setTimeSinceLabel] = useState<string | null>(null);
+  const [ultimoFim, setUltimoFim] = useState<Date | null | undefined>(undefined);
 
   useEffect(() => {
     let cancelled = false;
@@ -21,14 +21,13 @@ export default function CrisisEmptyState() {
       try {
         const lastEnd = await crisisRepository.lastEndedAt();
         if (cancelled) return;
-        if (lastEnd) {
-          const { value, unit } = elapsedSince(lastEnd);
-          setTimeSinceLabel(`${value} ${unit}`);
-        }
+        setUltimoFim(lastEnd);
       } catch {}
     })();
     return () => { cancelled = true; };
   }, [ultimaAtualizacao]);
+
+  const timeSinceLabel = ultimoFim ? tempoSemEnxaqueca(ultimoFim) : null;
 
   return (
     <ScreenBackground>
@@ -50,11 +49,11 @@ export default function CrisisEmptyState() {
               <Text style={{ color: Colors.accent }}>{timeSinceLabel}</Text>
               {' '}sem crises
             </Text>
-          ) : (
+          ) : ultimoFim === null ? (
             <Text style={styles.emptyHighlight}>
               Nenhuma crise registrada
             </Text>
-          )}
+          ) : null}
           <Text style={styles.emptySub}>
             Continue assim! Caso tenha uma crise, registre aqui para acompanhar seu progresso.
           </Text>
