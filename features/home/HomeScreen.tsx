@@ -7,21 +7,23 @@ import TextField from '@/components/ui/TextField';
 import { color } from '@/constants/Colors';
 import { MoodId } from '@/constants/data';
 import { useAuth } from '@/contexts/AuthContext';
+import { useCrisis } from '@/contexts/CrisisContext';
 import { useSync } from '@/contexts/SyncContext';
 import MoodSelector from '@/features/daily-record/MoodSelector';
 import { useDailyRecord } from '@/features/daily-record/useDailyRecord';
+import CrisisCard, { type EstadoDaCrise } from '@/features/home/components/CrisisCard';
 import DayTile from '@/features/home/components/DayTile';
 import SleepDialog from '@/features/home/components/SleepDialog';
 import WaterDialog from '@/features/home/components/WaterDialog';
 import { useVoiceToText } from '@/hooks/useVoiceToText';
 import {
   duracaoSono,
-  elapsedSince,
   falarDuracaoSono,
   formatHorario,
   formatLitros,
   formatSleep,
   lerHorario,
+  tempoSemEnxaqueca,
   toLocalDateString,
   type Horario,
 } from '@/lib/format';
@@ -47,6 +49,7 @@ export default function HomeScreen() {
   const { user } = useAuth();
   const router = useRouter();
   const { ultimaAtualizacao } = useSync();
+  const { hasActiveCrisis } = useCrisis();
   const today = toLocalDateString(new Date());
 
   const [selectedMood, setSelectedMood] = useState<MoodId | null>(null);
@@ -61,7 +64,7 @@ export default function HomeScreen() {
   const aguaRef = useRef<View>(null);
   const sonoRef = useRef<View>(null);
 
-  const [streakInfo, setStreakInfo] = useState<{ number: string; label: string } | null>(null);
+  const [ultimoFim, setUltimoFim] = useState<Date | null | undefined>(undefined);
   const [crisesThisMonth, setCrisesThisMonth] = useState<number | null>(null);
   const [avgIntensity, setAvgIntensity] = useState<number | null>(null);
 
@@ -109,10 +112,7 @@ export default function HomeScreen() {
       try {
         const lastEnd = await crisisRepository.lastEndedAt();
         if (cancelled) return;
-        if (lastEnd) {
-          const { value, unit } = elapsedSince(lastEnd);
-          setStreakInfo({ number: String(value), label: `${unit} sem crises` });
-        }
+        setUltimoFim(lastEnd);
 
         const now = new Date();
         const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
@@ -229,6 +229,15 @@ export default function HomeScreen() {
   const dormiAs = lerHorario(registroDia?.dormiAs ?? null);
   const acordeiAs = lerHorario(registroDia?.acordeiAs ?? null);
   const temSono = dormiAs !== null && acordeiAs !== null;
+
+  const tempo = ultimoFim ? tempoSemEnxaqueca(ultimoFim) : null;
+  const estadoDaCrise: EstadoDaCrise = hasActiveCrisis
+    ? { tipo: 'em-andamento' }
+    : ultimoFim === null
+      ? { tipo: 'sem-crise' }
+      : tempo
+        ? { tipo: 'tempo', tempo }
+        : { tipo: 'desconhecido' };
   const mlAgua = registroDia?.mlAgua ?? null;
   const ladoDoCartao = Math.floor((larguraDaFileira - VAO_DOS_CARTOES) / 2);
 
@@ -378,19 +387,9 @@ export default function HomeScreen() {
         ) : null}
       </View>
 
-      <Card className="mt-6">
-        <View className="flex-row flex-wrap items-baseline gap-2">
-          <Text variant="display">{streakInfo?.number ?? '–'}</Text>
-          <Text variant="caption" tone="muted">
-            {streakInfo ? streakInfo.label : 'Nenhuma crise registrada'}
-          </Text>
-        </View>
-        <Button
-          title="Registrar Crise"
-          onPress={() => router.push('/record-crisis')}
-          className="mt-4"
-        />
-      </Card>
+      <View className="mt-6">
+        <CrisisCard estado={estadoDaCrise} onRegistrar={() => router.push('/record-crisis')} />
+      </View>
 
       <View className="mt-6 flex-row gap-3">
         <Card className="flex-1 items-center">

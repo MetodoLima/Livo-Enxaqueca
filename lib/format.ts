@@ -32,17 +32,37 @@ export function formatDuration(start: Date, end: Date | null): string {
   return `${hours}h ${minutes}min`;
 }
 
-export type Elapsed = { value: number; unit: string };
+function contar(n: number, singular: string, plural: string): string {
+  return `${n} ${n === 1 ? singular : plural}`;
+}
 
-export function elapsedSince(date: Date, now: Date = new Date()): Elapsed {
-  const diffMs = now.getTime() - date.getTime();
-  const mins = Math.floor(diffMs / 60000);
-  const hours = Math.floor(diffMs / 3600000);
-  const days = Math.floor(diffMs / 86400000);
+function posicaoNoMes(d: Date): number {
+  return (((d.getDate() * 24 + d.getHours()) * 60 + d.getMinutes()) * 60 + d.getSeconds()) * 1000 + d.getMilliseconds();
+}
 
-  if (mins < 60) return { value: mins, unit: mins === 1 ? 'minuto' : 'minutos' };
-  if (hours < 24) return { value: hours, unit: hours === 1 ? 'hora' : 'horas' };
-  return { value: days, unit: days === 1 ? 'dia' : 'dias' };
+function mesesEntre(desde: Date, agora: Date): number {
+  const meses = (agora.getFullYear() - desde.getFullYear()) * 12 + agora.getMonth() - desde.getMonth();
+  return posicaoNoMes(agora) < posicaoNoMes(desde) ? meses - 1 : meses;
+}
+
+export function tempoSemEnxaqueca(desde: Date, agora: Date = new Date()): string | null {
+  const ms = agora.getTime() - desde.getTime();
+  if (!Number.isFinite(ms) || ms < 0) return null;
+
+  const minutos = Math.floor(ms / 60000);
+  if (minutos < 1) return 'menos de 1 minuto';
+  if (minutos < 60) return contar(minutos, 'minuto', 'minutos');
+
+  if (minutos < 24 * 60) {
+    const horas = contar(Math.floor(minutos / 60), 'hora', 'horas');
+    const resto = minutos % 60;
+    return resto === 0 ? horas : `${horas} e ${contar(resto, 'minuto', 'minutos')}`;
+  }
+
+  const meses = mesesEntre(desde, agora);
+  if (meses < 1) return contar(Math.floor(minutos / (24 * 60)), 'dia', 'dias');
+  if (meses < 12) return contar(meses, 'mês', 'meses');
+  return contar(Math.floor(meses / 12), 'ano', 'anos');
 }
 
 export function formatSleep(hours: number): string {
@@ -89,11 +109,6 @@ export function falarDuracaoSono(dormir: Horario, acordar: Horario): string {
 
 export function duracaoSono(dormir: Horario, acordar: Horario): number {
   return Math.round(minutosDeSono(dormir, acordar) / 6) / 10;
-}
-
-export function formatWater(ml: number): string {
-  if (ml >= 1000) return `${(ml / 1000).toFixed(1).replace('.0', '')}L`;
-  return `${ml}ml`;
 }
 
 export function intensityColor(intensity: number | null): string {
