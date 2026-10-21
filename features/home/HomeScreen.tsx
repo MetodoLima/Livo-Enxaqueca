@@ -12,7 +12,7 @@ import { useSync } from '@/contexts/SyncContext';
 import MoodSelector from '@/features/daily-record/MoodSelector';
 import { useDailyRecord } from '@/features/daily-record/useDailyRecord';
 import CrisisCard, { type EstadoDaCrise } from '@/features/home/components/CrisisCard';
-import DayTile from '@/features/home/components/DayTile';
+import DayTile, { type Ilustracao } from '@/features/home/components/DayTile';
 import SleepDialog from '@/features/home/components/SleepDialog';
 import WaterDialog from '@/features/home/components/WaterDialog';
 import { useVoiceToText } from '@/hooks/useVoiceToText';
@@ -35,6 +35,24 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, ActivityIndicator, Alert, Image, TouchableOpacity, View } from 'react-native';
 
 const VAO_DOS_CARTOES = 12;
+
+const ILUSTRACAO_AGUA: Ilustracao = {
+  source: require('../../assets/images/LivoAgua.png'),
+  aspecto: 384 / 566,
+  deslocamento: 12,
+  larguraMaxima: 1,
+  pes: 0.495,
+  chao: 0.64,
+};
+
+const ILUSTRACAO_SONO: Ilustracao = {
+  source: require('../../assets/images/LivoSono.png'),
+  aspecto: 312 / 225,
+  deslocamento: 0,
+  larguraMaxima: 0.78,
+  pes: 0.492,
+  chao: 0.56,
+};
 
 function falarLitros(ml: number): string {
   const texto = formatLitros(ml).replace(' L', '');
@@ -371,6 +389,7 @@ export default function HomeScreen() {
               spokenValue={mlAgua !== null ? falarLitros(mlAgua) : null}
               tone="primary"
               side={ladoDoCartao}
+              ilustracao={ILUSTRACAO_AGUA}
               onPress={() => setAguaAberta(true)}
             />
             <DayTile
@@ -381,6 +400,7 @@ export default function HomeScreen() {
               spokenValue={temSono ? falarDuracaoSono(dormiAs, acordeiAs) : null}
               tone="secondary"
               side={ladoDoCartao}
+              ilustracao={ILUSTRACAO_SONO}
               onPress={() => setSonoAberto(true)}
             />
           </>
