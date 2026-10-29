@@ -11,6 +11,7 @@ on:
 
 permissions:
   contents: read
+  issues: write
 
 jobs:
   ping:
@@ -28,9 +29,32 @@ jobs:
           echo "SUPABASE_ANON_KEY=$KEY" >> "$GITHUB_ENV"
           echo "SUPABASE_URL=$(jq -r '.build.preview.env.EXPO_PUBLIC_SUPABASE_URL' eas.json)" >> "$GITHUB_ENV"
 
-      - name: Consultar a tabela de sintomas
+      - name: Consultar a tabela de perguntas do setup
         run: |
-          curl --fail --silent --show-error \
+          STATUS=$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
             -H "apikey: $SUPABASE_ANON_KEY" \
             -H "Authorization: Bearer $SUPABASE_ANON_KEY" \
-            "$SUPABASE_URL/rest/v1/sintomas?select=id&limit=1"
+            "$SUPABASE_URL/rest/v1/perguntas_setup?select=id&limit=1")
+          echo "HTTP $STATUS"
+          test "$STATUS" = "200"
+
+      - name: Abrir ou comentar a issue de falha
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          NUMERO=$(gh issue list --repo "$GITHUB_REPOSITORY" --label keepalive --state open \
+            --limit 1 --json number --jq '.[0].number // empty')
+          if [ -n "$NUMERO" ]; then
+            gh issue comment "$NUMERO" --repo "$GITHUB_REPOSITORY" \
+              --body "Falhou de novo em $(date -u +%Y-%m-%d): $RUN_URL"
+          else
+            gh issue create --repo "$GITHUB_REPOSITORY" --label keepalive \
+              --title "Keepalive do Supabase falhou" \
+              --body "O workflow que mantém o Supabase acordado falhou: $RUN_URL
+
+          Se o log mostrar \`Could not resolve host\`, o projeto foi pausado e precisa ser restaurado no painel por alguém com papel Owner ou Administrator. Se mostrar um código diferente de 200, confira se a tabela \`perguntas_setup\` ainda existe e se o \`anon\` ainda tem \`select\` nela.
+
+          Feche esta issue quando o workflow voltar a passar. Novas falhas com ela aberta viram comentário aqui."
+          fi

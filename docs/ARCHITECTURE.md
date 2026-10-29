@@ -108,6 +108,20 @@ dia nada é herdado.
 
 8. **Sem comentários no código.** O porquê de uma decisão vai na descrição do pull request.
 
+9. **Tabela nova traz o grant na mesma migração.** Toda migração que cria tabela em
+   `public` traz, junto do `enable row level security` e das políticas, o `grant` explícito
+   para `authenticated` e `service_role`, só com as operações que as políticas permitem.
+   `anon` nunca recebe grant. O grant é verificado antes da RLS: sem ele, a Data API
+   responde `permission denied`, inclusive num banco recriado pelas migrações. Desde
+   30/10/2026 o Supabase não concede mais esse acesso sozinho, e a migração
+   `explicit_table_grants` removeu os privilégios padrão que faziam isso no projeto.
+   Tabela que nenhuma tela acessa fica só com `service_role`.
+   - A única exceção é `perguntas_setup`, que tem `select` para `anon` porque o keepalive
+     do GitHub Actions consulta essa tabela com a chave anônima. Não há política para
+     `anon`: a resposta vem vazia, e o keepalive só confere o código 200.
+   - Tabela apagada por migração sai também do keepalive
+     (`.github/workflows/keep-supabase-awake.yml`), se for a que ele consulta.
+
 ## Design system
 
 O Livo é usado por quem está em crise de enxaqueca: fotofobia, náusea, dificuldade de
