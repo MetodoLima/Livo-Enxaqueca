@@ -26,6 +26,8 @@ to authenticated, service_role;
 
 grant select on table public.perguntas_setup to authenticated, service_role;
 
+grant select on table public.opcoes_pergunta to authenticated;
+
 grant select on table public.perguntas_setup to anon;
 
 revoke all on all sequences in schema public from anon;
