@@ -165,8 +165,11 @@ Alguns comportamentos que não aparecem no nome:
   fechar descarta.
 - `TimeWheel` é a roda circular de hora e minuto. Aceita toque no número vizinho, digitação
   (toque no número do centro) e o ajuste do leitor de tela. Não exige arrastar.
-- `KeyboardAwareScroll` rola o campo em digitação para cima do teclado. O `Screen` com
-  `scroll` já usa; um diálogo com campo de texto também deve usar.
+- `KeyboardAwareScroll` rola o campo em foco para cima do teclado. O `TextField` e o
+  `TimeWheel` avisam a rolagem sozinhos, pelo `useRevelarAcimaDoTeclado`. Um controle novo
+  que abra o teclado precisa fazer o mesmo; sem isso, a rolagem só ganha espaço no fim e o
+  campo continua coberto. O `Screen` com `scroll` já usa, e um diálogo com campo de texto
+  também deve usar.
 - `Button` com `done` mostra uma confirmação no próprio botão: bloqueia o toque sem ficar
   apagado. O texto da confirmação diz a verdade sobre o envio, ou seja, "Salvo no aparelho"
   quando ficou na fila.
@@ -174,7 +177,9 @@ Alguns comportamentos que não aparecem no nome:
   dentro de um cartão ilustrado, como o cartão de crise da Home. O padrão é `shape="rounded"`.
   A forma vem sempre da prop, nunca de `rounded-*` no `className`, porque não há garantia de
   qual classe vence.
-- `TextField` aceita `accessory`, um elemento dentro do campo, à direita.
+- `Button` aceita `ref`, para o `Dialog` devolver o foco a ele ao fechar (`returnFocusTo`).
+- `TextField` aceita `accessory`, um elemento dentro do campo, à direita, e `ref`, que aponta
+  para o `TextInput`, para a tela levar o foco ao campo com erro.
 - `Dialog` é o diálogo flutuante sobre `scrim`: título, conteúdo e rodapé, tudo dentro da
   área rolável, para os botões continuarem alcançáveis com a fonte do sistema no máximo. Ao
   abrir, o foco do leitor de tela vai para o título; ao fechar, volta para o elemento passado

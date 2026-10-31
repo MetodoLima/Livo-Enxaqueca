@@ -1,5 +1,6 @@
-import { useState, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode, type Ref } from 'react';
 import { TextInput, View, type TextInputProps } from 'react-native';
+import { useRevelarAcimaDoTeclado } from '@/components/ui/KeyboardAwareScroll';
 import Text from '@/components/ui/Text';
 import { color } from '@/constants/Colors';
 
@@ -9,6 +10,7 @@ export interface TextFieldProps extends Omit<TextInputProps, 'style' | 'placehol
   hint?: string;
   accessory?: ReactNode;
   className?: string;
+  ref?: Ref<TextInput>;
 }
 
 export default function TextField({
@@ -20,18 +22,22 @@ export default function TextField({
   className = '',
   onFocus,
   onBlur,
+  ref,
   ...props
 }: TextFieldProps) {
   const [focused, setFocused] = useState(false);
+  const containerRef = useRef<View>(null);
+  const revelar = useRevelarAcimaDoTeclado();
   const border = error ? 'border-danger' : focused ? 'border-primary' : 'border-line-strong';
 
   return (
-    <View className={`gap-2 ${className}`}>
+    <View ref={containerRef} className={`gap-2 ${className}`}>
       <Text variant="caption" weight="semibold" tone="muted">
         {label}
       </Text>
       <View>
         <TextInput
+          ref={ref}
           accessibilityLabel={label}
           accessibilityHint={error ?? hint}
           placeholderTextColor={color.contentMuted}
@@ -40,6 +46,7 @@ export default function TextField({
           textAlignVertical={multiline ? 'top' : 'center'}
           onFocus={(e) => {
             setFocused(true);
+            revelar(containerRef);
             onFocus?.(e);
           }}
           onBlur={(e) => {

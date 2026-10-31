@@ -1,5 +1,6 @@
 import type { LucideIcon } from 'lucide-react-native';
-import { ActivityIndicator, Pressable, type PressableProps } from 'react-native';
+import type { Ref } from 'react';
+import { ActivityIndicator, Pressable, View, type PressableProps } from 'react-native';
 import Text, { type TextTone } from '@/components/ui/Text';
 import { color } from '@/constants/Colors';
 
@@ -47,6 +48,7 @@ export interface ButtonProps extends Omit<PressableProps, 'children' | 'style'> 
   loading?: boolean;
   done?: boolean;
   className?: string;
+  ref?: Ref<View>;
 }
 
 export default function Button({
@@ -60,6 +62,7 @@ export default function Button({
   disabled,
   className = '',
   accessibilityLabel,
+  ref,
   ...props
 }: ButtonProps) {
   const dimmed = !done && (disabled || loading);
@@ -67,6 +70,7 @@ export default function Button({
 
   return (
     <Pressable
+      ref={ref}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel ?? title}
       accessibilityState={{ disabled: !!inactive, busy: loading }}
