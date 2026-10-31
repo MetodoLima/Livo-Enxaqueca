@@ -1,17 +1,37 @@
 import { Link } from 'expo-router';
-import React, { useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { Colors } from '@/constants/Colors';
+import { Eye, EyeOff } from 'lucide-react-native';
+import React, { useRef, useState } from 'react';
+import { View } from 'react-native';
+import Button from '@/components/ui/Button';
+import Dialog from '@/components/ui/Dialog';
+import IconButton from '@/components/ui/IconButton';
+import Screen from '@/components/ui/Screen';
+import Text from '@/components/ui/Text';
+import TextField from '@/components/ui/TextField';
 import { sessionRepository } from '@/repositories';
+
+interface Aviso {
+  title: string;
+  message: string;
+}
 
 export default function LoginScreen() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [aviso, setAviso] = useState<Aviso>({ title: '', message: '' });
+  const [avisoVisible, setAvisoVisible] = useState(false);
+  const entrarRef = useRef<View>(null);
+
+  const mostrarAviso = (title: string, message: string) => {
+    setAviso({ title, message });
+    setAvisoVisible(true);
+  };
 
   const handleLogin = async () => {
     if (!email || !password) {
-      Alert.alert('Erro', 'Por favor, preencha todos os campos.');
+      mostrarAviso('Erro', 'Por favor, preencha todos os campos.');
       return;
     }
 
@@ -21,69 +41,66 @@ export default function LoginScreen() {
     setLoading(false);
 
     if (error) {
-      Alert.alert('Erro de Login', error);
+      mostrarAviso('Erro de login', error);
     }
   };
 
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-bg-dark"
-    >
-      <View className="flex-1 justify-center px-6">
-        <View className="items-center mb-10">
-          <Text className="text-accent text-5xl font-epilogue-bold mb-2">Livo</Text>
-          <Text className="text-soft text-lg font-epilogue text-center">
-            Sua jornada para o bem-estar começa aqui
-          </Text>
-        </View>
-
-        <View className="mb-6">
-          <Text className="text-soft font-epilogue-semi mb-2 ml-1">E-mail</Text>
-          <TextInput
-            className="w-full bg-card-dark text-soft font-epilogue p-4 rounded-2xl border border-[#334155]"
-            placeholder="Digite seu e-mail"
-            placeholderTextColor={Colors.muted}
-            value={email}
-            onChangeText={setEmail}
-            autoCapitalize="none"
-            keyboardType="email-address"
-          />
-        </View>
-
-        <View className="mb-8">
-          <Text className="text-soft font-epilogue-semi mb-2 ml-1">Senha</Text>
-          <TextInput
-            className="w-full bg-card-dark text-soft font-epilogue p-4 rounded-2xl border border-[#334155]"
-            placeholder="Digite sua senha"
-            placeholderTextColor={Colors.muted}
-            value={password}
-            onChangeText={setPassword}
-            secureTextEntry
-          />
-        </View>
-
-        <TouchableOpacity
-          className={`w-full bg-accent p-4 rounded-2xl items-center justify-center flex-row ${loading ? 'opacity-70' : ''}`}
-          onPress={handleLogin}
-          disabled={loading}
-        >
-          {loading ? (
-            <ActivityIndicator color={Colors.bgDark} />
-          ) : (
-            <Text className="text-bg-dark font-epilogue-bold text-lg">Entrar</Text>
-          )}
-        </TouchableOpacity>
-
-        <View className="flex-row justify-center mt-8">
-          <Text className="text-muted font-epilogue">Ainda não tem uma conta? </Text>
-          <Link href="/register" asChild>
-            <TouchableOpacity>
-              <Text className="text-accent font-epilogue-bold">Cadastre-se</Text>
-            </TouchableOpacity>
-          </Link>
-        </View>
+    <Screen scroll className="justify-center gap-6 pt-section">
+      <View className="items-center gap-2">
+        <Text variant="display" className="text-center">
+          Livo
+        </Text>
+        <Text tone="muted" className="text-center">
+          Sua jornada para o bem-estar começa aqui
+        </Text>
       </View>
-    </KeyboardAvoidingView>
+
+      <View className="gap-4">
+        <TextField
+          label="E-mail"
+          placeholder="Digite seu e-mail"
+          value={email}
+          onChangeText={setEmail}
+          autoCapitalize="none"
+          keyboardType="email-address"
+        />
+        <TextField
+          label="Senha"
+          placeholder="Digite sua senha"
+          value={password}
+          onChangeText={setPassword}
+          secureTextEntry={!showPassword}
+          accessory={
+            <IconButton
+              icon={showPassword ? Eye : EyeOff}
+              accessibilityLabel={showPassword ? 'Ocultar senha' : 'Mostrar senha'}
+              tone="primary"
+              filled
+              onPress={() => setShowPassword(!showPassword)}
+            />
+          }
+        />
+      </View>
+
+      <Button ref={entrarRef} title="Entrar" loading={loading} onPress={handleLogin} />
+
+      <View className="flex-row flex-wrap items-center justify-center">
+        <Text tone="muted">Ainda não tem uma conta?</Text>
+        <Link href="/register" asChild>
+          <Button title="Cadastre-se" variant="ghost" size="md" />
+        </Link>
+      </View>
+
+      <Dialog
+        visible={avisoVisible}
+        title={aviso.title}
+        onClose={() => setAvisoVisible(false)}
+        returnFocusTo={entrarRef}
+        footer={<Button title="Entendi" variant="secondary" size="md" onPress={() => setAvisoVisible(false)} />}
+      >
+        <Text>{aviso.message}</Text>
+      </Dialog>
+    </Screen>
   );
 }

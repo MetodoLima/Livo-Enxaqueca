@@ -1,9 +1,23 @@
-import { Ionicons } from '@expo/vector-icons';
 import { Link, router } from 'expo-router';
-import React, { useCallback, useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { Colors } from '@/constants/Colors';
+import { Eye, EyeOff } from 'lucide-react-native';
+import React, { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { AccessibilityInfo, TextInput, View } from 'react-native';
+import Button from '@/components/ui/Button';
+import Dialog from '@/components/ui/Dialog';
+import IconButton from '@/components/ui/IconButton';
+import Screen from '@/components/ui/Screen';
+import ScreenHeader from '@/components/ui/ScreenHeader';
+import Text from '@/components/ui/Text';
+import TextField from '@/components/ui/TextField';
 import { sessionRepository } from '@/repositories';
+
+const CAMPO_VAZIO = 'Preencha este campo.';
+
+interface Aviso {
+  title: string;
+  message: string;
+  irParaLogin: boolean;
+}
 
 export default function RegisterScreen() {
   const [name, setName] = useState('');
@@ -11,11 +25,20 @@ export default function RegisterScreen() {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [nameError, setNameError] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
   const [confirmPasswordError, setConfirmPasswordError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [campoParaFocar, setCampoParaFocar] = useState<RefObject<TextInput | null> | null>(null);
+  const [aviso, setAviso] = useState<Aviso>({ title: '', message: '', irParaLogin: false });
+  const [avisoVisible, setAvisoVisible] = useState(false);
+  const nomeRef = useRef<TextInput>(null);
+  const emailRef = useRef<TextInput>(null);
+  const senhaRef = useRef<TextInput>(null);
+  const confirmarRef = useRef<TextInput>(null);
+  const cadastrarRef = useRef<View>(null);
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -44,6 +67,11 @@ export default function RegisterScreen() {
     return errors;
   };
 
+  const faltamNaSenha = (password: string): string => {
+    const errors = validatePassword(password);
+    return errors.length > 0 ? `Faltam: ${errors.join(', ')}` : '';
+  };
+
   const validateConfirmPassword = useCallback((pwd: string, confirmPwd: string) => {
     if (!confirmPwd) {
       setConfirmPasswordError('');
@@ -52,6 +80,11 @@ export default function RegisterScreen() {
     } else {
       setConfirmPasswordError('');
     }
+  }, []);
+
+  const handleNameChange = useCallback((text: string) => {
+    setName(text);
+    setNameError('');
   }, []);
 
   const handleEmailChange = useCallback((text: string) => {
@@ -65,8 +98,7 @@ export default function RegisterScreen() {
 
   const handlePasswordChange = useCallback((text: string) => {
     setPassword(text);
-    const errors = validatePassword(text);
-    setPasswordError(errors.length > 0 ? `Faltam: ${errors.join(', ')}` : '');
+    setPasswordError(faltamNaSenha(text));
   }, []);
 
   const handleConfirmPasswordChange = useCallback((text: string) => {
@@ -79,25 +111,46 @@ export default function RegisterScreen() {
     }
   }, [password, confirmPassword, validateConfirmPassword]);
 
+  useEffect(() => {
+    const campo = campoParaFocar?.current;
+    if (!campo) return;
+    campo.focus();
+    AccessibilityInfo.sendAccessibilityEvent(campo, 'focus');
+    setCampoParaFocar(null);
+  }, [campoParaFocar]);
+
+  const mostrarAviso = (title: string, message: string, irParaLogin = false) => {
+    setAviso({ title, message, irParaLogin });
+    setAvisoVisible(true);
+  };
+
+  const fecharAviso = () => {
+    setAvisoVisible(false);
+    if (aviso.irParaLogin) {
+      router.replace('/login');
+    }
+  };
+
   const handleRegister = async () => {
-    if (!name || !email || !password || !confirmPassword) {
-      Alert.alert('Erro', 'Por favor, preencha todos os campos.');
-      return;
-    }
+    const erros = [
+      { ref: nomeRef, set: setNameError, erro: name ? '' : CAMPO_VAZIO },
+      {
+        ref: emailRef,
+        set: setEmailError,
+        erro: !email ? CAMPO_VAZIO : !validateEmail(email) ? 'Formato de e-mail inválido' : '',
+      },
+      { ref: senhaRef, set: setPasswordError, erro: !password ? CAMPO_VAZIO : faltamNaSenha(password) },
+      {
+        ref: confirmarRef,
+        set: setConfirmPasswordError,
+        erro: !confirmPassword ? CAMPO_VAZIO : password !== confirmPassword ? 'As senhas não coincidem' : '',
+      },
+    ];
 
-    if (!validateEmail(email)) {
-      Alert.alert('Erro', 'Por favor, insira um e-mail válido.');
-      return;
-    }
-
-    const passwordErrors = validatePassword(password);
-    if (passwordErrors.length > 0) {
-      Alert.alert('Erro', `Sua senha deve conter:\n- ${passwordErrors.join('\n- ')}`);
-      return;
-    }
-
-    if (password !== confirmPassword) {
-      Alert.alert('Erro', 'As senhas não coincidem.');
+    erros.forEach(({ set, erro }) => set(erro));
+    const primeiro = erros.find(({ erro }) => erro);
+    if (primeiro) {
+      setCampoParaFocar(primeiro.ref);
       return;
     }
 
@@ -107,133 +160,109 @@ export default function RegisterScreen() {
     setLoading(false);
 
     if (error) {
-      Alert.alert('Erro de Cadastro', error);
-    } else if (signedIn) {
-      Alert.alert('Sucesso', 'Sua conta foi criada!');
+      mostrarAviso('Erro de cadastro', error);
+    } else if (!signedIn) {
+      mostrarAviso('Verificação necessária', 'Verifique seu e-mail para confirmar a conta.', true);
+    }
+  };
+
+  const temErro = !!nameError || !!emailError || !!passwordError || !!confirmPasswordError;
+
+  const voltar = () => {
+    if (router.canGoBack()) {
+      router.back();
     } else {
-      Alert.alert('Verificação necessária', 'Verifique seu e-mail para confirmar a conta.');
       router.replace('/login');
     }
   };
 
+  const olho = (visivel: boolean, alternar: () => void) => (
+    <IconButton
+      icon={visivel ? Eye : EyeOff}
+      accessibilityLabel={visivel ? 'Ocultar senha' : 'Mostrar senha'}
+      tone="primary"
+      filled
+      onPress={alternar}
+    />
+  );
+
   return (
-    <KeyboardAvoidingView
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-      className="flex-1 bg-bg-dark"
-    >
-      <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }} className="px-6">
-        <View className="px-6 py-10">
-          <View className="mb-10">
-            <Text className="text-accent text-4xl font-epilogue-bold mb-2">Criar Conta</Text>
-            <Text className="text-soft text-base font-epilogue">
-              Junte-se a nós e comece a monitorar suas crises
-            </Text>
-          </View>
+    <Screen scroll className="gap-6">
+      <ScreenHeader
+        title="Criar conta"
+        subtitle="Junte-se a nós e comece a monitorar suas crises"
+        onBack={voltar}
+      />
 
-          <View className="mb-6">
-            <Text className="text-soft font-epilogue-semi mb-2 ml-1">Nome</Text>
-            <TextInput
-              className="w-full bg-card-dark text-soft font-epilogue p-4 rounded-2xl border border-[#334155]"
-              placeholder="Como quer ser chamado?"
-              placeholderTextColor={Colors.muted}
-              value={name}
-              onChangeText={setName}
-              autoCapitalize="words"
-            />
-          </View>
+      <View className="gap-4">
+        <TextField
+          ref={nomeRef}
+          label="Nome"
+          placeholder="Como quer ser chamado?"
+          value={name}
+          onChangeText={handleNameChange}
+          autoCapitalize="words"
+          error={nameError || undefined}
+        />
+        <TextField
+          ref={emailRef}
+          label="E-mail"
+          placeholder="Seu melhor e-mail"
+          value={email}
+          onChangeText={handleEmailChange}
+          autoCapitalize="none"
+          keyboardType="email-address"
+          error={emailError || undefined}
+        />
+        <TextField
+          ref={senhaRef}
+          label="Senha"
+          placeholder="Crie uma senha forte"
+          value={password}
+          onChangeText={handlePasswordChange}
+          secureTextEntry={!showPassword}
+          editable={!loading}
+          error={passwordError || undefined}
+          accessory={olho(showPassword, () => setShowPassword(!showPassword))}
+        />
+        <TextField
+          ref={confirmarRef}
+          label="Confirmar senha"
+          placeholder="Repita sua senha"
+          value={confirmPassword}
+          onChangeText={handleConfirmPasswordChange}
+          secureTextEntry={!showConfirmPassword}
+          editable={!loading}
+          error={confirmPasswordError || undefined}
+          accessory={olho(showConfirmPassword, () => setShowConfirmPassword(!showConfirmPassword))}
+        />
+      </View>
 
-          <View className="mb-6">
-            <Text className="text-soft font-epilogue-semi mb-2 ml-1">E-mail</Text>
-            <TextInput
-              className={`w-full bg-card-dark text-soft font-epilogue p-4 rounded-2xl border ${emailError ? 'border-red-500' : 'border-[#334155]'}`}
-              placeholder="Seu melhor e-mail"
-              placeholderTextColor={Colors.muted}
-              value={email}
-              onChangeText={handleEmailChange}
-              autoCapitalize="none"
-              keyboardType="email-address"
-            />
-            {emailError ? <Text className="text-red-500 font-epilogue text-sm mt-2 ml-1">{emailError}</Text> : null}
-          </View>
+      <Button
+        ref={cadastrarRef}
+        title="Cadastrar"
+        loading={loading}
+        disabled={temErro}
+        accessibilityHint={temErro ? 'Corrija os campos marcados em vermelho para continuar.' : undefined}
+        onPress={handleRegister}
+      />
 
-          <View className="mb-6">
-            <Text className="text-soft font-epilogue-semi mb-2 ml-1">Senha</Text>
-            <View className="relative">
-              <TextInput
-                className={`w-full bg-card-dark text-soft font-epilogue p-4 rounded-2xl border ${passwordError ? 'border-red-500' : 'border-[#334155]'}`}
-                placeholder="Crie uma senha forte"
-                placeholderTextColor={Colors.muted}
-                value={password}
-                onChangeText={handlePasswordChange}
-                secureTextEntry={!showPassword}
-                editable={!loading}
-                selectionColor="#64748b"
-              />
-              <TouchableOpacity
-                className="absolute right-4 top-4"
-                onPress={() => setShowPassword(!showPassword)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons
-                  name={showPassword ? 'eye' : 'eye-off'}
-                  size={20}
-                  color={Colors.muted}
-                />
-              </TouchableOpacity>
-            </View>
-            {passwordError ? <Text className="text-red-500 font-epilogue text-sm mt-2 ml-1">{passwordError}</Text> : null}
-          </View>
+      <View className="flex-row flex-wrap items-center justify-center">
+        <Text tone="muted">Já tem uma conta?</Text>
+        <Link href="/login" asChild>
+          <Button title="Entrar" variant="ghost" size="md" />
+        </Link>
+      </View>
 
-          <View className="mb-8">
-            <Text className="text-soft font-epilogue-semi mb-2 ml-1">Confirmar Senha</Text>
-            <View className="relative">
-              <TextInput
-                className={`w-full bg-card-dark text-soft font-epilogue p-4 rounded-2xl border ${confirmPasswordError ? 'border-red-500' : 'border-[#334155]'}`}
-                placeholder="Repita sua senha"
-                placeholderTextColor={Colors.muted}
-                value={confirmPassword}
-                onChangeText={handleConfirmPasswordChange}
-                secureTextEntry={!showConfirmPassword}
-                editable={!loading}
-                selectionColor="#64748b"
-              />
-              <TouchableOpacity
-                className="absolute right-4 top-4"
-                onPress={() => setShowConfirmPassword(!showConfirmPassword)}
-                hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-              >
-                <Ionicons
-                  name={showConfirmPassword ? 'eye' : 'eye-off'}
-                  size={20}
-                  color={Colors.muted}
-                />
-              </TouchableOpacity>
-            </View>
-            {confirmPasswordError ? <Text className="text-red-500 font-epilogue text-sm mt-2 ml-1">{confirmPasswordError}</Text> : null}
-          </View>
-
-          <TouchableOpacity
-            className={`w-full bg-accent p-4 rounded-2xl items-center justify-center flex-row ${loading || emailError || passwordError || confirmPasswordError ? 'opacity-70' : ''}`}
-            onPress={handleRegister}
-            disabled={loading || !!emailError || !!passwordError || !!confirmPasswordError}
-          >
-            {loading ? (
-              <ActivityIndicator color={Colors.bgDark} />
-            ) : (
-              <Text className="text-bg-dark font-epilogue-bold text-lg">Cadastrar</Text>
-            )}
-          </TouchableOpacity>
-
-          <View className="flex-row justify-center mt-8">
-            <Text className="text-muted font-epilogue">Já tem uma conta? </Text>
-            <Link href="/login" asChild>
-              <TouchableOpacity>
-                <Text className="text-accent font-epilogue-bold">Entrar</Text>
-              </TouchableOpacity>
-            </Link>
-          </View>
-        </View>
-      </ScrollView>
-    </KeyboardAvoidingView>
+      <Dialog
+        visible={avisoVisible}
+        title={aviso.title}
+        onClose={fecharAviso}
+        returnFocusTo={cadastrarRef}
+        footer={<Button title="Entendi" variant="secondary" size="md" onPress={fecharAviso} />}
+      >
+        <Text>{aviso.message}</Text>
+      </Dialog>
+    </Screen>
   );
 }
