@@ -1,21 +1,12 @@
 import { router } from 'expo-router';
+import { Check, CircleAlert, PenLine, TriangleAlert, X } from 'lucide-react-native';
 import React, { useState } from 'react';
-import {
-  LayoutAnimation,
-  Platform,
-  ScrollView,
-  StatusBar,
-  Text,
-  TouchableOpacity,
-  UIManager,
-  View,
-} from 'react-native';
+import { View } from 'react-native';
+import Notice from '@/components/ui/Notice';
+import OptionCard from '@/components/ui/OptionCard';
+import Text from '@/components/ui/Text';
+import SetupStep from '@/features/onboarding/SetupStep';
 import { useSetup } from '@/features/onboarding/SetupContext';
-import { SetupBackButton } from '@/components/SetupBackButton';
-
-if (Platform.OS === 'android') {
-  UIManager.setLayoutAnimationEnabledExperimental?.(true);
-}
 
 type HasAura = 'yes' | 'no' | null;
 
@@ -26,9 +17,6 @@ interface AuraSign {
   emoji: string;
   cortexType: string;
 }
-
-const TOTAL_STEPS = 9;
-const CURRENT_STEP = 3;
 
 const AURA_SIGNS: AuraSign[] = [
   {
@@ -115,7 +103,6 @@ export default function AuraStep() {
     (hasAura === 'yes' && (selectedSigns.length > 0 || showOther));
 
   function handleHasAura(value: HasAura) {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setHasAura(value);
     if (value === 'no') {
       setSelectedSigns([]);
@@ -130,7 +117,6 @@ export default function AuraStep() {
   }
 
   function handleToggleOther() {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setShowOther((prev) => !prev);
   }
 
@@ -161,312 +147,75 @@ export default function AuraStep() {
     selectedSigns.includes('ataxia');
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#0D2137' }}>
-      <StatusBar barStyle="light-content" backgroundColor="#0D2137" />
+    <SetupStep
+      step={3}
+      title="Sua visão ou sensibilidade mudam antes da dor?"
+      subtitle="A aura são sintomas neurológicos que aparecem minutos antes da crise. Ocorre em cerca de 30% dos casos."
+      previousRoute="/(setup)/step2"
+      canContinue={isValid}
+      onContinue={handleNext}
+    >
+      <View accessibilityRole="radiogroup" className="gap-2">
+        <OptionCard
+          label="Sim, acontece"
+          icon={Check}
+          mode="radio"
+          checked={hasAura === 'yes'}
+          onPress={() => handleHasAura('yes')}
+        />
+        <OptionCard
+          label="Não acontece"
+          icon={X}
+          mode="radio"
+          checked={hasAura === 'no'}
+          onPress={() => handleHasAura('no')}
+        />
+      </View>
 
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={{ paddingHorizontal: 24, paddingTop: 56, paddingBottom: 8 }}>
-          <SetupBackButton fallbackRoute="/(setup)/step2" />
+      {hasAura === 'yes' && (
+        <View className="gap-3">
+          <Text variant="heading">O que você costuma sentir?</Text>
+          <Text variant="caption" tone="muted">
+            Selecione todos que se aplicam.
+          </Text>
 
-          <View style={{ flexDirection: 'row', gap: 6, marginBottom: 32 }}>
-            {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-              <View
-                key={i}
-                style={{
-                  flex: 1,
-                  height: 4,
-                  borderRadius: 2,
-                  backgroundColor: i < CURRENT_STEP ? '#00BFA5' : '#1E3A52',
-                }}
+          <View className="gap-2">
+            {AURA_SIGNS.map((sign) => (
+              <OptionCard
+                key={sign.id}
+                label={sign.label}
+                description={sign.description}
+                tag={sign.cortexType.toUpperCase()}
+                emoji={sign.emoji}
+                mode="checkbox"
+                checked={selectedSigns.includes(sign.id)}
+                onPress={() => toggleSign(sign.id)}
               />
             ))}
+
+            <OptionCard
+              label="Outro"
+              description="Tenho outro sintoma não listado aqui"
+              icon={PenLine}
+              mode="checkbox"
+              checked={showOther}
+              onPress={handleToggleOther}
+            />
           </View>
 
-          <Text
-            style={{
-              fontSize: 12,
-              fontWeight: '600',
-              letterSpacing: 1.5,
-              color: '#00BFA5',
-              textTransform: 'uppercase',
-              marginBottom: 8,
-            }}
-          >
-            Passo {CURRENT_STEP} de {TOTAL_STEPS} · Aura
-          </Text>
-
-          <Text
-            style={{
-              fontSize: 26,
-              fontWeight: '700',
-              color: '#FFFFFF',
-              lineHeight: 34,
-              marginBottom: 8,
-            }}
-          >
-            Sua visão ou sensibilidade mudam antes da dor?
-          </Text>
-
-          <Text style={{ fontSize: 15, color: '#7A99B2', lineHeight: 22 }}>
-            A aura são sintomas neurológicos que aparecem minutos antes da crise. Ocorre em cerca de 30% dos casos.
-          </Text>
+          {showWarning && (
+            <Notice icon={TriangleAlert} tone="attention">
+              Sintomas como fraqueza, falta de equilíbrio ou dificuldade de fala devem ser avaliados por um neurologista para descartar outras condições.
+            </Notice>
+          )}
         </View>
+      )}
 
-        <View style={{ paddingHorizontal: 24, marginTop: 28, flexDirection: 'row', gap: 12 }}>
-          {[
-            { value: 'yes' as HasAura, label: 'Sim, acontece', emoji: '👍' },
-            { value: 'no' as HasAura, label: 'Não acontece', emoji: '✋' },
-          ].map((option) => {
-            const isSelected = hasAura === option.value;
-            return (
-              <TouchableOpacity
-                key={option.value}
-                onPress={() => handleHasAura(option.value)}
-                activeOpacity={0.8}
-                style={{
-                  flex: 1,
-                  backgroundColor: isSelected ? '#00BFA518' : '#112236',
-                  borderWidth: 1.5,
-                  borderColor: isSelected ? '#00BFA5' : '#1E3A52',
-                  borderRadius: 16,
-                  paddingVertical: 18,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                }}
-              >
-                <Text style={{ fontSize: 22 }}>{option.emoji}</Text>
-                <Text
-                  style={{
-                    fontSize: 15,
-                    fontWeight: '600',
-                    color: isSelected ? '#00BFA5' : '#FFFFFF',
-                  }}
-                >
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {hasAura === 'yes' && (
-          <View style={{ paddingHorizontal: 24, marginTop: 28 }}>
-            <Text
-              style={{
-                fontSize: 15,
-                fontWeight: '600',
-                color: '#FFFFFF',
-                marginBottom: 4,
-              }}
-            >
-              O que você costuma sentir?
-            </Text>
-            <Text style={{ fontSize: 13, color: '#7A99B2', marginBottom: 16 }}>
-              Selecione todos que se aplicam.
-            </Text>
-
-            <View style={{ gap: 10 }}>
-              {AURA_SIGNS.map((sign) => {
-                const isChecked = selectedSigns.includes(sign.id);
-                return (
-                  <TouchableOpacity
-                    key={sign.id}
-                    onPress={() => toggleSign(sign.id)}
-                    activeOpacity={0.8}
-                    style={{
-                      backgroundColor: isChecked ? '#00BFA518' : '#112236',
-                      borderWidth: 1.5,
-                      borderColor: isChecked ? '#00BFA5' : '#1E3A52',
-                      borderRadius: 16,
-                      paddingVertical: 16,
-                      paddingHorizontal: 18,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 14,
-                    }}
-                  >
-                    <Text style={{ fontSize: 24 }}>{sign.emoji}</Text>
-
-                    <View style={{ flex: 1, gap: 4 }}>
-                      <Text
-                        style={{
-                          fontSize: 15,
-                          fontWeight: '600',
-                          color: isChecked ? '#00BFA5' : '#FFFFFF',
-                        }}
-                      >
-                        {sign.label}
-                      </Text>
-                      <Text style={{ fontSize: 13, color: '#4A6A82' }}>
-                        {sign.description}
-                      </Text>
-                      <View
-                        style={{
-                          alignSelf: 'flex-start',
-                          backgroundColor: isChecked ? '#00BFA530' : '#1E3A52',
-                          borderRadius: 6,
-                          paddingHorizontal: 6,
-                          paddingVertical: 2,
-                          marginTop: 2,
-                        }}
-                      >
-                        <Text
-                          style={{
-                            fontSize: 10,
-                            fontWeight: '700',
-                            color: isChecked ? '#00BFA5' : '#4A6A82',
-                            letterSpacing: 0.5,
-                          }}
-                        >
-                          {sign.cortexType.toUpperCase()}
-                        </Text>
-                      </View>
-                    </View>
-
-                    <View
-                      style={{
-                        width: 22,
-                        height: 22,
-                        borderRadius: 6,
-                        borderWidth: 2,
-                        borderColor: isChecked ? '#00BFA5' : '#1E3A52',
-                        backgroundColor: isChecked ? '#00BFA5' : 'transparent',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      {isChecked && (
-                        <Text style={{ fontSize: 13, color: '#FFFFFF', fontWeight: '700' }}>
-                          ✓
-                        </Text>
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-
-              <TouchableOpacity
-                onPress={handleToggleOther}
-                activeOpacity={0.8}
-                style={{
-                  backgroundColor: showOther ? '#00BFA518' : '#112236',
-                  borderWidth: 1.5,
-                  borderColor: showOther ? '#00BFA5' : '#1E3A52',
-                  borderRadius: 16,
-                  paddingVertical: 16,
-                  paddingHorizontal: 18,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 14,
-                  borderStyle: 'dashed',
-                }}
-              >
-                <Text style={{ fontSize: 24 }}>✏️</Text>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text
-                    style={{
-                      fontSize: 15,
-                      fontWeight: '600',
-                      color: showOther ? '#00BFA5' : '#FFFFFF',
-                    }}
-                  >
-                    Outro
-                  </Text>
-                  <Text style={{ fontSize: 13, color: '#4A6A82' }}>
-                    Tenho outro sintoma não listado aqui
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: 6,
-                    borderWidth: 2,
-                    borderColor: showOther ? '#00BFA5' : '#1E3A52',
-                    backgroundColor: showOther ? '#00BFA5' : 'transparent',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  {showOther && (
-                    <Text style={{ fontSize: 13, color: '#FFFFFF', fontWeight: '700' }}>✓</Text>
-                  )}
-                </View>
-              </TouchableOpacity>
-            </View>
-
-            {showWarning && (
-              <View
-                style={{
-                  backgroundColor: '#E85D7518',
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: '#E85D7540',
-                  padding: 14,
-                  marginTop: 16,
-                  flexDirection: 'row',
-                  gap: 10,
-                  alignItems: 'flex-start',
-                }}
-              >
-                <Text style={{ fontSize: 16 }}>⚠️</Text>
-                <Text style={{ fontSize: 13, color: '#E85D75', lineHeight: 19, flex: 1 }}>
-                  Sintomas como fraqueza, falta de equilíbrio ou dificuldade de fala devem ser avaliados por um neurologista para descartar outras condições.
-                </Text>
-              </View>
-            )}
-          </View>
-        )}
-
-        {hasAura === 'no' && (
-          <View style={{ paddingHorizontal: 24, marginTop: 20 }}>
-            <View
-              style={{
-                backgroundColor: '#112236',
-                borderRadius: 12,
-                padding: 16,
-                flexDirection: 'row',
-                gap: 10,
-                alignItems: 'flex-start',
-              }}
-            >
-              <Text style={{ fontSize: 16 }}>💡</Text>
-              <Text style={{ fontSize: 13, color: '#7A99B2', lineHeight: 19, flex: 1 }}>
-                A maioria das pessoas com enxaqueca não tem aura. Suas crises serão acompanhadas normalmente.
-              </Text>
-            </View>
-          </View>
-        )}
-
-        <View style={{ paddingHorizontal: 24, marginTop: 32 }}>
-          <TouchableOpacity
-            onPress={handleNext}
-            disabled={!isValid}
-            style={{
-              backgroundColor: isValid ? '#00BFA5' : '#1E3A52',
-              borderRadius: 16,
-              paddingVertical: 18,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 16,
-                fontWeight: '700',
-                color: isValid ? '#FFFFFF' : '#3A5A72',
-                letterSpacing: 0.3,
-              }}
-            >
-              Continuar
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </View>
+      {hasAura === 'no' && (
+        <Notice icon={CircleAlert}>
+          A maioria das pessoas com enxaqueca não tem aura. Suas crises serão acompanhadas normalmente.
+        </Notice>
+      )}
+    </SetupStep>
   );
 }

@@ -1,21 +1,12 @@
 import { router } from 'expo-router';
+import { Check, CircleAlert, PenLine, X } from 'lucide-react-native';
 import React, { useState } from 'react';
-import {
-  LayoutAnimation,
-  Platform,
-  ScrollView,
-  StatusBar,
-  Text,
-  TouchableOpacity,
-  UIManager,
-  View,
-} from 'react-native';
+import { View } from 'react-native';
+import Notice from '@/components/ui/Notice';
+import OptionCard from '@/components/ui/OptionCard';
+import Text from '@/components/ui/Text';
+import SetupStep from '@/features/onboarding/SetupStep';
 import { useSetup } from '@/features/onboarding/SetupContext';
-import { SetupBackButton } from '@/components/SetupBackButton';
-
-if (Platform.OS === 'android') {
-  UIManager.setLayoutAnimationEnabledExperimental?.(true);
-}
 
 type HasSigns = 'yes' | 'no' | null;
 
@@ -25,9 +16,6 @@ interface Sign {
   description: string;
   emoji: string;
 }
-
-const TOTAL_STEPS = 9;
-const CURRENT_STEP = 2;
 
 const PREMONITORY_SIGNS: Sign[] = [
   {
@@ -104,7 +92,6 @@ export default function PremonitoryStep() {
     (hasSigns === 'yes' && (selectedSigns.length > 0 || showOther));
 
   function handleHasSigns(value: HasSigns) {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setHasSigns(value);
     if (value === 'no') {
       setSelectedSigns([]);
@@ -119,7 +106,6 @@ export default function PremonitoryStep() {
   }
 
   function handleToggleOther() {
-    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
     setShowOther((prev) => !prev);
   }
 
@@ -144,271 +130,68 @@ export default function PremonitoryStep() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#0D2137' }}>
-      <StatusBar barStyle="light-content" backgroundColor="#0D2137" />
+    <SetupStep
+      step={2}
+      title="Você percebe sinais antes da dor começar?"
+      subtitle="Alguns sintomas aparecem horas antes da crise. Isso ajuda o app a te alertar com antecedência."
+      previousRoute="/(setup)/step1"
+      canContinue={isValid}
+      onContinue={handleNext}
+    >
+      <View accessibilityRole="radiogroup" className="gap-2">
+        <OptionCard
+          label="Sim, percebo"
+          icon={Check}
+          mode="radio"
+          checked={hasSigns === 'yes'}
+          onPress={() => handleHasSigns('yes')}
+        />
+        <OptionCard
+          label="Não percebo"
+          icon={X}
+          mode="radio"
+          checked={hasSigns === 'no'}
+          onPress={() => handleHasSigns('no')}
+        />
+      </View>
 
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
-        keyboardShouldPersistTaps="handled"
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={{ paddingHorizontal: 24, paddingTop: 56, paddingBottom: 8 }}>
-          <SetupBackButton fallbackRoute="/(setup)/step1" />
+      {hasSigns === 'yes' && (
+        <View className="gap-3">
+          <Text variant="heading">Quais sinais você costuma sentir?</Text>
+          <Text variant="caption" tone="muted">
+            Selecione todos que se aplicam.
+          </Text>
 
-          <View style={{ flexDirection: 'row', gap: 6, marginBottom: 32 }}>
-            {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-              <View
-                key={i}
-                style={{
-                  flex: 1,
-                  height: 4,
-                  borderRadius: 2,
-                  backgroundColor: i < CURRENT_STEP ? '#00BFA5' : '#1E3A52',
-                }}
+          <View className="gap-2">
+            {PREMONITORY_SIGNS.map((sign) => (
+              <OptionCard
+                key={sign.id}
+                label={sign.label}
+                description={sign.description}
+                emoji={sign.emoji}
+                mode="checkbox"
+                checked={selectedSigns.includes(sign.id)}
+                onPress={() => toggleSign(sign.id)}
               />
             ))}
+
+            <OptionCard
+              label="Outro"
+              description="Tenho outro sinal não listado aqui"
+              icon={PenLine}
+              mode="checkbox"
+              checked={showOther}
+              onPress={handleToggleOther}
+            />
           </View>
-
-          <Text
-            style={{
-              fontSize: 12,
-              fontWeight: '600',
-              letterSpacing: 1.5,
-              color: '#00BFA5',
-              textTransform: 'uppercase',
-              marginBottom: 8,
-            }}
-          >
-            Passo {CURRENT_STEP} de {TOTAL_STEPS} · Fase Premonitória
-          </Text>
-
-          <Text
-            style={{
-              fontSize: 26,
-              fontWeight: '700',
-              color: '#FFFFFF',
-              lineHeight: 34,
-              marginBottom: 8,
-            }}
-          >
-            Você percebe sinais antes da dor começar?
-          </Text>
-
-          <Text style={{ fontSize: 15, color: '#7A99B2', lineHeight: 22 }}>
-            Alguns sintomas aparecem horas antes da crise. Isso ajuda o app a te alertar com antecedência.
-          </Text>
         </View>
+      )}
 
-        <View style={{ paddingHorizontal: 24, marginTop: 28, flexDirection: 'row', gap: 12 }}>
-          {[
-            { value: 'yes' as HasSigns, label: 'Sim, percebo', emoji: '👁️' },
-            { value: 'no' as HasSigns, label: 'Não percebo', emoji: '🤷' },
-          ].map((option) => {
-            const isSelected = hasSigns === option.value;
-            return (
-              <TouchableOpacity
-                key={option.value}
-                onPress={() => handleHasSigns(option.value)}
-                activeOpacity={0.8}
-                style={{
-                  flex: 1,
-                  backgroundColor: isSelected ? '#00BFA518' : '#112236',
-                  borderWidth: 1.5,
-                  borderColor: isSelected ? '#00BFA5' : '#1E3A52',
-                  borderRadius: 16,
-                  paddingVertical: 18,
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  gap: 8,
-                }}
-              >
-                <Text style={{ fontSize: 22 }}>{option.emoji}</Text>
-                <Text
-                  style={{
-                    fontSize: 15,
-                    fontWeight: '600',
-                    color: isSelected ? '#00BFA5' : '#FFFFFF',
-                  }}
-                >
-                  {option.label}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {hasSigns === 'yes' && (
-          <View style={{ paddingHorizontal: 24, marginTop: 28 }}>
-            <Text
-              style={{
-                fontSize: 15,
-                fontWeight: '600',
-                color: '#FFFFFF',
-                marginBottom: 4,
-              }}
-            >
-              Quais sinais você costuma sentir?
-            </Text>
-            <Text style={{ fontSize: 13, color: '#7A99B2', marginBottom: 16 }}>
-              Selecione todos que se aplicam.
-            </Text>
-
-            <View style={{ gap: 10 }}>
-              {PREMONITORY_SIGNS.map((sign) => {
-                const isChecked = selectedSigns.includes(sign.id);
-                return (
-                  <TouchableOpacity
-                    key={sign.id}
-                    onPress={() => toggleSign(sign.id)}
-                    activeOpacity={0.8}
-                    style={{
-                      backgroundColor: isChecked ? '#00BFA518' : '#112236',
-                      borderWidth: 1.5,
-                      borderColor: isChecked ? '#00BFA5' : '#1E3A52',
-                      borderRadius: 16,
-                      paddingVertical: 16,
-                      paddingHorizontal: 18,
-                      flexDirection: 'row',
-                      alignItems: 'center',
-                      gap: 14,
-                    }}
-                  >
-                    <Text style={{ fontSize: 24 }}>{sign.emoji}</Text>
-
-                    <View style={{ flex: 1, gap: 2 }}>
-                      <Text
-                        style={{
-                          fontSize: 15,
-                          fontWeight: '600',
-                          color: isChecked ? '#00BFA5' : '#FFFFFF',
-                        }}
-                      >
-                        {sign.label}
-                      </Text>
-                      <Text style={{ fontSize: 13, color: '#4A6A82' }}>
-                        {sign.description}
-                      </Text>
-                    </View>
-
-                    <View
-                      style={{
-                        width: 22,
-                        height: 22,
-                        borderRadius: 6,
-                        borderWidth: 2,
-                        borderColor: isChecked ? '#00BFA5' : '#1E3A52',
-                        backgroundColor: isChecked ? '#00BFA5' : 'transparent',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                      }}
-                    >
-                      {isChecked && (
-                        <Text style={{ fontSize: 13, color: '#FFFFFF', fontWeight: '700' }}>
-                          ✓
-                        </Text>
-                      )}
-                    </View>
-                  </TouchableOpacity>
-                );
-              })}
-
-              <TouchableOpacity
-                onPress={handleToggleOther}
-                activeOpacity={0.8}
-                style={{
-                  backgroundColor: showOther ? '#00BFA518' : '#112236',
-                  borderWidth: 1.5,
-                  borderColor: showOther ? '#00BFA5' : '#1E3A52',
-                  borderRadius: 16,
-                  paddingVertical: 16,
-                  paddingHorizontal: 18,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 14,
-                  borderStyle: 'dashed',
-                }}
-              >
-                <Text style={{ fontSize: 24 }}>✏️</Text>
-                <View style={{ flex: 1, gap: 2 }}>
-                  <Text
-                    style={{
-                      fontSize: 15,
-                      fontWeight: '600',
-                      color: showOther ? '#00BFA5' : '#FFFFFF',
-                    }}
-                  >
-                    Outro
-                  </Text>
-                  <Text style={{ fontSize: 13, color: '#4A6A82' }}>
-                    Tenho outro sinal não listado aqui
-                  </Text>
-                </View>
-                <View
-                  style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: 6,
-                    borderWidth: 2,
-                    borderColor: showOther ? '#00BFA5' : '#1E3A52',
-                    backgroundColor: showOther ? '#00BFA5' : 'transparent',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  {showOther && (
-                    <Text style={{ fontSize: 13, color: '#FFFFFF', fontWeight: '700' }}>✓</Text>
-                  )}
-                </View>
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
-
-        {hasSigns === 'no' && (
-          <View style={{ paddingHorizontal: 24, marginTop: 20 }}>
-            <View
-              style={{
-                backgroundColor: '#112236',
-                borderRadius: 12,
-                padding: 16,
-                flexDirection: 'row',
-                gap: 10,
-                alignItems: 'flex-start',
-              }}
-            >
-              <Text style={{ fontSize: 16 }}>💡</Text>
-              <Text style={{ fontSize: 13, color: '#7A99B2', lineHeight: 19, flex: 1 }}>
-                Tudo bem! Com o tempo, o app pode te ajudar a identificar padrões que você ainda não percebeu.
-              </Text>
-            </View>
-          </View>
-        )}
-
-        <View style={{ paddingHorizontal: 24, marginTop: 32 }}>
-          <TouchableOpacity
-            onPress={handleNext}
-            disabled={!isValid}
-            style={{
-              backgroundColor: isValid ? '#00BFA5' : '#1E3A52',
-              borderRadius: 16,
-              paddingVertical: 18,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 16,
-                fontWeight: '700',
-                color: isValid ? '#FFFFFF' : '#3A5A72',
-                letterSpacing: 0.3,
-              }}
-            >
-              Continuar
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </View>
+      {hasSigns === 'no' && (
+        <Notice icon={CircleAlert}>
+          Tudo bem! Com o tempo, o app pode te ajudar a identificar padrões que você ainda não percebeu.
+        </Notice>
+      )}
+    </SetupStep>
   );
 }

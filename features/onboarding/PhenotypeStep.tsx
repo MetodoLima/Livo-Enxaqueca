@@ -1,14 +1,10 @@
 import { router } from 'expo-router';
+import { CalendarDays } from 'lucide-react-native';
 import React, { useState } from 'react';
-import {
-  ScrollView,
-  StatusBar,
-  Text,
-  TouchableOpacity,
-  View,
-} from 'react-native';
+import { View } from 'react-native';
+import OptionCard from '@/components/ui/OptionCard';
+import SetupStep from '@/features/onboarding/SetupStep';
 import { useSetup } from '@/features/onboarding/SetupContext';
-import { SetupBackButton } from '@/components/SetupBackButton';
 
 type OptionValue = '2' | '7' | '12' | '16' | 'unknown';
 
@@ -17,11 +13,7 @@ interface Option {
   label: string;
   sublabel: string;
   userType: 'episodic' | 'chronic' | null;
-  color: string;
 }
-
-const TOTAL_STEPS = 9;
-const CURRENT_STEP = 1;
 
 const OPTIONS: Option[] = [
   {
@@ -29,35 +21,30 @@ const OPTIONS: Option[] = [
     label: '1 - 4 dias',
     sublabel: 'Raramente',
     userType: 'episodic',
-    color: '#00BFA5',
   },
   {
     value: '7',
     label: '5 - 9 dias',
     sublabel: 'Às vezes',
     userType: 'episodic',
-    color: '#00BFA5',
   },
   {
     value: '12',
     label: '10 - 14 dias',
     sublabel: 'Com frequência',
     userType: 'episodic',
-    color: '#00BFA5',
   },
   {
     value: '16',
     label: '15 dias ou mais',
     sublabel: 'Quase todo dia',
     userType: 'chronic',
-    color: '#00BFA5',
   },
   {
     value: 'unknown',
     label: 'Não sei',
     sublabel: 'Posso descobrir depois',
     userType: null,
-    color: '#4A6A82',
   },
 ];
 
@@ -83,152 +70,27 @@ export default function PhenotypeStep() {
   }
 
   return (
-    <View style={{ flex: 1, backgroundColor: '#0D2137' }}>
-      <StatusBar barStyle="light-content" backgroundColor="#0D2137" />
-
-      <ScrollView
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={{ paddingHorizontal: 24, paddingTop: 56, paddingBottom: 8 }}>
-          <SetupBackButton fallbackRoute="/(setup)/intro" />
-
-          <View style={{ flexDirection: 'row', gap: 6, marginBottom: 32 }}>
-            {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-              <View
-                key={i}
-                style={{
-                  flex: 1,
-                  height: 4,
-                  borderRadius: 2,
-                  backgroundColor: i < CURRENT_STEP ? '#00BFA5' : '#1E3A52',
-                }}
-              />
-            ))}
-          </View>
-
-          <Text
-            style={{
-              fontSize: 12,
-              fontWeight: '600',
-              letterSpacing: 1.5,
-              color: '#00BFA5',
-              textTransform: 'uppercase',
-              marginBottom: 8,
-            }}
-          >
-            Passo {CURRENT_STEP} de {TOTAL_STEPS} · Fenotipagem
-          </Text>
-
-          <Text
-            style={{
-              fontSize: 26,
-              fontWeight: '700',
-              color: '#FFFFFF',
-              lineHeight: 34,
-              marginBottom: 8,
-            }}
-          >
-            Com que frequência você tem crises?
-          </Text>
-
-          <Text style={{ fontSize: 15, color: '#7A99B2', lineHeight: 22 }}>
-            Pense nos últimos 3 meses. Inclua dias com dor leve ou moderada também.
-          </Text>
-        </View>
-
-        <View style={{ paddingHorizontal: 24, marginTop: 24, gap: 12 }}>
-          {OPTIONS.map((option) => {
-            const isSelected = selected === option.value;
-            const isUnknown = option.value === 'unknown';
-
-            return (
-              <TouchableOpacity
-                key={option.value}
-                onPress={() => setSelected(option.value)}
-                activeOpacity={0.8}
-                style={{
-                  backgroundColor: isSelected ? option.color + '18' : '#112236',
-                  borderWidth: 1.5,
-                  borderColor: isSelected ? option.color : '#1E3A52',
-                  borderRadius: 16,
-                  paddingVertical: 18,
-                  paddingHorizontal: 20,
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  justifyContent: 'space-between',
-                  marginTop: isUnknown ? 8 : 0,
-                  borderStyle: isUnknown ? 'dashed' : 'solid',
-                }}
-              >
-                <View style={{ gap: 2 }}>
-                  <Text
-                    style={{
-                      fontSize: 16,
-                      fontWeight: '600',
-                      color: isSelected ? option.color : '#FFFFFF',
-                    }}
-                  >
-                    {option.label}
-                  </Text>
-                  <Text style={{ fontSize: 13, color: '#4A6A82' }}>
-                    {option.sublabel}
-                  </Text>
-                </View>
-
-                <View
-                  style={{
-                    width: 22,
-                    height: 22,
-                    borderRadius: 11,
-                    borderWidth: 2,
-                    borderColor: isSelected ? option.color : '#1E3A52',
-                    backgroundColor: isSelected ? option.color : 'transparent',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                  }}
-                >
-                  {isSelected && (
-                    <View
-                      style={{
-                        width: 8,
-                        height: 8,
-                        borderRadius: 4,
-                        backgroundColor: '#FFFFFF',
-                      }}
-                    />
-                  )}
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        <View style={{ paddingHorizontal: 24, marginTop: 32 }}>
-          <TouchableOpacity
-            onPress={handleNext}
-            disabled={!isValid}
-            style={{
-              backgroundColor: isValid ? '#00BFA5' : '#1E3A52',
-              borderRadius: 16,
-              paddingVertical: 18,
-              alignItems: 'center',
-              justifyContent: 'center',
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 16,
-                fontWeight: '700',
-                color: isValid ? '#FFFFFF' : '#3A5A72',
-                letterSpacing: 0.3,
-              }}
-            >
-              Continuar
-            </Text>
-          </TouchableOpacity>
-        </View>
-      </ScrollView>
-    </View>
+    <SetupStep
+      step={1}
+      title="Com que frequência você tem crises?"
+      subtitle="Pense nos últimos 3 meses. Inclua dias com dor leve ou moderada também."
+      previousRoute="/(setup)/intro"
+      canContinue={isValid}
+      onContinue={handleNext}
+    >
+      <View accessibilityRole="radiogroup" className="gap-2">
+        {OPTIONS.map((option) => (
+          <OptionCard
+            key={option.value}
+            label={option.label}
+            description={option.sublabel}
+            icon={CalendarDays}
+            mode="radio"
+            checked={selected === option.value}
+            onPress={() => setSelected(option.value)}
+          />
+        ))}
+      </View>
+    </SetupStep>
   );
 }
