@@ -3,7 +3,7 @@ import { View, StyleSheet } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home, Calendar, Wind, BarChart2, User } from 'lucide-react-native';
-import { Colors } from '@/constants/Colors';
+import { Colors, color } from '@/constants/Colors';
 import { useCrisis } from '@/contexts/CrisisContext';
 
 export default function TabLayout() {
@@ -51,7 +51,7 @@ export default function TabLayout() {
               hasActiveCrisis && styles.centerBtnActive,
               focused && styles.centerBtnFocused,
             ]}>
-              <Wind size={24} color="white" />
+              <Wind size={24} color={hasActiveCrisis ? color.canvas : 'white'} />
             </View>
           ),
           tabBarLabel: () => null,
@@ -92,8 +92,9 @@ const styles = StyleSheet.create({
     elevation: 8,
   },
   centerBtnActive: {
-    backgroundColor: '#EF4444',
-    shadowColor: '#EF4444',
+    backgroundColor: color.danger,
+    shadowOpacity: 0,
+    elevation: 0,
   },
   centerBtnFocused: {
     transform: [{ scale: 1.08 }],

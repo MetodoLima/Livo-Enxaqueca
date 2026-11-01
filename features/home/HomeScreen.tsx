@@ -30,7 +30,7 @@ import {
 import { crisisRepository, dailyRecordRepository, momentRepository, type RegistroDia } from '@/repositories';
 import { isSttModelDownloaded, STT_MODEL_SIZE_LABEL } from '@/services/onDeviceComplement';
 import { useRouter } from 'expo-router';
-import { Bell, CalendarDays, Check, Droplets, Mic, Moon, Send, StopCircle, TrendingDown } from 'lucide-react-native';
+import { CalendarDays, Check, Droplets, Mic, Moon, Send, StopCircle, TrendingDown } from 'lucide-react-native';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { AccessibilityInfo, ActivityIndicator, Alert, Image, TouchableOpacity, View } from 'react-native';
 
@@ -269,13 +269,6 @@ export default function HomeScreen() {
           <Text variant="title">
             {user?.user_metadata?.name ? `${user.user_metadata.name}!` : 'Visitante!'}
           </Text>
-        </View>
-        <View
-          importantForAccessibility="no-hide-descendants"
-          accessibilityElementsHidden
-          className="h-12 w-12 items-center justify-center rounded-full bg-surface-raised"
-        >
-          <Bell size={22} color={color.contentMuted} />
         </View>
       </View>
 
