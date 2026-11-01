@@ -45,6 +45,8 @@ export interface ButtonProps extends Omit<PressableProps, 'children' | 'style'> 
   size?: ButtonSize;
   shape?: ButtonShape;
   icon?: LucideIcon;
+  iconPosition?: 'start' | 'end';
+  iconOnly?: boolean;
   loading?: boolean;
   done?: boolean;
   className?: string;
@@ -57,6 +59,8 @@ export default function Button({
   size = 'lg',
   shape = 'rounded',
   icon: Icon,
+  iconPosition = 'start',
+  iconOnly = false,
   loading = false,
   done = false,
   disabled,
@@ -82,10 +86,13 @@ export default function Button({
         <ActivityIndicator color={ICON_COLOR[variant]} />
       ) : (
         <>
-          {Icon && <Icon size={20} color={ICON_COLOR[variant]} />}
-          <Text variant="body" weight="semibold" tone={LABEL_TONE[variant]} className="text-center">
-            {title}
-          </Text>
+          {Icon && iconPosition === 'start' && <Icon size={20} color={ICON_COLOR[variant]} />}
+          {iconOnly ? null : (
+            <Text variant="body" weight="semibold" tone={LABEL_TONE[variant]} className="text-center">
+              {title}
+            </Text>
+          )}
+          {Icon && iconPosition === 'end' && <Icon size={20} color={ICON_COLOR[variant]} />}
         </>
       )}
     </Pressable>
