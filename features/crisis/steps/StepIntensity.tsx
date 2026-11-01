@@ -1,25 +1,44 @@
-import React, { useRef, useState } from 'react';
-import { View, Text, Image, StyleSheet, Dimensions, PanResponder, AccessibilityInfo, TouchableOpacity } from 'react-native';
-import Animated, { FadeInUp, useReducedMotion } from 'react-native-reanimated';
-import { Colors } from '@/constants/Colors';
-import { HelpCircle } from 'lucide-react-native';
-import HelpModal from '../components/HelpModal';
+import { useRef, useState } from 'react';
+import { AccessibilityInfo, Image, PanResponder, View, type ImageSourcePropType } from 'react-native';
+import Text from '@/components/ui/Text';
 import { INTENSITY_CONFIG, type CrisisRecord } from '@/types/crisis';
 
-const SCREEN_HEIGHT = Dimensions.get('window').height;
-const SLIDER_HEIGHT = SCREEN_HEIGHT * 0.52;
-const SLIDER_WIDTH = 48;
-const THUMB_SIZE = 48;
-const EVEN_VALUES = [0, 2, 4, 6, 8, 10];
+const VALORES = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0];
+const ALTURA_MAXIMA_DA_LINHA = 48;
+const PINO = 48;
 
-const INTENSITY_ICONS: Record<number, any> = {
-  0:  require('@/assets/images/crisis/intensity/SemDor.png'),
-  2:  require('@/assets/images/crisis/intensity/Leve.png'),
-  4:  require('@/assets/images/crisis/intensity/Incomoda.png'),
-  6:  require('@/assets/images/crisis/intensity/Forte.png'),
-  8:  require('@/assets/images/crisis/intensity/MuitoForte.png'),
+const PAIN_BG: Record<number, string> = {
+  0: 'bg-pain-0',
+  1: 'bg-pain-1',
+  2: 'bg-pain-2',
+  3: 'bg-pain-3',
+  4: 'bg-pain-4',
+  5: 'bg-pain-5',
+  6: 'bg-pain-6',
+  7: 'bg-pain-7',
+  8: 'bg-pain-8',
+  9: 'bg-pain-9',
+  10: 'bg-pain-10',
+};
+
+const IMAGEM_SEM_DOR: ImageSourcePropType = require('@/assets/images/crisis/intensity/SemDor.png');
+
+const IMAGEM_POR_PAR: Record<number, ImageSourcePropType> = {
+  2: require('@/assets/images/crisis/intensity/Leve.png'),
+  4: require('@/assets/images/crisis/intensity/Incomoda.png'),
+  6: require('@/assets/images/crisis/intensity/Forte.png'),
+  8: require('@/assets/images/crisis/intensity/MuitoForte.png'),
   10: require('@/assets/images/crisis/intensity/Insuportave.png'),
 };
+
+function imagemDa(valor: number): ImageSourcePropType {
+  if (valor === 0) return IMAGEM_SEM_DOR;
+  return IMAGEM_POR_PAR[Math.ceil(valor / 2) * 2];
+}
+
+function limitar(valor: number): number {
+  return Math.max(0, Math.min(10, valor));
+}
 
 interface StepIntensityProps {
   data: CrisisRecord;
@@ -27,291 +46,150 @@ interface StepIntensityProps {
   onNext: () => void;
 }
 
-function valueToPosition(value: number): number {
-  return ((10 - value) / 10) * (SLIDER_HEIGHT - THUMB_SIZE);
-}
-
-function positionToValue(y: number): number {
-  const clamped = Math.max(0, Math.min(y, SLIDER_HEIGHT - THUMB_SIZE));
-  const raw = 10 - (clamped / (SLIDER_HEIGHT - THUMB_SIZE)) * 10;
-  return Math.round(raw);
-}
-
-export default function StepIntensity({ data, onChange, onNext }: StepIntensityProps) {
-  const reduceMotion = useReducedMotion();
+export default function StepIntensity({ data, onChange }: StepIntensityProps) {
   const [value, setValue] = useState<number | null>(data.intensity);
-  const [showHelp, setShowHelp] = useState(false);
-  const thumbYRef = useRef(valueToPosition(data.intensity ?? 5));
-  const [thumbY, setThumbY] = useState(valueToPosition(data.intensity ?? 5));
-  const startYRef = useRef(0);
-  const startThumbRef = useRef(0);
+  const [alturaDisponivel, setAlturaDisponivel] = useState(0);
 
-  const currentConfig = value !== null
-    ? INTENSITY_CONFIG.find((c) => c.value === value)
-    : null;
-  const currentColor = currentConfig?.color ?? '#1E3A52';
+  const alturaDaLinha = Math.min(ALTURA_MAXIMA_DA_LINHA, alturaDisponivel / VALORES.length);
+  const config = value !== null ? INTENSITY_CONFIG[value] : null;
 
-  function applyY(newY: number) {
-    const clamped = Math.max(0, Math.min(newY, SLIDER_HEIGHT - THUMB_SIZE));
-    thumbYRef.current = clamped;
-    setThumbY(clamped);
-    setValue(positionToValue(clamped));
-  }
+  const valueRef = useRef(value);
+  const alturaRef = useRef(alturaDaLinha);
+  const inicioRef = useRef(0);
+  const onChangeRef = useRef(onChange);
+  valueRef.current = value;
+  alturaRef.current = alturaDaLinha;
+  onChangeRef.current = onChange;
+
+  const aplicar = (novo: number) => {
+    if (novo === valueRef.current) return;
+    valueRef.current = novo;
+    setValue(novo);
+    onChangeRef.current({ intensity: novo });
+  };
+
+  const valorNaAltura = (y: number) => {
+    const linha = alturaRef.current;
+    if (linha <= 0) return null;
+    return limitar(10 - Math.floor(y / linha));
+  };
 
   const panResponder = useRef(
     PanResponder.create({
       onStartShouldSetPanResponder: () => true,
       onMoveShouldSetPanResponder: () => true,
-
+      onPanResponderTerminationRequest: () => false,
       onPanResponderGrant: (e) => {
-        startYRef.current = e.nativeEvent.pageY;
-        startThumbRef.current = thumbYRef.current;
+        inicioRef.current = e.nativeEvent.locationY;
+        const novo = valorNaAltura(inicioRef.current);
+        if (novo !== null) aplicar(novo);
       },
-
-      onPanResponderMove: (e) => {
-        const dy = e.nativeEvent.pageY - startYRef.current;
-        applyY(startThumbRef.current + dy);
+      onPanResponderMove: (_, gesto) => {
+        const novo = valorNaAltura(inicioRef.current + gesto.dy);
+        if (novo !== null) aplicar(novo);
       },
-
       onPanResponderRelease: () => {
-        const finalValue = positionToValue(thumbYRef.current);
-        setValue(finalValue);
-        onChange({ intensity: finalValue });
-        const config = INTENSITY_CONFIG.find((c) => c.value === finalValue);
-        if (config) {
-          AccessibilityInfo.announceForAccessibility(
-            `Intensidade ${finalValue} de 10: ${config.label}`
-          );
-        }
+        const final = valueRef.current;
+        if (final === null) return;
+        AccessibilityInfo.announceForAccessibility(
+          `Intensidade ${final} de 10: ${INTENSITY_CONFIG[final].label}`,
+        );
       },
-    })
+    }),
   ).current;
 
-  const fillHeight = Math.max(0, SLIDER_HEIGHT - thumbY - THUMB_SIZE / 2);
+  const mover = (passo: 1 | -1) => {
+    const atual = valueRef.current;
+    aplicar(atual === null ? 0 : limitar(atual + passo));
+  };
+
+  const topoDoPino = value !== null ? (10 - value) * alturaDaLinha + alturaDaLinha / 2 - PINO / 2 : 0;
 
   return (
-    <View style={styles.container}>
-      <Animated.View entering={reduceMotion ? undefined : FadeInUp.duration(400)} style={styles.content}>
-        <View style={styles.headerRow}>
-          <Text style={[styles.title, { marginBottom: 0 }]} accessibilityRole="header">Qual o nível da dor?</Text>
-          <TouchableOpacity 
-            onPress={() => setShowHelp(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Ajuda sobre o nível da dor"
-          >
-            <HelpCircle size={24} color={Colors.muted} />
-          </TouchableOpacity>
-        </View>
-        <View
-          style={styles.sliderWrapper}
-          accessible={true}
-          accessibilityRole="adjustable"
-          accessibilityLabel={
-            value !== null
-              ? `Nível de dor: ${value} de 10, ${currentConfig?.label ?? ''}`
-              : 'Nível de dor: não definido'
-          }
-          accessibilityValue={{ min: 0, max: 10, now: value ?? undefined }}
-          accessibilityHint="Arraste para cima ou para baixo para ajustar a intensidade da dor"
-        >
+    <View className="flex-1 gap-6">
+      <Text variant="title">Qual o nível da dor?</Text>
 
+      <View className="flex-1 flex-row items-center gap-4">
+        <View
+          className="flex-1 items-center gap-2"
+          importantForAccessibility="no-hide-descendants"
+          accessibilityElementsHidden
+        >
+          <Image
+            source={value !== null ? imagemDa(value) : IMAGEM_SEM_DOR}
+            resizeMode="contain"
+            className={`h-40 w-40 ${value === null ? 'opacity-50' : ''}`}
+          />
+          <Text variant="hero" className="text-center">
+            {value !== null ? value : '–'}
+          </Text>
+          <Text variant="heading" className="text-center">
+            {config ? config.label : 'Toque na escala'}
+          </Text>
+          {config ? (
+            <Text tone="muted" className="text-center">
+              {config.sublabel}
+            </Text>
+          ) : null}
+        </View>
+
+        <View
+          className="self-stretch justify-center"
+          onLayout={(e) => setAlturaDisponivel(e.nativeEvent.layout.height)}
+        >
           <View
-            style={[styles.track, { height: SLIDER_HEIGHT }]}
+            accessible
+            accessibilityRole="adjustable"
+            accessibilityLabel="Nível da dor"
+            accessibilityValue={
+              value !== null && config
+                ? { min: 0, max: 10, now: value, text: `${value}, ${config.label}` }
+                : { text: 'não definido' }
+            }
+            accessibilityHint="Arraste para cima ou para baixo para ajustar a intensidade da dor"
+            accessibilityActions={[{ name: 'increment' }, { name: 'decrement' }]}
+            onAccessibilityAction={(e) => {
+              if (e.nativeEvent.actionName === 'increment') mover(1);
+              if (e.nativeEvent.actionName === 'decrement') mover(-1);
+            }}
+            className="w-20"
+            style={{ height: alturaDaLinha * VALORES.length }}
             {...panResponder.panHandlers}
           >
-            <View style={[styles.trackBg, { height: SLIDER_HEIGHT }]} />
-
-            {value !== null && (
-              <View
-                style={[
-                  styles.trackFill,
-                  { height: fillHeight, backgroundColor: currentColor },
-                ]}
-              />
-            )}
-
-            <View
-              style={[
-                styles.thumb,
-                {
-                  top: thumbY,
-                  backgroundColor: value !== null ? currentColor : '#1E3A52',
-                  shadowColor: value !== null ? currentColor : 'transparent',
-                  borderWidth: value === null ? 2 : 0,
-                  borderColor: '#2A4A62',
-                },
-              ]}
-            >
-              <Text style={styles.thumbText}>
-                {value !== null ? value : '?'}
-              </Text>
+            <View pointerEvents="none" className="flex-1 flex-row gap-2">
+              <View className="w-6">
+                {VALORES.map((n) => (
+                  <View key={n} className="items-end justify-center" style={{ height: alturaDaLinha }}>
+                    <Text
+                      variant="caption"
+                      weight={n === value ? 'bold' : 'regular'}
+                      tone={n === value ? 'content' : 'muted'}
+                    >
+                      {n}
+                    </Text>
+                  </View>
+                ))}
+              </View>
+              <View className="w-12">
+                {VALORES.map((n) => (
+                  <View key={n} className="items-center justify-center" style={{ height: alturaDaLinha }}>
+                    <View
+                      className={`w-4 rounded-sm ${PAIN_BG[n]}`}
+                      style={{ height: Math.max(0, alturaDaLinha - 4) }}
+                    />
+                  </View>
+                ))}
+                {value !== null ? (
+                  <View
+                    className={`absolute left-0 h-12 w-12 rounded-full border-2 border-content ${PAIN_BG[value]}`}
+                    style={{ top: topoDoPino }}
+                  />
+                ) : null}
+              </View>
             </View>
           </View>
-
-          <View style={[styles.labelsColumn, { height: SLIDER_HEIGHT }]}>
-            {[...INTENSITY_CONFIG]
-              .reverse()
-              .filter((item) => EVEN_VALUES.includes(item.value))
-              .map((item) => {
-                const isActive = value !== null &&
-                  EVEN_VALUES.reduce((prev, curr) =>
-                    Math.abs(curr - value) < Math.abs(prev - value) ? curr : prev
-                  ) === item.value;
-
-                const icon = INTENSITY_ICONS[item.value];
-                const isLarge = [6, 8, 10].includes(item.value);
-
-                return (
-                  <View key={item.value} style={styles.labelRow}>
-                    <View style={styles.iconContainer}>
-                      {icon ? (
-                        <Image
-                          source={icon}
-                          style={[
-                            styles.labelIcon,
-                            isLarge && styles.labelIconLarge,
-                            !isActive && { opacity: 0.4 },
-                          ]}
-                          resizeMode="contain"
-                        />
-                      ) : (
-                        <Text style={[styles.labelEmoji, !isActive && { opacity: 0.4 }]}>
-                          {item.emoji}
-                        </Text>
-                      )}
-                    </View>
-                    <View style={{ flex: 1 }}>
-                      <Text style={[styles.labelNumber, isActive && { color: currentColor }]}>
-                        {item.value}
-                      </Text>
-                      <Text style={[styles.labelText, isActive && { color: 'white' }]}>
-                        {item.sublabel.toUpperCase()}
-                      </Text>
-                    </View>
-                  </View>
-                );
-              })}
-          </View>
         </View>
-      </Animated.View>
-
-      <HelpModal 
-        visible={showHelp} 
-        onClose={() => setShowHelp(false)} 
-        title="Nível da dor" 
-        message="Use a escala de 0 a 10. Arraste o controle ou toque na barra para posicionar." 
-      />
+      </View>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  content: {
-    flex: 1,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 28,
-  },
-  title: {
-    fontSize: 22,
-    fontFamily: 'Epilogue_700Bold',
-    color: 'white',
-    marginBottom: 28,
-    lineHeight: 30,
-  },
-  helpText: {
-    fontSize: 13,
-    fontFamily: 'Epilogue_400Regular',
-    color: Colors.muted,
-    marginBottom: 20,
-    lineHeight: 20,
-  },
-  sliderWrapper: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 20,
-  },
-  track: {
-    width: SLIDER_WIDTH,
-    position: 'relative',
-    alignItems: 'center',
-  },
-  trackBg: {
-    position: 'absolute',
-    width: SLIDER_WIDTH,
-    top: 0,
-    backgroundColor: '#1E3A52',
-    borderRadius: SLIDER_WIDTH / 2,
-  },
-  trackFill: {
-    position: 'absolute',
-    width: SLIDER_WIDTH,
-    bottom: 0,
-    borderRadius: SLIDER_WIDTH / 2,
-  },
-  thumb: {
-    position: 'absolute',
-    width: THUMB_SIZE,
-    height: THUMB_SIZE,
-    borderRadius: THUMB_SIZE / 2,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.5,
-    shadowRadius: 8,
-    elevation: 8,
-  },
-  thumbText: {
-    fontSize: 16,
-    fontFamily: 'Epilogue_700Bold',
-    color: '#FFFFFF',
-  },
-  labelsColumn: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  labelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    height: SLIDER_HEIGHT / 6,
-  },
-  iconContainer: {
-    width: 44,
-    height: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  labelIcon: {
-    width: 32,
-    height: 32,
-  },
-  labelIconLarge: {
-    width: 42,
-    height: 42,
-  },
-  labelEmoji: {
-    fontSize: 20,
-    width: 28,
-    textAlign: 'center',
-  },
-  labelNumber: {
-    fontSize: 14,
-    fontFamily: 'Epilogue_700Bold',
-    color: Colors.muted,
-    lineHeight: 16,
-  },
-  labelText: {
-    fontSize: 12,
-    fontFamily: 'Epilogue_600SemiBold',
-    color: Colors.muted,
-    letterSpacing: 1,
-  },
-});

@@ -1,16 +1,14 @@
-import { Colors } from '@/constants/Colors';
 import { crisisRepository } from '@/repositories';
 import { useSync } from '@/contexts/SyncContext';
 import { tempoSemEnxaqueca } from '@/lib/format';
 import { useRouter } from 'expo-router';
-import { ChevronDown, Zap } from 'lucide-react-native';
 import { useEffect, useState } from 'react';
-import { Image, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import ScreenBackground from '@/components/ui/ScreenBackground';
-import Animated, { FadeInUp, useReducedMotion } from 'react-native-reanimated';
+import { Image, View } from 'react-native';
+import Button from '@/components/ui/Button';
+import Screen from '@/components/ui/Screen';
+import Text from '@/components/ui/Text';
 
 export default function CrisisEmptyState() {
-  const reduceMotion = useReducedMotion();
   const router = useRouter();
   const { ultimaAtualizacao } = useSync();
   const [ultimoFim, setUltimoFim] = useState<Date | null | undefined>(undefined);
@@ -30,115 +28,43 @@ export default function CrisisEmptyState() {
   const timeSinceLabel = ultimoFim ? tempoSemEnxaqueca(ultimoFim) : null;
 
   return (
-    <ScreenBackground>
-      <View style={styles.emptyContainer}>
-        <Animated.View entering={reduceMotion ? undefined : FadeInUp.delay(100)} style={styles.emptyMascotWrapper}>
-          <Image
-            source={require('../../../assets/images/LivoMeditar.png')}
-            style={styles.emptyMascotImage}
-            resizeMode="contain"
-            accessibilityLabel="Mascote Livo meditando"
-          />
-        </Animated.View>
+    <Screen className="items-center justify-center gap-6">
+      <Image
+        source={require('@/assets/images/LivoMeditar.png')}
+        resizeMode="contain"
+        className="h-44 w-44"
+        accessibilityLabel="Mascote Livo meditando"
+      />
 
-        <Animated.View entering={reduceMotion ? undefined : FadeInUp.delay(250)}>
-          <Text style={styles.emptyTitle} accessibilityRole="header">Tudo tranquilo!</Text>
-          {timeSinceLabel ? (
-            <Text style={styles.emptyHighlight}>
-              Você está há{' '}
-              <Text style={{ color: Colors.accent }}>{timeSinceLabel}</Text>
-              {' '}sem crises
-            </Text>
-          ) : ultimoFim === null ? (
-            <Text style={styles.emptyHighlight}>
-              Nenhuma crise registrada
-            </Text>
-          ) : null}
-          <Text style={styles.emptySub}>
-            Continue assim! Caso tenha uma crise, registre aqui para acompanhar seu progresso.
+      <View className="items-center gap-3">
+        <Text variant="title" className="text-center">
+          Tudo tranquilo!
+        </Text>
+        {timeSinceLabel ? (
+          <Text variant="heading" className="text-center">
+            Você está há {timeSinceLabel} sem crises
           </Text>
-        </Animated.View>
-
-        <Animated.View entering={reduceMotion ? undefined : FadeInUp.delay(400)}>
-          <TouchableOpacity
-            onPress={() => router.push('/record-crisis')}
-            style={styles.emptyBtn}
-            accessibilityRole="button"
-            accessibilityLabel="Registrar uma nova crise"
-          >
-            <Zap size={18} color="white" fill="white" />
-            <Text style={styles.emptyBtnText}>Registrar Crise</Text>
-          </TouchableOpacity>
-        </Animated.View>
-
-        <Animated.View entering={reduceMotion ? undefined : FadeInUp.delay(550)} style={{ marginTop: 32 }}>
-          <Text style={styles.emptyArrowHint}>Ou toque no botão abaixo</Text>
-          <View style={{ alignItems: 'center', marginTop: 8 }}>
-            <ChevronDown size={24} color={Colors.muted} />
-          </View>
-        </Animated.View>
+        ) : ultimoFim === null ? (
+          <Text variant="heading" className="text-center">
+            Nenhuma crise registrada
+          </Text>
+        ) : null}
+        <Text tone="muted" className="text-center">
+          Continue assim! Caso tenha uma crise, registre aqui para acompanhar seu progresso.
+        </Text>
       </View>
-    </ScreenBackground>
+
+      <View className="items-center gap-3 self-stretch">
+        <Button
+          title="Registrar Crise"
+          accessibilityLabel="Registrar uma nova crise"
+          onPress={() => router.push('/record-crisis')}
+          className="self-stretch"
+        />
+        <Text variant="caption" tone="muted" className="text-center">
+          Ou toque no botão abaixo
+        </Text>
+      </View>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-  },
-  emptyMascotWrapper: {
-    width: 180,
-    height: 180,
-    marginBottom: 24,
-  },
-  emptyMascotImage: {
-    width: '100%',
-    height: '100%',
-  },
-  emptyTitle: {
-    fontSize: 24,
-    fontFamily: 'Epilogue_700Bold',
-    color: 'white',
-    textAlign: 'center',
-    marginBottom: 8,
-  },
-  emptyHighlight: {
-    fontSize: 18,
-    fontFamily: 'Epilogue_600SemiBold',
-    color: 'white',
-    textAlign: 'center',
-    marginBottom: 12,
-  },
-  emptySub: {
-    fontSize: 14,
-    fontFamily: 'Epilogue_400Regular',
-    color: Colors.muted,
-    textAlign: 'center',
-    lineHeight: 22,
-    marginBottom: 28,
-  },
-  emptyBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    backgroundColor: Colors.accent,
-    paddingVertical: 16,
-    paddingHorizontal: 32,
-    borderRadius: 16,
-    minHeight: 56,
-  },
-  emptyBtnText: {
-    fontSize: 16,
-    fontFamily: 'Epilogue_700Bold',
-    color: 'white',
-  },
-  emptyArrowHint: {
-    fontSize: 13,
-    fontFamily: 'Epilogue_400Regular',
-    color: Colors.muted,
-    textAlign: 'center',
-  },
-});

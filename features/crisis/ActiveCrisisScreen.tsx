@@ -1,6 +1,7 @@
 import Card from '@/components/ui/Card';
 import { IntensityEditor, LocationEditor, MedicationsEditor, SymptomsEditor } from '@/features/crisis/components/EditModals';
-import { Colors } from '@/constants/Colors';
+import { Colors, color } from '@/constants/Colors';
+import UiText from '@/components/ui/Text';
 import { useCrisis } from '@/contexts/CrisisContext';
 import { crisisRepository, ehBancoLocalIndisponivel } from '@/repositories';
 import { tagStyles } from '@/features/crisis/components/tagStyles';
@@ -33,7 +34,7 @@ import {
 } from 'react-native';
 import { LOCATION_ICONS } from './steps/StepLocation';
 import ScreenBackground from '@/components/ui/ScreenBackground';
-import Animated, { FadeInUp, ZoomIn, useReducedMotion } from 'react-native-reanimated';
+import Animated, { FadeInUp, useReducedMotion } from 'react-native-reanimated';
 import PastPhaseCard from '@/features/crisis/components/PastPhaseCard';
 import CrisisEmptyState from '@/features/crisis/components/CrisisEmptyState';
 
@@ -123,7 +124,7 @@ export default function ActiveCrisisScreen() {
   if (registrada) {
     return (
       <View
-        style={styles.successContainer}
+        className="flex-1 items-center justify-center gap-4 bg-canvas px-gutter"
         accessible={true}
         accessibilityRole="alert"
         accessibilityLabel={
@@ -134,17 +135,17 @@ export default function ActiveCrisisScreen() {
             : 'Crise registrada com sucesso.'
         }
       >
-        <Animated.View entering={reduceMotion ? undefined : ZoomIn} style={styles.successIcon}>
-          <Check size={36} color="#10B981" />
-        </Animated.View>
-        <Text style={styles.successTitle}>Crise registrada!</Text>
-        <Text style={styles.successSub}>
+        <View className="h-12 w-12 items-center justify-center rounded-md bg-success-subtle">
+          <Check size={24} color={color.success} />
+        </View>
+        <UiText variant="title" className="text-center">Crise registrada!</UiText>
+        <UiText tone="muted" className="text-center">
           {ficouNaFila
             ? 'Salva no aparelho. Será enviada quando houver internet.'
             : savedIntensity != null
             ? `Intensidade ${savedIntensity}/10`
             : 'Registro salvo com sucesso.'}
-        </Text>
+        </UiText>
       </View>
     );
   }
@@ -917,35 +918,5 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 14,
     fontFamily: 'Epilogue_700Bold',
-  },
-
-  successContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.bgDark,
-    paddingHorizontal: 24,
-  },
-  successIcon: {
-    width: 88,
-    height: 88,
-    borderRadius: 44,
-    backgroundColor: 'rgba(16,185,129,0.15)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-  },
-  successTitle: {
-    color: 'white',
-    fontSize: 22,
-    fontFamily: 'Epilogue_700Bold',
-    marginBottom: 8,
-  },
-  successSub: {
-    color: Colors.muted,
-    fontSize: 14,
-    fontFamily: 'Epilogue_400Regular',
-    textAlign: 'center',
-    lineHeight: 22,
   },
 });

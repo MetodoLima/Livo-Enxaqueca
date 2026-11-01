@@ -1,31 +1,43 @@
-import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  Modal,
-  AccessibilityInfo,
-} from 'react-native';
-import { Clock, ChevronUp, ChevronDown, Calendar, AlertTriangle, HelpCircle } from 'lucide-react-native';
-import Animated, { FadeInUp, useReducedMotion } from 'react-native-reanimated';
-import { Colors } from '@/constants/Colors';
-import { formatTime } from '@/lib/format';
-import HelpModal from '../components/HelpModal';
-import type { CrisisRecord, TimePreset, EndTimePreset } from '@/types/crisis';
+import { Clock, TriangleAlert } from 'lucide-react-native';
+import { useState, type ReactNode } from 'react';
+import { AccessibilityInfo, View } from 'react-native';
+import Chip from '@/components/ui/Chip';
+import DateField from '@/components/ui/DateField';
+import Notice from '@/components/ui/Notice';
+import Text from '@/components/ui/Text';
+import TimeField from '@/components/ui/TimeField';
+import { color } from '@/constants/Colors';
+import type { Horario } from '@/lib/format';
+import type { CrisisRecord, EndTimePreset, TimePreset } from '@/types/crisis';
 
-interface StepTimeProps {
-  data: CrisisRecord;
-  onChange: (patch: Partial<CrisisRecord>) => void;
-  onNext: () => void;
+const AVISO_FIM_ANTES = 'Atenção: a hora de fim está antes da hora de início.';
+const AVISO_INICIO_FUTURO = 'O início da crise não pode ficar no futuro. Ajuste a data ou a hora.';
+const AVISO_FIM_FUTURO = 'O fim da crise não pode ficar no futuro. Ajuste a data ou a hora.';
+
+const START_PRESETS: { key: TimePreset; label: string }[] = [
+  { key: 'now', label: 'Agora mesmo' },
+  { key: '1h_ago', label: 'Há 1 hora' },
+  { key: 'custom', label: 'Outro' },
+];
+
+const END_PRESETS: { key: EndTimePreset; label: string }[] = [
+  { key: 'ongoing', label: 'Ainda em curso' },
+  { key: 'now', label: 'Agora mesmo' },
+  { key: 'custom', label: 'Outro' },
+];
+
+export interface ProblemasDoHorario {
+  inicioNoFuturo: boolean;
+  fimNoFuturo: boolean;
+  fimAntesDoInicio: boolean;
 }
 
-function formatDate(date: Date): string {
-  return date.toLocaleDateString('pt-BR', {
-    weekday: 'short',
-    day: 'numeric',
-    month: 'short',
-  });
+export function problemasDoHorario(data: CrisisRecord, agora: Date = new Date()): ProblemasDoHorario {
+  return {
+    inicioNoFuturo: data.startTime.getTime() > agora.getTime(),
+    fimNoFuturo: data.endTime !== null && data.endTime.getTime() > agora.getTime(),
+    fimAntesDoInicio: data.endTime !== null && data.endTime < data.startTime,
+  };
 }
 
 function subtractHours(date: Date, hours: number): Date {
@@ -34,338 +46,68 @@ function subtractHours(date: Date, hours: number): Date {
   return d;
 }
 
-function TimePicker({
-  value,
-  onConfirm,
-  onCancel,
-}: {
-  value: Date;
-  onConfirm: (date: Date) => void;
-  onCancel: () => void;
-}) {
-  const [hour, setHour] = useState(value.getHours());
-  const [minute, setMinute] = useState(value.getMinutes());
+function horarioDe(date: Date): Horario {
+  return { hora: date.getHours(), minuto: date.getMinutes() };
+}
 
-  const nudge = (
-    setter: React.Dispatch<React.SetStateAction<number>>,
-    current: number,
-    max: number,
-    dir: 1 | -1,
-  ) => {
-    setter((current + dir + max) % max);
-  };
+function comHorario(date: Date, { hora, minuto }: Horario): Date {
+  const d = new Date(date);
+  d.setHours(hora, minuto, 0, 0);
+  return d;
+}
 
-  const handleConfirm = () => {
-    const d = new Date(value);
-    d.setHours(hour, minute, 0, 0);
-    onConfirm(d);
-  };
+interface StepTimeProps {
+  data: CrisisRecord;
+  onChange: (patch: Partial<CrisisRecord>) => void;
+  onNext: () => void;
+}
 
+interface SecaoProps {
+  titulo: string;
+  iconColor: string;
+  destaque?: boolean;
+  children: ReactNode;
+}
+
+function Secao({ titulo, iconColor, destaque = false, children }: SecaoProps) {
   return (
-    <View style={pickerStyles.container}>
-      <Text style={pickerStyles.title} accessibilityRole="header">Selecionar horário</Text>
-
-      <View style={pickerStyles.row}>
-        <View style={pickerStyles.column}>
-          <TouchableOpacity
-            onPress={() => nudge(setHour, hour, 24, 1)}
-            style={pickerStyles.arrowBtn}
-            accessibilityRole="button"
-            accessibilityLabel="Aumentar hora"
-          >
-            <ChevronUp size={28} color={Colors.muted} />
-          </TouchableOpacity>
-          <View
-            style={pickerStyles.valueBox}
-            accessible={true}
-            accessibilityLabel={`Hora: ${String(hour).padStart(2, '0')}`}
-          >
-            <Text style={pickerStyles.valueText}>
-              {String(hour).padStart(2, '0')}
-            </Text>
-          </View>
-          <TouchableOpacity
-            onPress={() => nudge(setHour, hour, 24, -1)}
-            style={pickerStyles.arrowBtn}
-            accessibilityRole="button"
-            accessibilityLabel="Diminuir hora"
-          >
-            <ChevronDown size={28} color={Colors.muted} />
-          </TouchableOpacity>
-          <Text style={pickerStyles.label}>Hora</Text>
-        </View>
-
-        <Text style={pickerStyles.separator} importantForAccessibility="no">:</Text>
-
-        <View style={pickerStyles.column}>
-          <TouchableOpacity
-            onPress={() => nudge(setMinute, minute, 60, 1)}
-            style={pickerStyles.arrowBtn}
-            accessibilityRole="button"
-            accessibilityLabel="Aumentar minuto"
-          >
-            <ChevronUp size={28} color={Colors.muted} />
-          </TouchableOpacity>
-          <View
-            style={pickerStyles.valueBox}
-            accessible={true}
-            accessibilityLabel={`Minuto: ${String(minute).padStart(2, '0')}`}
-          >
-            <Text style={pickerStyles.valueText}>
-              {String(minute).padStart(2, '0')}
-            </Text>
-          </View>
-          <TouchableOpacity
-            onPress={() => nudge(setMinute, minute, 60, -1)}
-            style={pickerStyles.arrowBtn}
-            accessibilityRole="button"
-            accessibilityLabel="Diminuir minuto"
-          >
-            <ChevronDown size={28} color={Colors.muted} />
-          </TouchableOpacity>
-          <Text style={pickerStyles.label}>Minuto</Text>
-        </View>
+    <View className={`gap-4 rounded-lg border bg-surface p-4 ${destaque ? 'border-attention' : 'border-line'}`}>
+      <View className="flex-row items-center gap-2">
+        <Clock size={20} color={iconColor} />
+        <Text variant="caption" weight="semibold" tone="muted" className="flex-1 uppercase">
+          {titulo}
+        </Text>
       </View>
-
-      <View style={pickerStyles.actions}>
-        <TouchableOpacity
-          onPress={onCancel}
-          style={pickerStyles.cancelBtn}
-          accessibilityRole="button"
-          accessibilityLabel="Cancelar seleção de horário"
-        >
-          <Text style={pickerStyles.cancelText}>Cancelar</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          onPress={handleConfirm}
-          style={pickerStyles.confirmBtn}
-          accessibilityRole="button"
-          accessibilityLabel={`Confirmar horário ${String(hour).padStart(2, '0')}:${String(minute).padStart(2, '0')}`}
-        >
-          <Text style={pickerStyles.confirmText}>Confirmar</Text>
-        </TouchableOpacity>
-      </View>
+      {children}
     </View>
   );
 }
 
-function DatePicker({
-  value,
-  onConfirm,
-  onCancel,
-}: {
-  value: Date;
-  onConfirm: (date: Date) => void;
-  onCancel: () => void;
-}) {
-  const [day, setDay] = React.useState(value.getDate());
-  const [month, setMonth] = React.useState(value.getMonth());
-  const [year, setYear] = React.useState(value.getFullYear());
-
-  const MONTHS = [
-    'Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun',
-    'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez',
-  ];
-
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-
-  const nudgeDay = (dir: 1 | -1) => {
-    setDay((d) => {
-      const next = d + dir;
-      if (next < 1) return daysInMonth;
-      if (next > daysInMonth) return 1;
-      return next;
-    });
-  };
-
-  const nudgeMonth = (dir: 1 | -1) => {
-    setMonth((m) => (m + dir + 12) % 12);
-  };
-
-  const nudgeYear = (dir: 1 | -1) => {
-    setYear((y) => y + dir);
-  };
-
-  const handleConfirm = () => {
-    const d = new Date(value);
-    d.setFullYear(year, month, day);
-    onConfirm(d);
-  };
-
-  return (
-    <View style={pickerStyles.container}>
-      <Text style={pickerStyles.title} accessibilityRole="header">Selecionar data</Text>
-
-      <View style={pickerStyles.row}>
-        <View style={pickerStyles.column}>
-          <TouchableOpacity onPress={() => nudgeDay(1)} style={pickerStyles.arrowBtn} accessibilityRole="button" accessibilityLabel="Aumentar dia">
-            <ChevronUp size={28} color={Colors.muted} />
-          </TouchableOpacity>
-          <View style={pickerStyles.valueBox} accessible={true} accessibilityLabel={`Dia: ${String(day).padStart(2, '0')}`}>
-            <Text style={pickerStyles.valueText}>
-              {String(day).padStart(2, '0')}
-            </Text>
-          </View>
-          <TouchableOpacity onPress={() => nudgeDay(-1)} style={pickerStyles.arrowBtn} accessibilityRole="button" accessibilityLabel="Diminuir dia">
-            <ChevronDown size={28} color={Colors.muted} />
-          </TouchableOpacity>
-          <Text style={pickerStyles.label}>Dia</Text>
-        </View>
-
-        <Text style={pickerStyles.separator} importantForAccessibility="no">/</Text>
-
-        <View style={pickerStyles.column}>
-          <TouchableOpacity onPress={() => nudgeMonth(1)} style={pickerStyles.arrowBtn} accessibilityRole="button" accessibilityLabel="Próximo mês">
-            <ChevronUp size={28} color={Colors.muted} />
-          </TouchableOpacity>
-          <View style={[pickerStyles.valueBox, { width: 88 }]} accessible={true} accessibilityLabel={`Mês: ${MONTHS[month]}`}>
-            <Text style={[pickerStyles.valueText, { fontSize: 22 }]}>
-              {MONTHS[month]}
-            </Text>
-          </View>
-          <TouchableOpacity onPress={() => nudgeMonth(-1)} style={pickerStyles.arrowBtn} accessibilityRole="button" accessibilityLabel="Mês anterior">
-            <ChevronDown size={28} color={Colors.muted} />
-          </TouchableOpacity>
-          <Text style={pickerStyles.label}>Mês</Text>
-        </View>
-
-        <Text style={pickerStyles.separator} importantForAccessibility="no">/</Text>
-
-        <View style={pickerStyles.column}>
-          <TouchableOpacity onPress={() => nudgeYear(1)} style={pickerStyles.arrowBtn} accessibilityRole="button" accessibilityLabel="Próximo ano">
-            <ChevronUp size={28} color={Colors.muted} />
-          </TouchableOpacity>
-          <View style={pickerStyles.valueBox} accessible={true} accessibilityLabel={`Ano: ${year}`}>
-            <Text style={[pickerStyles.valueText, { fontSize: 24 }]}>
-              {year}
-            </Text>
-          </View>
-          <TouchableOpacity onPress={() => nudgeYear(-1)} style={pickerStyles.arrowBtn} accessibilityRole="button" accessibilityLabel="Ano anterior">
-            <ChevronDown size={28} color={Colors.muted} />
-          </TouchableOpacity>
-          <Text style={pickerStyles.label}>Ano</Text>
-        </View>
-      </View>
-
-      <View style={pickerStyles.actions}>
-        <TouchableOpacity onPress={onCancel} style={pickerStyles.cancelBtn} accessibilityRole="button" accessibilityLabel="Cancelar seleção de data">
-          <Text style={pickerStyles.cancelText}>Cancelar</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={handleConfirm} style={pickerStyles.confirmBtn} accessibilityRole="button" accessibilityLabel={`Confirmar data ${String(day).padStart(2, '0')} de ${MONTHS[month]} de ${year}`}>
-          <Text style={pickerStyles.confirmText}>Confirmar</Text>
-        </TouchableOpacity>
-      </View>
-    </View>
-  );
-}
-
-const pickerStyles = StyleSheet.create({
-  container: {
-    backgroundColor: '#0D2137',
-    borderRadius: 24,
-    padding: 28,
-    marginHorizontal: 20,
-    borderWidth: 1,
-    borderColor: '#1E3A52',
-  },
-  title: {
-    fontSize: 18,
-    fontFamily: 'Epilogue_700Bold',
-    color: 'white',
-    textAlign: 'center',
-    marginBottom: 24,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  column: {
-    alignItems: 'center',
-  },
-  arrowBtn: {
-    padding: 14,
-    minWidth: 48,
-    minHeight: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  valueBox: {
-    width: 80,
-    height: 72,
-    borderRadius: 16,
-    backgroundColor: '#112236',
-    borderWidth: 1.5,
-    borderColor: Colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  valueText: {
-    fontSize: 36,
-    fontFamily: 'Epilogue_700Bold',
-    color: 'white',
-  },
-  separator: {
-    fontSize: 36,
-    fontFamily: 'Epilogue_700Bold',
-    color: Colors.muted,
-    marginBottom: 28,
-  },
-  label: {
-    fontSize: 12,
-    fontFamily: 'Epilogue_600SemiBold',
-    color: Colors.muted,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-    marginTop: 6,
-  },
-  actions: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 28,
-  },
-  cancelBtn: {
-    flex: 1,
-    paddingVertical: 16,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#1E3A52',
-    alignItems: 'center',
-    minHeight: 52,
-    justifyContent: 'center',
-  },
-  cancelText: {
-    fontSize: 15,
-    fontFamily: 'Epilogue_600SemiBold',
-    color: Colors.muted,
-  },
-  confirmBtn: {
-    flex: 1,
-    paddingVertical: 16,
-    borderRadius: 14,
-    backgroundColor: Colors.accent,
-    alignItems: 'center',
-    minHeight: 52,
-    justifyContent: 'center',
-  },
-  confirmText: {
-    fontSize: 15,
-    fontFamily: 'Epilogue_700Bold',
-    color: 'white',
-  },
-});
-
-type PickerTarget = 'start' | 'end' | null;
-type PickerMode = 'time' | 'date';
-
-export default function StepTime({ data, onChange, onNext }: StepTimeProps) {
-  const reduceMotion = useReducedMotion();
+export default function StepTime({ data, onChange }: StepTimeProps) {
   const [startPreset, setStartPreset] = useState<TimePreset>('now');
-  const [endPreset, setEndPreset] = useState<EndTimePreset>('ongoing');
-  const [pickerTarget, setPickerTarget] = useState<PickerTarget>(null);
-  const [pickerMode, setPickerMode] = useState<PickerMode>('time');
-  const [showHelp, setShowHelp] = useState(false);
+  const [endPreset, setEndPreset] = useState<EndTimePreset>(data.endTime ? 'custom' : 'ongoing');
+  const [larguraDaFileira, setLarguraDaFileira] = useState(0);
+
+  const larguraDoCampo = larguraDaFileira > 0 ? (larguraDaFileira - 12) / 2 : undefined;
+
+  const avisar = (proximo: CrisisRecord) => {
+    const problemas = problemasDoHorario(proximo);
+    if (problemas.inicioNoFuturo) AccessibilityInfo.announceForAccessibility(AVISO_INICIO_FUTURO);
+    else if (problemas.fimNoFuturo) AccessibilityInfo.announceForAccessibility(AVISO_FIM_FUTURO);
+    else if (problemas.fimAntesDoInicio) AccessibilityInfo.announceForAccessibility(AVISO_FIM_ANTES);
+  };
+
+  const mudarInicio = (startTime: Date) => {
+    setStartPreset('custom');
+    onChange({ startTime });
+    avisar({ ...data, startTime });
+  };
+
+  const mudarFim = (endTime: Date) => {
+    setEndPreset('custom');
+    onChange({ endTime });
+    avisar({ ...data, endTime });
+  };
 
   const handleStartPreset = (preset: TimePreset) => {
     setStartPreset(preset);
@@ -373,7 +115,6 @@ export default function StepTime({ data, onChange, onNext }: StepTimeProps) {
       onChange({ startTime: new Date() });
     } else if (preset === '1h_ago') {
       onChange({ startTime: subtractHours(new Date(), 1) });
-    } else if (preset === 'custom') {
     }
   };
 
@@ -383,417 +124,84 @@ export default function StepTime({ data, onChange, onNext }: StepTimeProps) {
       onChange({ endTime: null });
     } else if (preset === 'now') {
       onChange({ endTime: new Date() });
-    } else if (preset === 'custom') {
-      if (!data.endTime) {
-        onChange({ endTime: new Date() });
-      }
+    } else if (!data.endTime) {
+      onChange({ endTime: new Date() });
     }
   };
 
-  const handlePickerConfirm = (date: Date) => {
-    if (pickerTarget === 'start') {
-      onChange({ startTime: date });
-      // COGA: Validação temporal — avisar se início ficou depois do fim
-      if (data.endTime && date > data.endTime) {
-        AccessibilityInfo.announceForAccessibility(
-          'Atenção: a hora de início está após a hora de fim.'
-        );
-      }
-    } else if (pickerTarget === 'end') {
-      onChange({ endTime: date });
-      // COGA: Validação temporal — avisar se fim ficou antes do início
-      if (date < data.startTime) {
-        AccessibilityInfo.announceForAccessibility(
-          'Atenção: a hora de fim está antes da hora de início.'
-        );
-      }
-    }
-    setPickerTarget(null);
-  };
+  const problemas = problemasDoHorario(data);
 
-  // COGA: Validação temporal
-  const hasTimeConflict = data.endTime !== null && data.endTime < data.startTime;
+  const campos = (
+    rotuloHora: string,
+    rotuloData: string,
+    valor: Date,
+    mudar: (date: Date) => void,
+  ) => (
+    <View
+      className="flex-row gap-3"
+      onLayout={(e) => setLarguraDaFileira(e.nativeEvent.layout.width)}
+    >
+      <View style={{ width: larguraDoCampo }}>
+        <TimeField
+          label={rotuloHora}
+          title="Selecionar horário"
+          value={horarioDe(valor)}
+          initial={horarioDe(valor)}
+          clearable={false}
+          onChange={(horario) => {
+            if (horario) mudar(comHorario(valor, horario));
+          }}
+        />
+      </View>
+      <View style={{ width: larguraDoCampo }}>
+        <DateField label={rotuloData} title="Selecionar data" value={valor} onChange={mudar} />
+      </View>
+    </View>
+  );
 
   return (
-    <View style={styles.container}>
-      <Animated.View entering={reduceMotion ? undefined : FadeInUp.duration(400)} style={styles.content}>
-        <View style={styles.headerRow}>
-          <Text style={[styles.title, { marginBottom: 0 }]} accessibilityRole="header">Horário da crise</Text>
-          <TouchableOpacity 
-            onPress={() => setShowHelp(true)}
-            accessibilityRole="button"
-            accessibilityLabel="Ajuda sobre o horário da crise"
-          >
-            <HelpCircle size={24} color={Colors.muted} />
-          </TouchableOpacity>
+    <View className="gap-6">
+      <Text variant="title">Horário da crise</Text>
+
+      <Secao titulo="Hora de início" iconColor={color.primary}>
+        <View className="flex-row flex-wrap gap-2">
+          {START_PRESETS.map(({ key, label }) => (
+            <Chip
+              key={key}
+              label={label}
+              tone="primary"
+              selected={startPreset === key}
+              onPress={() => handleStartPreset(key)}
+            />
+          ))}
         </View>
+        {campos('Hora de início', 'Data de início', data.startTime, mudarInicio)}
+      </Secao>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Clock size={18} color={Colors.accent} />
-            <Text style={styles.sectionLabel}>Hora de início</Text>
-          </View>
-
-          <View style={styles.dateTimeRow}>
-            <TouchableOpacity
-              style={styles.dateTimeCard}
-              onPress={() => { setPickerMode('date'); setPickerTarget('start'); }}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel={`Data de início: ${formatDate(data.startTime)}. Toque para alterar`}
-            >
-              <View style={styles.dateTimeCardHeader}>
-                <Calendar size={16} color={Colors.accent} />
-                <Text style={styles.dateTimeCardLabel}>Data</Text>
-              </View>
-              <Text style={styles.dateTimeCardValue}>{formatDate(data.startTime)}</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={styles.dateTimeCard}
-              onPress={() => { setPickerMode('time'); setPickerTarget('start'); }}
-              activeOpacity={0.7}
-              accessibilityRole="button"
-              accessibilityLabel={`Hora de início: ${formatTime(data.startTime)}. Toque para alterar`}
-            >
-              <View style={styles.dateTimeCardHeader}>
-                <Clock size={16} color={Colors.accent} />
-                <Text style={styles.dateTimeCardLabel}>Hora</Text>
-              </View>
-              <Text style={styles.dateTimeCardValue}>{formatTime(data.startTime)}</Text>
-            </TouchableOpacity>
-          </View>
-
-          <View style={styles.presetRow} accessibilityRole="radiogroup" accessibilityLabel="Hora de início">
-            {([
-              { key: 'now' as TimePreset, label: 'Agora mesmo' },
-              { key: '1h_ago' as TimePreset, label: 'Há 1 hora' },
-              { key: 'custom' as TimePreset, label: 'Outro' },
-            ]).map(({ key, label }) => (
-              <TouchableOpacity
-                key={key}
-                onPress={() => handleStartPreset(key)}
-                style={[
-                  styles.presetBtn,
-                  startPreset === key && styles.presetBtnActive,
-                ]}
-                accessibilityRole="radio"
-                accessibilityLabel={label}
-                accessibilityState={{ checked: startPreset === key }}
-              >
-                <Text
-                  style={[
-                    styles.presetText,
-                    startPreset === key && styles.presetTextActive,
-                  ]}
-                >
-                  {label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Clock size={18} color={Colors.orange} />
-            <Text style={styles.sectionLabel}>Hora de fim</Text>
-          </View>
-
-          {data.endTime ? (
-            <View style={styles.dateTimeRow}>
-              <TouchableOpacity
-                style={[styles.dateTimeCard, styles.dateTimeCardOrange]}
-                onPress={() => { setPickerMode('date'); setPickerTarget('end'); }}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel={`Data de fim: ${formatDate(data.endTime)}. Toque para alterar`}
-              >
-                <View style={styles.dateTimeCardHeader}>
-                  <Calendar size={16} color={Colors.orange} />
-                  <Text style={[styles.dateTimeCardLabel, { color: Colors.orange }]}>Data</Text>
-                </View>
-                <Text style={styles.dateTimeCardValue}>{formatDate(data.endTime)}</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                style={[styles.dateTimeCard, styles.dateTimeCardOrange]}
-                onPress={() => { setPickerMode('time'); setPickerTarget('end'); }}
-                activeOpacity={0.7}
-                accessibilityRole="button"
-                accessibilityLabel={`Hora de fim: ${formatTime(data.endTime)}. Toque para alterar`}
-              >
-                <View style={styles.dateTimeCardHeader}>
-                  <Clock size={16} color={Colors.orange} />
-                  <Text style={[styles.dateTimeCardLabel, { color: Colors.orange }]}>Hora</Text>
-                </View>
-                <Text style={styles.dateTimeCardValue}>{formatTime(data.endTime)}</Text>
-              </TouchableOpacity>
-            </View>
-          ) : (
-            <View style={styles.ongoingBadge} accessible={true} accessibilityLabel="Crise ainda em andamento">
-              <View style={styles.ongoingDot} />
-              <Text style={styles.ongoingText}>Ainda em curso</Text>
-            </View>
-          )}
-
-          <View style={styles.presetRow} accessibilityRole="radiogroup" accessibilityLabel="Hora de fim">
-            {([
-              { key: 'ongoing' as EndTimePreset, label: 'Ainda em curso' },
-              { key: 'now' as EndTimePreset, label: 'Agora mesmo' },
-              { key: 'custom' as EndTimePreset, label: 'Outro' },
-            ]).map(({ key, label }) => (
-              <TouchableOpacity
-                key={key}
-                onPress={() => handleEndPreset(key)}
-                style={[
-                  styles.presetBtn,
-                  endPreset === key && styles.presetBtnActive,
-                ]}
-                accessibilityRole="radio"
-                accessibilityLabel={label}
-                accessibilityState={{ checked: endPreset === key }}
-              >
-                <Text
-                  style={[
-                    styles.presetText,
-                    endPreset === key && styles.presetTextActive,
-                  ]}
-                >
-                  {label}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-        </View>
-
-        {/* COGA: Aviso visual de conflito temporal */}
-        {hasTimeConflict && (
-          <View style={styles.timeWarning} accessible={true} accessibilityRole="alert">
-            <AlertTriangle size={16} color="#F59E0B" />
-            <Text style={styles.timeWarningText}>
-              Atenção: a hora de fim está antes da hora de início.
-            </Text>
-          </View>
+      <Secao titulo="Hora de fim" iconColor={color.attention} destaque={data.endTime === null}>
+        {data.endTime ? (
+          campos('Hora de fim', 'Data de fim', data.endTime, mudarFim)
+        ) : (
+          <Text weight="semibold" tone="attention" accessibilityLabel="Crise ainda em andamento">
+            • Ainda em curso
+          </Text>
         )}
-      </Animated.View>
-
-      <HelpModal 
-        visible={showHelp} 
-        onClose={() => setShowHelp(false)} 
-        title="Horário da crise" 
-        message="Informe quando a dor começou. Se já passou, defina também o fim." 
-      />
-
-      <Modal
-        visible={pickerTarget !== null}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setPickerTarget(null)}
-      >
-        <View style={styles.modalOverlay}>
-          {pickerMode === 'time' ? (
-            <TimePicker
-              value={
-                pickerTarget === 'end' && data.endTime
-                  ? data.endTime
-                  : data.startTime
-              }
-              onConfirm={handlePickerConfirm}
-              onCancel={() => setPickerTarget(null)}
+        <View className="flex-row flex-wrap gap-2">
+          {END_PRESETS.map(({ key, label }) => (
+            <Chip
+              key={key}
+              label={label}
+              tone="primary"
+              selected={endPreset === key}
+              onPress={() => handleEndPreset(key)}
             />
-          ) : (
-            <DatePicker
-              value={
-                pickerTarget === 'end' && data.endTime
-                  ? data.endTime
-                  : data.startTime
-              }
-              onConfirm={handlePickerConfirm}
-              onCancel={() => setPickerTarget(null)}
-            />
-          )}
+          ))}
         </View>
-      </Modal>
+      </Secao>
+
+      {problemas.inicioNoFuturo ? <Notice icon={TriangleAlert} tone="attention">{AVISO_INICIO_FUTURO}</Notice> : null}
+      {problemas.fimNoFuturo ? <Notice icon={TriangleAlert} tone="attention">{AVISO_FIM_FUTURO}</Notice> : null}
+      {problemas.fimAntesDoInicio ? <Notice icon={TriangleAlert} tone="attention">{AVISO_FIM_ANTES}</Notice> : null}
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'space-between',
-  },
-  content: {
-    flex: 1,
-  },
-  headerRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 20,
-  },
-  title: {
-    fontSize: 26,
-    fontFamily: 'Epilogue_700Bold',
-    color: 'white',
-    marginBottom: 20,
-  },
-  helpText: {
-    fontSize: 14,
-    fontFamily: 'Epilogue_400Regular',
-    color: Colors.muted,
-    marginBottom: 20,
-    lineHeight: 20,
-  },
-  subtitle: {
-    fontSize: 15,
-    fontFamily: 'Epilogue_400Regular',
-    color: Colors.muted,
-    marginBottom: 32,
-  },
-  section: {
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-    borderWidth: 1,
-    borderColor: 'rgba(139,163,167,0.1)',
-  },
-  sectionHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 14,
-  },
-  sectionLabel: {
-    fontSize: 13,
-    fontFamily: 'Epilogue_600SemiBold',
-    color: Colors.muted,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
-  },
-  timeDisplay: {
-    marginBottom: 16,
-  },
-  dateTimeRow: {
-    flexDirection: 'row',
-    gap: 12,
-    marginBottom: 16,
-  },
-  dateTimeCard: {
-    flex: 1,
-    backgroundColor: '#112236',
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: `${Colors.accent}40`,
-    padding: 14,
-    minHeight: 48,
-  },
-  dateTimeCardOrange: {
-    borderColor: `${Colors.orange}40`,
-  },
-  dateTimeCardHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginBottom: 6,
-  },
-  dateTimeCardLabel: {
-    fontSize: 12,
-    fontFamily: 'Epilogue_600SemiBold',
-    color: Colors.accent,
-    textTransform: 'uppercase',
-    letterSpacing: 0.8,
-  },
-  dateTimeCardValue: {
-    fontSize: 20,
-    fontFamily: 'Epilogue_700Bold',
-    color: 'white',
-  },
-  timeDate: {
-    fontSize: 13,
-    fontFamily: 'Epilogue_400Regular',
-    color: Colors.muted,
-    marginBottom: 2,
-  },
-  timeValue: {
-    fontSize: 28,
-    fontFamily: 'Epilogue_700Bold',
-    color: 'white',
-  },
-  ongoingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 16,
-  },
-  ongoingDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: Colors.orange,
-  },
-  ongoingText: {
-    fontSize: 18,
-    fontFamily: 'Epilogue_700Bold',
-    color: Colors.orange,
-  },
-  presetsLabel: {
-    fontSize: 12,
-    fontFamily: 'Epilogue_400Regular',
-    color: Colors.muted,
-    marginBottom: 8,
-  },
-  presetRow: {
-    flexDirection: 'row',
-    gap: 8,
-    flexWrap: 'wrap',
-  },
-  presetBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: '#112236',
-    borderWidth: 1,
-    borderColor: '#1E3A52',
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  presetBtnActive: {
-    backgroundColor: `${Colors.accent}20`,
-    borderColor: Colors.accent,
-  },
-  presetText: {
-    fontSize: 14,
-    fontFamily: 'Epilogue_600SemiBold',
-    color: Colors.muted,
-  },
-  presetTextActive: {
-    color: Colors.accent,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  timeWarning: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: 'rgba(245,158,11,0.12)',
-    borderWidth: 1,
-    borderColor: 'rgba(245,158,11,0.3)',
-  },
-  timeWarningText: {
-    fontSize: 13,
-    fontFamily: 'Epilogue_600SemiBold',
-    color: '#F59E0B',
-    flex: 1,
-  },
-});

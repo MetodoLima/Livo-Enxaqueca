@@ -1,24 +1,19 @@
 import React, { useState, useCallback, useEffect, useRef } from 'react';
-import {
-  View,
-  Text,
-  SafeAreaView,
-  ScrollView,
-  TouchableOpacity,
-  Modal,
-  StyleSheet,
-  AccessibilityInfo,
-} from 'react-native';
-import Animated, { FadeIn } from 'react-native-reanimated';
+import { View, AccessibilityInfo } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
-import { Colors } from '@/constants/Colors';
+import Button from '@/components/ui/Button';
+import Dialog from '@/components/ui/Dialog';
+import Screen from '@/components/ui/Screen';
+import Text from '@/components/ui/Text';
 import { createEmptyCrisis, type CrisisRecord } from '@/types/crisis';
 import { useCrisis } from '@/contexts/CrisisContext';
+import { crisisRepository } from '@/repositories';
 
-import StepHeader, { ProgressBar } from '@/features/crisis/steps/StepHeader';
+import HelpModal from '@/features/crisis/components/HelpModal';
+import StepHeader, { STEP_NAMES } from '@/features/crisis/steps/StepHeader';
 import StepFooter from '@/features/crisis/steps/StepFooter';
-import StepTime from '@/features/crisis/steps/StepTime';
+import StepTime, { problemasDoHorario } from '@/features/crisis/steps/StepTime';
 import StepIntensity from '@/features/crisis/steps/StepIntensity';
 import StepLocation from '@/features/crisis/steps/StepLocation';
 import StepSymptoms from '@/features/crisis/steps/StepSymptoms';
@@ -26,20 +21,55 @@ import StepMedication from '@/features/crisis/steps/StepMedication';
 
 type Step = 1 | 2 | 3 | 4 | 5;
 
-const STEP_NAMES: Record<number, string> = {
-  1: 'Horário',
-  2: 'Intensidade',
-  3: 'Localização',
-  4: 'Sintomas',
-  5: 'Medicamentos',
+interface Ajuda {
+  title: string;
+  message: string;
+  label: string;
+}
+
+const AJUDA: Partial<Record<Step, Ajuda>> = {
+  1: {
+    title: 'Horário da crise',
+    message: 'Informe quando a dor começou. Se já passou, defina também o fim.',
+    label: 'Ajuda sobre o horário da crise',
+  },
+  2: {
+    title: 'Nível da dor',
+    message: 'Use a escala de 0 a 10. Arraste o controle ou toque na barra para posicionar.',
+    label: 'Ajuda sobre o nível da dor',
+  },
+  4: {
+    title: 'Sintomas',
+    message: 'Selecione todos os sintomas que você está sentindo. Toque novamente para desmarcar.',
+    label: 'Ajuda sobre os sintomas',
+  },
+  5: {
+    title: 'Medicamentos',
+    message: 'Se não tomou, toque em "Não tomei nenhum". Você pode adicionar medicamentos personalizados abaixo.',
+    label: 'Ajuda sobre medicamentos',
+  },
 };
 
 const DRAFT_KEY = 'crisis_draft';
+
+function motivoDoBloqueio(step: Step, crisis: CrisisRecord): string | undefined {
+  if (step === 1) {
+    const problemas = problemasDoHorario(crisis);
+    if (problemas.inicioNoFuturo || problemas.fimNoFuturo) {
+      return 'Ajuste o horário: o início e o fim não podem ficar no futuro.';
+    }
+  }
+  if (step === 2 && crisis.intensity === null) return 'Escolha o nível da dor para avançar.';
+  return undefined;
+}
 
 export default function RecordCrisisScreen() {
   const [currentStep, setCurrentStep] = useState<Step>(1);
   const [crisis, setCrisis] = useState<CrisisRecord>(createEmptyCrisis);
   const [showExitModal, setShowExitModal] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
+  const [primeiraCrise, setPrimeiraCrise] = useState(false);
+  const ajudaAutomaticaMostrada = useRef(false);
   const [restored, setRestored] = useState(false);
   const router = useRouter();
   const { saveCrisis } = useCrisis();
@@ -68,6 +98,25 @@ export default function RecordCrisisScreen() {
     if (!restored) return;
     AsyncStorage.setItem(DRAFT_KEY, JSON.stringify({ ...crisis, _step: currentStep })).catch(() => {});
   }, [crisis, currentStep, restored]);
+
+  useEffect(() => {
+    let cancelado = false;
+    crisisRepository
+      .lastEndedAt()
+      .then((ultimoFim) => {
+        if (!cancelado) setPrimeiraCrise(ultimoFim === null);
+      })
+      .catch(() => {});
+    return () => {
+      cancelado = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (currentStep !== 2 || !primeiraCrise || ajudaAutomaticaMostrada.current) return;
+    ajudaAutomaticaMostrada.current = true;
+    setShowHelp(true);
+  }, [currentStep, primeiraCrise]);
 
   const clearDraft = useCallback(() => {
     AsyncStorage.removeItem(DRAFT_KEY).catch(() => {});
@@ -133,151 +182,65 @@ export default function RecordCrisisScreen() {
     }
   };
 
+  const ajuda = AJUDA[currentStep];
+  const motivo = motivoDoBloqueio(currentStep, crisis);
+
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bgDark }}>
-      <View style={styles.headerArea}>
-        <StepHeader
-          currentStep={currentStep}
-          onBack={goBack}
-          onClose={handleClose}
+    <Screen
+      scroll={currentStep !== 2}
+      className="gap-6 pt-4"
+      footer={
+        <StepFooter
+          onBack={currentStep === 1 ? handleClose : goBack}
+          onNext={goNext}
+          disabled={motivo !== undefined}
+          disabledHint={motivo}
         />
-        <ProgressBar currentStep={currentStep} />
-      </View>
-
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={styles.scrollContent}
-        showsVerticalScrollIndicator={false}
-        keyboardShouldPersistTaps="handled"
-      >
-        <Animated.View key={currentStep} entering={FadeIn.duration(300)} style={{ flex: 1 }}>
-          {renderStep()}
-        </Animated.View>
-      </ScrollView>
-
-      <StepFooter
-        onBack={currentStep === 1 ? handleClose : goBack}
-        onNext={goNext}
-        disabled={currentStep === 2 && crisis.intensity === null}
+      }
+    >
+      <StepHeader
+        currentStep={currentStep}
+        onClose={handleClose}
+        onHelp={ajuda ? () => setShowHelp(true) : undefined}
+        helpLabel={ajuda?.label}
       />
 
-      <Modal
+      {renderStep()}
+
+      {ajuda ? (
+        <HelpModal
+          visible={showHelp}
+          onClose={() => setShowHelp(false)}
+          title={ajuda.title}
+          message={ajuda.message}
+        />
+      ) : null}
+
+      <Dialog
         visible={showExitModal}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setShowExitModal(false)}
-      >
-        <View style={styles.modalOverlay}>
-          <View style={styles.modalCard} accessibilityViewIsModal={true}>
-            <Text style={styles.modalEmoji}>⚠️</Text>
-            <Text style={styles.modalTitle} accessibilityRole="header">Sair do registro?</Text>
-            <Text style={styles.modalMessage}>
-              Os dados desta crise não serão salvos.
-            </Text>
-
-            <View style={styles.modalActions}>
-              <TouchableOpacity
-                onPress={() => setShowExitModal(false)}
-                style={styles.modalBtnCancel}
-                accessibilityRole="button"
-                accessibilityLabel="Continuar preenchendo"
-              >
-                <Text style={styles.modalBtnCancelText}>Continuar</Text>
-              </TouchableOpacity>
-
-              <TouchableOpacity
-                onPress={confirmExit}
-                style={styles.modalBtnExit}
-                accessibilityRole="button"
-                accessibilityLabel="Sair sem salvar os dados"
-              >
-                <Text style={styles.modalBtnExitText}>Sair sem salvar</Text>
-              </TouchableOpacity>
-            </View>
+        title="Sair do registro?"
+        onClose={() => setShowExitModal(false)}
+        footer={
+          <View className="flex-row flex-wrap gap-3">
+            <Button
+              title="Continuar"
+              variant="ghost"
+              accessibilityLabel="Continuar preenchendo"
+              onPress={() => setShowExitModal(false)}
+              className="flex-grow"
+            />
+            <Button
+              title="Sair sem salvar"
+              variant="danger"
+              accessibilityLabel="Sair sem salvar os dados"
+              onPress={confirmExit}
+              className="flex-grow"
+            />
           </View>
-        </View>
-      </Modal>
-    </SafeAreaView>
+        }
+      >
+        <Text tone="muted">Os dados desta crise não serão salvos.</Text>
+      </Dialog>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  headerArea: {
-    paddingHorizontal: 24,
-  },
-  scrollContent: {
-    flexGrow: 1,
-    paddingHorizontal: 24,
-    paddingBottom: 24,
-  },
-
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 28,
-  },
-  modalCard: {
-    width: '100%',
-    backgroundColor: '#0D2137',
-    borderRadius: 24,
-    padding: 28,
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#1E3A52',
-  },
-  modalEmoji: {
-    fontSize: 40,
-    marginBottom: 16,
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontFamily: 'Epilogue_700Bold',
-    color: 'white',
-    marginBottom: 8,
-    textAlign: 'center',
-  },
-  modalMessage: {
-    fontSize: 14,
-    fontFamily: 'Epilogue_400Regular',
-    color: Colors.muted,
-    textAlign: 'center',
-    lineHeight: 20,
-    marginBottom: 28,
-  },
-  modalActions: {
-    flexDirection: 'row',
-    gap: 12,
-    width: '100%',
-  },
-  modalBtnCancel: {
-    flex: 1,
-    paddingVertical: 16,
-    borderRadius: 14,
-    backgroundColor: Colors.accent,
-    alignItems: 'center',
-    minHeight: 52,
-    justifyContent: 'center',
-  },
-  modalBtnCancelText: {
-    fontSize: 15,
-    fontFamily: 'Epilogue_700Bold',
-    color: 'white',
-  },
-  modalBtnExit: {
-    flex: 1,
-    paddingVertical: 16,
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#EF4444',
-    alignItems: 'center',
-    minHeight: 52,
-    justifyContent: 'center',
-  },
-  modalBtnExitText: {
-    fontSize: 15,
-    fontFamily: 'Epilogue_600SemiBold',
-    color: '#EF4444',
-  },
-});
