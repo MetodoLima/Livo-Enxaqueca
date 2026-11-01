@@ -155,7 +155,8 @@ usa nada dele. Ele sai quando a última tela migrar.
 
 `Text`, `Button`, `IconButton`, `Screen`, `Card`, `Chip`, `ScreenHeader`, `SectionDivider`,
 `EmptyState`, `LoadingState`, `ErrorState`, `TextField`, `TimeField`, `TimeWheel`,
-`KeyboardAwareScroll`, `Dialog`, `ProgressSteps` e `IconBadge`, em `components/ui/`. Antes de montar
+`KeyboardAwareScroll`, `Dialog`, `ProgressSteps`, `IconBadge`, `OptionCard` e `Notice`, em
+`components/ui/`. Antes de montar
 algo à mão numa tela, veja se uma delas já resolve.
 
 Alguns comportamentos que não aparecem no nome:
@@ -186,6 +187,17 @@ Alguns comportamentos que não aparecem no nome:
   em `returnFocusTo`. O `TimeField` ainda monta o próprio diálogo e deve migrar para o
   `Dialog`.
 - `Card` aceita `surface="raised"`, com fundo `surface-raised`, e `ref`.
+- `Screen` aceita `footer`, um rodapé fixo fora da área rolável, com borda `line` em cima, que
+  respeita a barra de navegação do Android (no mínimo 24 abaixo). Como fica fora da rolagem,
+  nenhum conteúdo fica escondido atrás dele. O cadastro inicial usa; o registro de crise pode
+  migrar para ele.
+- `OptionCard` é a opção selecionável em lista. `mode="radio"` é seleção única e
+  `mode="checkbox"` é múltipla, com o papel e o `accessibilityState.checked` correspondentes.
+  O cartão inteiro é o alvo de toque, e a seleção muda a forma do indicador, não só a cor.
+  Aceita `icon` ou `emoji` à esquerda, `description` e `tag`. Opções de seleção única ficam
+  dentro de uma `View` com `accessibilityRole="radiogroup"`.
+- `Notice` é o aviso em caixa: ícone de 20 e texto `caption` em `content`, sobre o fundo
+  `*-subtle` e a borda do `tone`. `primary` é dica, `attention` é alerta.
 - `TimeWheel` aceita `visibleItems` (3 ou 5) e `onInteraction`, que avisa quando a pessoa
   mexeu na roda. A roda sempre mostra um número, então um valor que a pessoa precisa
   informar só conta como preenchido depois de `onInteraction`: valor que ninguém escolheu

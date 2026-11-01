@@ -1,14 +1,12 @@
-import React, { useState } from 'react';
-import {
-    ScrollView,
-    StatusBar,
-    Text,
-    TouchableOpacity,
-    View,
-} from 'react-native';
+import React, { useRef, useState } from 'react';
+import { View } from 'react-native';
+import Button from '@/components/ui/Button';
+import Dialog from '@/components/ui/Dialog';
+import OptionCard from '@/components/ui/OptionCard';
+import Text from '@/components/ui/Text';
 import { useAuth } from '@/contexts/AuthContext';
+import SetupStep from '@/features/onboarding/SetupStep';
 import { useSetup } from '@/features/onboarding/SetupContext';
-import { SetupBackButton } from '@/components/SetupBackButton';
 import {
     sessionRepository,
     setupRepository,
@@ -20,57 +18,47 @@ import {
 type ImpactLevel = 'none' | 'mild' | 'moderate' | 'high' | 'total' | 'unknown' | null;
 type ActivityStop = 'never' | 'sometimes' | 'often' | 'always' | null;
 
-const TOTAL_STEPS = 9;
-const CURRENT_STEP = 9;
-
 const IMPACT_OPTIONS: {
     value: ImpactLevel;
     label: string;
     sublabel: string;
     emoji: string;
-    color: string;
 }[] = [
         {
             value: 'none',
             label: 'Não afeta minha rotina',
             sublabel: 'Consigo trabalhar, estudar e fazer tudo normalmente',
             emoji: '💪',
-            color: '#00BFA5',
         },
         {
             value: 'mild',
             label: 'Afeta levemente',
             sublabel: 'Fico desconfortável mas consigo continuar',
             emoji: '🙂',
-            color: '#00BFA5',
         },
         {
             value: 'moderate',
             label: 'Preciso reduzir o ritmo',
             sublabel: 'Consigo fazer o essencial mas com dificuldade',
             emoji: '😐',
-            color: '#00BFA5',
         },
         {
             value: 'high',
             label: 'Preciso parar a maioria das atividades',
             sublabel: 'Trabalho, estudos e compromissos ficam prejudicados',
             emoji: '😣',
-            color: '#00BFA5',
         },
         {
             value: 'total',
             label: 'Fico completamente incapacitado',
             sublabel: 'Preciso me isolar, apagar as luzes e ficar na cama',
             emoji: '🤕',
-            color: '#00BFA5',
         },
         {
             value: 'unknown',
             label: 'Não sei avaliar',
             sublabel: 'Varia muito de crise para crise',
             emoji: '🤔',
-            color: '#4A6A82',
         },
     ];
 
@@ -79,12 +67,11 @@ const ACTIVITY_STOP_OPTIONS: {
     label: string;
     sublabel: string;
     emoji: string;
-    color: string;
 }[] = [
-        { value: 'never', label: 'Nunca preciso parar', sublabel: 'Consigo manter minha rotina', emoji: '💪', color: '#00BFA5' },
-        { value: 'sometimes', label: 'Às vezes paro', sublabel: 'Em crises mais fortes', emoji: '⚖️', color: '#00BFA5' },
-        { value: 'often', label: 'Na maioria das crises', sublabel: 'Geralmente preciso descansar', emoji: '🛋️', color: '#00BFA5' },
-        { value: 'always', label: 'Sempre preciso parar tudo', sublabel: 'Toda crise me tira de ação', emoji: '🛑', color: '#00BFA5' },
+        { value: 'never', label: 'Nunca preciso parar', sublabel: 'Consigo manter minha rotina', emoji: '💪' },
+        { value: 'sometimes', label: 'Às vezes paro', sublabel: 'Em crises mais fortes', emoji: '⚖️' },
+        { value: 'often', label: 'Na maioria das crises', sublabel: 'Geralmente preciso descansar', emoji: '🛋️' },
+        { value: 'always', label: 'Sempre preciso parar tudo', sublabel: 'Toda crise me tira de ação', emoji: '🛑' },
     ];
 
 const FIELD_META: Record<string, { passo: number; tipo: string }> = {
@@ -204,6 +191,9 @@ export default function ImpactStep() {
     const [impactLevel, setImpactLevel] = useState<ImpactLevel>(null);
     const [activityStop, setActivityStop] = useState<ActivityStop>(null);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [answersSaved, setAnswersSaved] = useState(false);
+    const [errorVisible, setErrorVisible] = useState(false);
+    const continueRef = useRef<View>(null);
 
     const selectedImpact = IMPACT_OPTIONS.find((o) => o.value === impactLevel) ?? null;
     const isValid = impactLevel !== null && (impactLevel === 'unknown' || activityStop !== null);
@@ -221,12 +211,14 @@ export default function ImpactStep() {
 
         setIsSubmitting(true);
         try {
-            const usuarioId = await userRepository.currentUsuarioId();
-            if (!usuarioId) throw new Error('Perfil do usuário não encontrado na tabela usuarios.');
+            if (!answersSaved) {
+                const usuarioId = await userRepository.currentUsuarioId();
+                if (!usuarioId) throw new Error('Perfil do usuário não encontrado na tabela usuarios.');
 
-            const perguntas = await setupRepository.listQuestions();
-
-            await saveSetupAnswers(finalData, usuarioId, perguntas);
+                const perguntas = await setupRepository.listQuestions();
+                await saveSetupAnswers(finalData, usuarioId, perguntas);
+                setAnswersSaved(true);
+            }
 
             const { error: updateErr } = await sessionRepository.markSetupCompleted();
             if (updateErr) throw new Error(updateErr);
@@ -235,185 +227,74 @@ export default function ImpactStep() {
             await checkSetupStatus();
         } catch (err: any) {
             console.error('[Setup] Erro ao finalizar setup:', err?.message ?? err);
+            setErrorVisible(true);
         } finally {
             setIsSubmitting(false);
         }
     }
 
     return (
-        <View style={{ flex: 1, backgroundColor: '#0D2137' }}>
-            <StatusBar barStyle="light-content" backgroundColor="#0D2137" />
+        <SetupStep
+            step={9}
+            title="O quanto a enxaqueca afeta sua vida?"
+            subtitle="Pense em como você fica durante uma crise típica. Isso define a necessidade de tratamento preventivo."
+            previousRoute="/(setup)/step8"
+            canContinue={isValid}
+            onContinue={handleNext}
+            loading={isSubmitting}
+            continueRef={continueRef}
+        >
+            <View accessibilityRole="radiogroup" className="gap-2">
+                {IMPACT_OPTIONS.map((option) => (
+                    <OptionCard
+                        key={option.value}
+                        label={option.label}
+                        description={option.sublabel}
+                        emoji={option.emoji}
+                        mode="radio"
+                        checked={impactLevel === option.value}
+                        onPress={() => {
+                            setImpactLevel(option.value);
+                            if (option.value === 'unknown') setActivityStop(null);
+                        }}
+                    />
+                ))}
+            </View>
 
-            <ScrollView
-                contentContainerStyle={{ flexGrow: 1, paddingBottom: 40 }}
-                showsVerticalScrollIndicator={false}
-            >
-                <View style={{ paddingHorizontal: 24, paddingTop: 56, paddingBottom: 8 }}>
-                    <SetupBackButton fallbackRoute="/(setup)/step8" />
+            {impactLevel && impactLevel !== 'unknown' && (
+                <View className="gap-3">
+                    <Text variant="heading">Você precisa parar suas atividades durante a crise?</Text>
+                    <Text variant="caption" tone="muted">
+                        Trabalho, estudos, compromissos do dia a dia.
+                    </Text>
 
-                    <View style={{ flexDirection: 'row', gap: 6, marginBottom: 32 }}>
-                        {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-                            <View
-                                key={i}
-                                style={{
-                                    flex: 1,
-                                    height: 4,
-                                    borderRadius: 2,
-                                    backgroundColor: i < CURRENT_STEP ? '#00BFA5' : '#1E3A52',
-                                }}
+                    <View accessibilityRole="radiogroup" className="gap-2">
+                        {ACTIVITY_STOP_OPTIONS.map((option) => (
+                            <OptionCard
+                                key={option.value}
+                                label={option.label}
+                                description={option.sublabel}
+                                emoji={option.emoji}
+                                mode="radio"
+                                checked={activityStop === option.value}
+                                onPress={() => setActivityStop(option.value)}
                             />
                         ))}
                     </View>
-
-                    <Text style={{ fontSize: 12, fontWeight: '600', letterSpacing: 1.5, color: '#00BFA5', textTransform: 'uppercase', marginBottom: 8 }}>
-                        Passo {CURRENT_STEP} de {TOTAL_STEPS} · Impacto
-                    </Text>
-
-                    <Text style={{ fontSize: 26, fontWeight: '700', color: '#FFFFFF', lineHeight: 34, marginBottom: 8 }}>
-                        O quanto a enxaqueca afeta sua vida?
-                    </Text>
-
-                    <Text style={{ fontSize: 15, color: '#7A99B2', lineHeight: 22 }}>
-                        Pense em como você fica durante uma crise típica. Isso define a necessidade de tratamento preventivo.
-                    </Text>
                 </View>
+            )}
 
-                <View style={{ paddingHorizontal: 24, marginTop: 28, gap: 10 }}>
-                    {IMPACT_OPTIONS.map((option) => {
-                        const isSelected = impactLevel === option.value;
-                        const isUnknown = option.value === 'unknown';
-                        return (
-                            <TouchableOpacity
-                                key={option.value}
-                                onPress={() => {
-                                    setImpactLevel(option.value);
-                                    if (isUnknown) setActivityStop(null);
-                                }}
-                                activeOpacity={0.8}
-                                style={{
-                                    backgroundColor: isSelected ? option.color + '18' : '#112236',
-                                    borderWidth: 1.5,
-                                    borderColor: isSelected ? option.color : '#1E3A52',
-                                    borderRadius: 16,
-                                    paddingVertical: 16,
-                                    paddingHorizontal: 18,
-                                    flexDirection: 'row',
-                                    alignItems: 'center',
-                                    gap: 14,
-                                    marginTop: isUnknown ? 8 : 0,
-                                    borderStyle: isUnknown ? 'dashed' : 'solid',
-                                }}
-                            >
-                                <Text style={{ fontSize: 24 }}>{option.emoji}</Text>
-                                <View style={{ flex: 1, gap: 2 }}>
-                                    <Text style={{ fontSize: 15, fontWeight: '600', color: isSelected ? option.color : '#FFFFFF' }}>
-                                        {option.label}
-                                    </Text>
-                                    <Text style={{ fontSize: 13, color: '#4A6A82' }}>
-                                        {option.sublabel}
-                                    </Text>
-                                </View>
-                                <View
-                                    style={{
-                                        width: 22,
-                                        height: 22,
-                                        borderRadius: 11,
-                                        borderWidth: 2,
-                                        borderColor: isSelected ? option.color : '#1E3A52',
-                                        backgroundColor: isSelected ? option.color : 'transparent',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                    }}
-                                >
-                                    {isSelected && (
-                                        <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#FFFFFF' }} />
-                                    )}
-                                </View>
-                            </TouchableOpacity>
-                        );
-                    })}
-                </View>
-
-                {impactLevel && impactLevel !== 'unknown' && (
-                    <View style={{ paddingHorizontal: 24, marginTop: 28 }}>
-                        <Text style={{ fontSize: 15, fontWeight: '600', color: '#FFFFFF', marginBottom: 4 }}>
-                            Você precisa parar suas atividades durante a crise?
-                        </Text>
-                        <Text style={{ fontSize: 13, color: '#7A99B2', marginBottom: 16 }}>
-                            Trabalho, estudos, compromissos do dia a dia.
-                        </Text>
-
-                        <View style={{ gap: 10 }}>
-                            {ACTIVITY_STOP_OPTIONS.map((option) => {
-                                const isSelected = activityStop === option.value;
-                                return (
-                                    <TouchableOpacity
-                                        key={option.value}
-                                        onPress={() => setActivityStop(option.value)}
-                                        activeOpacity={0.8}
-                                        style={{
-                                            backgroundColor: isSelected ? option.color + '18' : '#112236',
-                                            borderWidth: 1.5,
-                                            borderColor: isSelected ? option.color : '#1E3A52',
-                                            borderRadius: 16,
-                                            paddingVertical: 14,
-                                            paddingHorizontal: 18,
-                                            flexDirection: 'row',
-                                            alignItems: 'center',
-                                            gap: 14,
-                                        }}
-                                    >
-                                        <Text style={{ fontSize: 22 }}>{option.emoji}</Text>
-                                        <View style={{ flex: 1, gap: 2 }}>
-                                            <Text style={{ fontSize: 15, fontWeight: '600', color: isSelected ? option.color : '#FFFFFF' }}>
-                                                {option.label}
-                                            </Text>
-                                            <Text style={{ fontSize: 13, color: '#4A6A82' }}>
-                                                {option.sublabel}
-                                            </Text>
-                                        </View>
-                                        <View
-                                            style={{
-                                                width: 22,
-                                                height: 22,
-                                                borderRadius: 11,
-                                                borderWidth: 2,
-                                                borderColor: isSelected ? option.color : '#1E3A52',
-                                                backgroundColor: isSelected ? option.color : 'transparent',
-                                                alignItems: 'center',
-                                                justifyContent: 'center',
-                                            }}
-                                        >
-                                            {isSelected && (
-                                                <View style={{ width: 8, height: 8, borderRadius: 4, backgroundColor: '#FFFFFF' }} />
-                                            )}
-                                        </View>
-                                    </TouchableOpacity>
-                                );
-                            })}
-                        </View>
-                    </View>
-                )}
-
-
-                <View style={{ paddingHorizontal: 24, marginTop: 32 }}>
-                    <TouchableOpacity
-                        onPress={handleNext}
-                        disabled={!isValid || isSubmitting}
-                        style={{
-                            backgroundColor: isValid ? '#00BFA5' : '#1E3A52',
-                            borderRadius: 16,
-                            paddingVertical: 18,
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                        }}
-                    >
-                        <Text style={{ fontSize: 16, fontWeight: '700', color: isValid ? '#FFFFFF' : '#3A5A72', letterSpacing: 0.3 }}>
-                            {isSubmitting ? 'Salvando...' : 'Continuar'}
-                        </Text>
-                    </TouchableOpacity>
-                </View>
-            </ScrollView>
-        </View>
+            <Dialog
+                visible={errorVisible}
+                title="Não foi possível concluir"
+                onClose={() => setErrorVisible(false)}
+                returnFocusTo={continueRef}
+                footer={
+                    <Button title="Entendi" variant="secondary" size="md" onPress={() => setErrorVisible(false)} />
+                }
+            >
+                <Text>Confira sua conexão e tente de novo. Suas respostas continuam salvas nesta tela.</Text>
+            </Dialog>
+        </SetupStep>
     );
 }
