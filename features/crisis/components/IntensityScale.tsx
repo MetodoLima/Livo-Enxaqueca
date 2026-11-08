@@ -39,7 +39,7 @@ const IMAGEM_POR_PAR: Record<number, ImageSourcePropType> = {
   10: require('@/assets/images/crisis/intensity/Insuportave.png'),
 };
 
-function imagemDa(valor: number): ImageSourcePropType {
+export function imagemDa(valor: number): ImageSourcePropType {
   if (valor === 0) return IMAGEM_SEM_DOR;
   return IMAGEM_POR_PAR[Math.ceil(valor / 2) * 2];
 }

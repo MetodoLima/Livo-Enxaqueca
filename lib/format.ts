@@ -22,6 +22,13 @@ export function formatDateTime(date: Date): string {
   });
 }
 
+const DIAS_DA_SEMANA = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+
+export function formatDiaPorExtenso(date: Date): string {
+  const mes = date.toLocaleDateString('pt-BR', { month: 'long' });
+  return `${DIAS_DA_SEMANA[date.getDay()]}, ${date.getDate()} de ${mes}`;
+}
+
 export function formatDuration(start: Date, end: Date | null): string {
   if (!end) return 'Em andamento';
   const diffMs = end.getTime() - start.getTime();

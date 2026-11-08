@@ -9,7 +9,8 @@ export type TextTone =
   | 'secondary'
   | 'attention'
   | 'danger'
-  | 'success';
+  | 'success'
+  | 'canvas';
 
 export type TextWeight = 'regular' | 'semibold' | 'bold';
 
@@ -45,6 +46,7 @@ const TONE: Record<TextTone, string> = {
   attention: 'text-attention',
   danger: 'text-danger',
   success: 'text-success',
+  canvas: 'text-canvas',
 };
 
 export interface TextProps extends NativeTextProps {

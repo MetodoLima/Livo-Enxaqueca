@@ -50,6 +50,14 @@ export function medicationLabel(id: string): string {
   return MEDICATIONS.find((m) => m.id === id)?.label ?? id;
 }
 
+export function locationLabel(id: string): string {
+  return LOCATIONS.find((l) => l.id === id)?.label ?? id;
+}
+
+export function sideLabel(id: string): string {
+  return SIDES.find((s) => s.id === id)?.label ?? id;
+}
+
 export const INTENSITY_CONFIG = [
   { value: 0,  label: 'Sem dor',        sublabel: 'Nenhuma dor',              emoji: '😌', color: painColor['0'] },
   { value: 1,  label: 'Dói um pouco',   sublabel: 'Quase imperceptível',      emoji: '🙂', color: painColor['1'] },

@@ -209,6 +209,8 @@ Alguns comportamentos que não aparecem no nome:
   dentro de uma `View` com `accessibilityRole="radiogroup"`.
 - `Notice` é o aviso em caixa: ícone de 20 e texto `caption` em `content`, sobre o fundo
   `*-subtle` e a borda do `tone`. `primary` é dica, `attention` é alerta.
+- `Text` aceita `tone="canvas"`, para texto sobre fundo sólido claro, como o contador de
+  crises do calendário sobre `danger` (5,91:1).
 - `TimeWheel` aceita `visibleItems` (3 ou 5) e `onInteraction`, que avisa quando a pessoa
   mexeu na roda. A roda sempre mostra um número, então um valor que a pessoa precisa
   informar só conta como preenchido depois de `onInteraction`: valor que ninguém escolheu
@@ -232,6 +234,11 @@ DS4. **Borda decorativa e borda de controle são diferentes.** `line` é para di
 cartão. `line-strong` é para o que precisa ser reconhecido como controle: campo, chip
 selecionável, caixa de seleção. Borda de controle precisa de 3:1.
 
+Exceção: no calendário do Histórico, a borda do dia de hoje usa a cor da dor mais forte do
+dia (`pain-*`) ou `line-strong` quando não há crise. Com `pain-9` e `pain-10`, essa borda fica
+abaixo de 3:1 sobre o `canvas`. O `accessibilityLabel` do dia compensa, porque diz "hoje". O
+dia selecionado usa `primary`, que passa de 3:1.
+
 DS5. **Texto só pelo `Text`.** Proibido `fontSize`, `fontFamily`, `fontWeight` e
 `lineHeight` soltos, e as classes `text-sm`, `text-lg`, `text-[15px]` e `font-epilogue-*`
 direto na tela. Tamanho, peso e cor vêm de `variant`, `weight` e `tone`.
@@ -241,6 +248,11 @@ DS6. **Um botão `primary` por tela.** O resto é `secondary` ou `ghost`.
 DS7. **Tocável é primitiva, com área de 48 ou mais.** Em tela migrada, toque é `Button`,
 `IconButton`, `Chip` ou `Card` com `onPress`. Proibido `TouchableOpacity` e `Pressable`
 direto na tela, e proibido `hitSlop` para compensar alvo pequeno.
+
+Exceção: a grade do calendário do Histórico usa células de 44 de altura e cerca de 44 de
+largura (a largura útil de 312 dividida por 7). Sete colunas de 48 não cabem numa tela de
+360. A célula de 44 passa do mínimo de 24 da WCAG 2.2 AA (critério 2.5.8). O resto da tela,
+inclusive as setas de mês e os filtros, segue a regra de 48.
 
 DS8. **Texto nunca dentro de altura fixa.** Em contêiner que tem texto, use `min-h-*`,
 nunca `h-*` nem `max-h-*`. Proibido `allowFontScaling={false}` e `maxFontSizeMultiplier`.

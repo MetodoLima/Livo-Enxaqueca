@@ -1,27 +1,23 @@
 import { useState, useCallback } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
-  LayoutAnimation,
-  Platform,
-  UIManager,
-} from 'react-native';
-import { ChevronLeft, ChevronRight, AlertCircle } from 'lucide-react-native';
+import { View, LayoutAnimation, Platform, UIManager } from 'react-native';
+import { AlertCircle, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react-native';
 import Animated, { FadeInUp } from 'react-native-reanimated';
-import { Colors } from '@/constants/Colors';
 import Card from '@/components/ui/Card';
-import ScreenBackground from '@/components/ui/ScreenBackground';
+import EmptyState from '@/components/ui/EmptyState';
+import IconButton from '@/components/ui/IconButton';
+import LoadingState from '@/components/ui/LoadingState';
+import Notice from '@/components/ui/Notice';
+import Screen from '@/components/ui/Screen';
+import ScreenHeader from '@/components/ui/ScreenHeader';
+import Text from '@/components/ui/Text';
 import { useCrisisCalendar } from '@/features/crisis/useCrisisCalendar';
 import { useDailyRecordCalendar } from '@/features/daily-record/useDailyRecordCalendar';
-import { intensityColor } from '@/lib/format';
 import type { CalendarTab, TimelineEntry } from '@/features/calendar/types';
 import StuckQueueNotice from '@/features/calendar/components/StuckQueueNotice';
 import CrisisListItem from '@/features/calendar/components/CrisisListItem';
 import DailyRecordListItem from '@/features/calendar/components/DailyRecordListItem';
 import CalendarTabBar from '@/features/calendar/components/CalendarTabBar';
+import CalendarDay from '@/features/calendar/components/CalendarDay';
 import TimelineItem from '@/features/calendar/components/TimelineItem';
 
 if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
@@ -33,6 +29,31 @@ const MONTH_NAMES = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ];
+
+const contar = (n: number, singular: string, plural: string) => `${n} ${n === 1 ? singular : plural}`;
+
+function DiaVazio({ texto }: { texto: string }) {
+  return (
+    <Card padding="sm">
+      <Text tone="muted" className="text-center">
+        {texto}
+      </Text>
+    </Card>
+  );
+}
+
+function Numero({ valor, rotulo }: { valor: string; rotulo: string }) {
+  return (
+    <View className="flex-1 gap-1" accessible accessibilityLabel={`${rotulo}: ${valor}`}>
+      <Text variant="title" className="text-center">
+        {valor}
+      </Text>
+      <Text variant="caption" tone="muted" className="text-center">
+        {rotulo}
+      </Text>
+    </View>
+  );
+}
 
 export default function CalendarScreen() {
   const today = new Date();
@@ -49,6 +70,7 @@ export default function CalendarScreen() {
 
   const daysInMonth = new Date(year, month + 1, 0).getDate();
   const firstWeekday = new Date(year, month, 1).getDay();
+  const nomeDoMes = MONTH_NAMES[month].toLowerCase();
 
   const goToPrevMonth = useCallback(() => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -88,285 +110,174 @@ export default function CalendarScreen() {
     return (all.reduce((a, b) => a + b, 0) / all.length).toFixed(1);
   })();
 
+  const celulas: (number | null)[] = [
+    ...Array.from({ length: firstWeekday }, () => null),
+    ...Array.from({ length: daysInMonth }, (_, i) => i + 1),
+  ];
+  while (celulas.length % 7 !== 0) celulas.push(null);
+  const semanas = Array.from({ length: celulas.length / 7 }, (_, i) => celulas.slice(i * 7, i * 7 + 7));
+
+  const resumoDoDia = [
+    hasCrises ? contar(selectedCrises.length, 'crise', 'crises') : '',
+    hasRegistro ? contar(selectedRegistros.length, 'evento', 'eventos') : '',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+
   return (
-    <ScreenBackground>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ paddingBottom: 140 }}
-        showsVerticalScrollIndicator={false}
-      >
-        <View style={{ paddingHorizontal: 24, paddingTop: 40 }}>
+    <Screen scroll>
+      <ScreenHeader title="Histórico" subtitle="Consulte suas crises e eventos registrados em cada dia." />
 
-          <Text style={{ fontSize: 28, color: 'white', fontFamily: 'Epilogue_300Light', marginBottom: 8 }}>
-            Seu <Text style={{ fontFamily: 'Epilogue_700Bold' }}>Histórico</Text>
-          </Text>
+      <View className="gap-6">
+        <StuckQueueNotice />
 
-          <Text
-            style={{
-              fontSize: 15,
-              color: Colors.muted,
-              fontFamily: 'Epilogue_400Regular',
-              lineHeight: 22,
-              marginBottom: 24,
-            }}
-          >
-            Consulte suas crises e eventos registrados em cada dia.
-          </Text>
+        <View className="gap-2">
+          <View className="flex-row items-center gap-2">
+            <IconButton icon={ChevronLeft} accessibilityLabel="Mês anterior" tone="content" filled onPress={goToPrevMonth} />
+            <Text variant="heading" className="flex-1 text-center" accessibilityLiveRegion="polite">
+              {MONTH_NAMES[month]} {year}
+            </Text>
+            <IconButton icon={ChevronRight} accessibilityLabel="Próximo mês" tone="content" filled onPress={goToNextMonth} />
+          </View>
 
-          <StuckQueueNotice />
-
-          <Card style={{ marginBottom: 24 }}>
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-              <TouchableOpacity
-                onPress={goToPrevMonth}
-                style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: '#1E3A52' }}
-              >
-                <ChevronLeft size={20} color="white" />
-              </TouchableOpacity>
-              <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 16 }}>
-                {MONTH_NAMES[month]} {year}
+          <View className="flex-row" accessibilityElementsHidden importantForAccessibility="no-hide-descendants">
+            {WEEKDAYS.map((d, i) => (
+              <Text key={i} variant="caption" weight="semibold" tone="muted" className="flex-1 text-center">
+                {d}
               </Text>
-              <TouchableOpacity
-                onPress={goToNextMonth}
-                style={{ width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center', backgroundColor: '#1E3A52' }}
-              >
-                <ChevronRight size={20} color="white" />
-              </TouchableOpacity>
-            </View>
+            ))}
+          </View>
 
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
-              {WEEKDAYS.map((d, i) => (
-                <Text key={i} style={{ width: 40, textAlign: 'center', fontSize: 11, color: Colors.muted, fontFamily: 'Epilogue_700Bold' }}>
-                  {d}
-                </Text>
+          {loading ? (
+            <LoadingState label="Carregando o mês…" />
+          ) : (
+            <View className="gap-1">
+              {semanas.map((semana, s) => (
+                <View key={s} className="flex-row">
+                  {semana.map((day, i) => {
+                    if (day === null) return <View key={`vazio-${s}-${i}`} className="min-h-11 flex-1" />;
+
+                    const crises = crisisByDay[day] ?? [];
+                    const eventos = registroByDay[day]?.length ?? 0;
+                    const dorMaxima = crises.length > 0 ? Math.max(...crises.map((c) => c.intensidadeDor ?? 0)) : null;
+                    const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
+                    const rotulo = [
+                      `${day} de ${nomeDoMes}`,
+                      crises.length > 0 ? contar(crises.length, 'crise', 'crises') : '',
+                      dorMaxima !== null ? `dor máxima ${dorMaxima}` : '',
+                      eventos > 0 ? contar(eventos, 'evento', 'eventos') : '',
+                      isToday ? 'hoje' : '',
+                    ]
+                      .filter(Boolean)
+                      .join(', ');
+
+                    return (
+                      <CalendarDay
+                        key={day}
+                        day={day}
+                        accessibilityLabel={rotulo}
+                        crises={crises.length}
+                        dorMaxima={dorMaxima}
+                        temEvento={eventos > 0}
+                        hoje={isToday}
+                        selecionado={selectedDay === day}
+                        onPress={() => handleDayPress(day)}
+                      />
+                    );
+                  })}
+                </View>
               ))}
             </View>
+          )}
 
-            {loading ? (
-              <View style={{ height: 180, alignItems: 'center', justifyContent: 'center' }}>
-                <ActivityIndicator color={Colors.accent} />
-              </View>
-            ) : (
-              <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
-                {Array.from({ length: firstWeekday }).map((_, i) => (
-                  <View key={`empty-${i}`} style={{ width: 40, height: 40, marginBottom: 4 }} />
-                ))}
-
-                {Array.from({ length: daysInMonth }, (_, i) => i + 1).map((day) => {
-                  const hasCrisisDay = !!crisisByDay[day]?.length;
-                  const hasRegistroDay = !!registroByDay[day]?.length;
-                  const crisisCount = crisisByDay[day]?.length ?? 0;
-                  const isSelected = selectedDay === day;
-                  const isToday = day === today.getDate() && month === today.getMonth() && year === today.getFullYear();
-                  const maxIntensity = hasCrisisDay
-                    ? Math.max(...(crisisByDay[day] ?? []).map((c) => c.intensidadeDor ?? 0))
-                    : null;
-                  const crisisColor = maxIntensity !== null ? intensityColor(maxIntensity) : null;
-
-                  return (
-                    <TouchableOpacity
-                      key={day}
-                      onPress={() => handleDayPress(day)}
-                      style={{
-                        width: 40, height: 40,
-                        alignItems: 'center', justifyContent: 'center',
-                        marginBottom: 4, borderRadius: 12,
-                        backgroundColor: isSelected
-                          ? Colors.accent
-                          : hasCrisisDay
-                            ? `${crisisColor}25`
-                            : 'transparent',
-                        borderWidth: isToday && !isSelected ? 1.5 : 0,
-                        borderColor: Colors.accent,
-                      }}
-                    >
-                      <Text style={{
-                        color: isSelected ? 'white' : hasCrisisDay ? crisisColor ?? 'white' : 'white',
-                        fontFamily: isSelected || hasCrisisDay ? 'Epilogue_700Bold' : 'Epilogue_400Regular',
-                        fontSize: 14,
-                      }}>
-                        {day}
-                      </Text>
-
-                      {hasCrisisDay && !isSelected && crisisCount === 1 && (
-                        <View style={{
-                          position: 'absolute', bottom: 3,
-                          width: 4, height: 4, borderRadius: 2,
-                          backgroundColor: crisisColor ?? Colors.accent,
-                        }} />
-                      )}
-
-                      {hasCrisisDay && !isSelected && crisisCount > 1 && (
-                        <View style={{
-                          position: 'absolute', top: 3, right: 3,
-                          width: 14, height: 14, borderRadius: 7,
-                          backgroundColor: crisisColor ?? Colors.accent,
-                          alignItems: 'center', justifyContent: 'center',
-                        }}>
-                          <Text style={{ color: 'white', fontSize: 8, fontFamily: 'Epilogue_700Bold' }}>
-                            {crisisCount}
-                          </Text>
-                        </View>
-                      )}
-
-                      {hasRegistroDay && !isSelected && (
-                        <View style={{
-                          position: 'absolute', bottom: 3, right: 3,
-                          width: 5, height: 5, borderRadius: 2,
-                          backgroundColor: Colors.accent, opacity: 0.8,
-                        }} />
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-            )}
-
-            <View style={{ marginTop: 16, paddingTop: 16, borderTopWidth: 1, borderTopColor: '#1E3A52', flexDirection: 'row', flexWrap: 'wrap', gap: 12 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <View style={{ width: 10, height: 10, borderRadius: 3, backgroundColor: '#EF444430' }} />
-                <Text style={{ fontSize: 10, color: Colors.muted, fontFamily: 'Epilogue_400Regular' }}>Crise</Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <View style={{ width: 8, height: 8, borderRadius: 2, backgroundColor: Colors.accent, opacity: 0.8 }} />
-                <Text style={{ fontSize: 10, color: Colors.muted, fontFamily: 'Epilogue_400Regular' }}>Evento</Text>
-              </View>
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                <View style={{ width: 10, height: 10, borderRadius: 3, borderWidth: 1.5, borderColor: Colors.accent }} />
-                <Text style={{ fontSize: 10, color: Colors.muted, fontFamily: 'Epilogue_400Regular' }}>Hoje</Text>
-              </View>
-            </View>
-          </Card>
-
-          {error && (
-            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, padding: 16, backgroundColor: '#EF444420', borderRadius: 16, marginBottom: 16 }}>
-              <AlertCircle size={16} color="#EF4444" />
-              <Text style={{ color: '#EF4444', fontFamily: 'Epilogue_400Regular', fontSize: 13 }}>
-                Erro ao carregar dados: {error}
+          <View className="flex-row flex-wrap items-center justify-center gap-4 pt-2">
+            <View className="flex-row items-center gap-1">
+              <View className="h-1.5 w-1.5 rounded-full bg-pain-6" />
+              <Text variant="caption" tone="muted">
+                Crise (cor = intensidade)
               </Text>
             </View>
-          )}
-
-          {selectedDay !== null && (
-            <Animated.View entering={FadeInUp.duration(250)}>
-              <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 18, marginBottom: 4 }}>
-                Detalhes do dia
+            <View className="flex-row items-center gap-1">
+              <View className="h-1.5 w-1.5 bg-secondary" />
+              <Text variant="caption" tone="muted">
+                Evento
               </Text>
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-                <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 14 }}>
-                  {selectedDay} de {MONTH_NAMES[month]}
-                </Text>
-                <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 13 }}>
-                  {hasCrises && `${selectedCrises.length} crise${selectedCrises.length > 1 ? 's' : ''}`}
-                  {hasCrises && hasRegistro && ' · '}
-                  {hasRegistro && `${selectedRegistros.length} evento${selectedRegistros.length > 1 ? 's' : ''}`}
-                </Text>
-              </View>
-
-              {(hasCrises || hasRegistro) && (
-                <CalendarTabBar
-                  active={activeTab}
-                  onChange={setActiveTab}
-                  hasCrises={hasCrises}
-                  hasRegistro={hasRegistro}
-                />
-              )}
-
-              {!hasCrises && !hasRegistro ? (
-                <View style={{
-                  padding: 32, borderWidth: 1.5, borderStyle: 'dashed',
-                  borderColor: '#1E3A52', borderRadius: 20, alignItems: 'center',
-                }}>
-                  <Text style={{ fontSize: 28, marginBottom: 8 }}>✨</Text>
-                  <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 14, textAlign: 'center' }}>
-                    Sem dados neste dia
-                  </Text>
-                </View>
-              ) : activeTab === 'todos' ? (
-                timeline.map((entry, i) => (
-                  <TimelineItem key={`${entry.type}-${i}`} entry={entry} index={i} />
-                ))
-              ) : activeTab === 'crises' ? (
-                hasCrises ? (
-                  selectedCrises.map((crisis, i) => (
-                    <CrisisListItem key={crisis.id} crisis={crisis} index={i} />
-                  ))
-                ) : (
-                  <View style={{
-                    padding: 24, borderWidth: 1.5, borderStyle: 'dashed',
-                    borderColor: '#1E3A52', borderRadius: 20, alignItems: 'center',
-                  }}>
-                    <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 14 }}>
-                      Nenhuma crise neste dia
-                    </Text>
-                  </View>
-                )
-              ) : (
-                hasRegistro ? (
-                  selectedRegistros.map((r, i) => (
-                    <DailyRecordListItem key={r.id} registro={r} index={i} />
-                  ))
-                ) : (
-                  <View style={{
-                    padding: 24, borderWidth: 1.5, borderStyle: 'dashed',
-                    borderColor: '#1E3A52', borderRadius: 20, alignItems: 'center',
-                  }}>
-                    <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 14 }}>
-                      Nenhum evento registrado neste dia
-                    </Text>
-                  </View>
-                )
-              )}
-            </Animated.View>
-          )}
-
-          {!loading && totalCrises > 0 && (
-            <Animated.View entering={FadeInUp.duration(300)} style={{ marginTop: selectedDay !== null ? 24 : 0 }}>
-              <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 18, marginBottom: 12 }}>
-                Resumo do mês
+            </View>
+            <View className="flex-row items-center gap-1">
+              <View className="h-2.5 w-2.5 rounded-sm border-[1.5px] border-line-strong" />
+              <Text variant="caption" tone="muted">
+                Hoje
               </Text>
-              <View style={{ flexDirection: 'row', gap: 12, marginBottom: 24 }}>
-                <View style={{ flex: 1, backgroundColor: '#1E3A52', borderRadius: 16, padding: 16, alignItems: 'center' }}>
-                  <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 22 }}>{totalCrises}</Text>
-                  <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 9, marginTop: 2 }}>
-                    Número de crises
-                  </Text>
-                </View>
-                <View style={{ flex: 1, backgroundColor: '#1E3A52', borderRadius: 16, padding: 16, alignItems: 'center' }}>
-                  <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 22 }}>{criseDays}</Text>
-                  <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 9, marginTop: 2 }}>
-                    Número de dias afetados
-                  </Text>
-                </View>
-                {avgIntensity !== null && (
-                  <View style={{ flex: 1, backgroundColor: '#1E3A52', borderRadius: 16, padding: 16, alignItems: 'center' }}>
-                    <Text style={{ color: intensityColor(Math.round(parseFloat(avgIntensity))), fontFamily: 'Epilogue_700Bold', fontSize: 22 }}>
-                      {avgIntensity}
-                    </Text>
-                    <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 9, marginTop: 2 }}>intensidade média das crises</Text>
-                  </View>
-                )}
-              </View>
-            </Animated.View>
-          )}
-
-          {!loading && !error && totalCrises === 0 && Object.keys(registroByDay).length === 0 && selectedDay === null && (
-            <Animated.View entering={FadeInUp.duration(300)} style={{
-              padding: 40, borderWidth: 1.5, borderStyle: 'dashed',
-              borderColor: '#1E3A52', borderRadius: 24, alignItems: 'center',
-            }}>
-              <Text style={{ fontSize: 36, marginBottom: 12 }}>🌿</Text>
-              <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 16, marginBottom: 4 }}>
-                Mês sem registros
-              </Text>
-              <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 13, textAlign: 'center' }}>
-                Nenhuma crise ou evento em {MONTH_NAMES[month]}
-              </Text>
-            </Animated.View>
-          )}
-
+            </View>
+          </View>
         </View>
-      </ScrollView>
-    </ScreenBackground>
+
+        {error ? (
+          <Notice icon={AlertCircle} tone="danger">
+            {`Erro ao carregar dados: ${error}`}
+          </Notice>
+        ) : null}
+
+        {selectedDay !== null ? (
+          <Animated.View entering={FadeInUp.duration(250)} className="gap-3">
+            <View className="gap-1">
+              <Text variant="heading">
+                Detalhes do dia · {selectedDay} de {nomeDoMes}
+              </Text>
+              {resumoDoDia ? (
+                <Text variant="caption" tone="muted">
+                  {resumoDoDia}
+                </Text>
+              ) : null}
+            </View>
+
+            {hasCrises || hasRegistro ? <CalendarTabBar active={activeTab} onChange={setActiveTab} /> : null}
+
+            {!hasCrises && !hasRegistro ? (
+              <DiaVazio texto="Sem dados neste dia" />
+            ) : activeTab === 'todos' ? (
+              timeline.map((entry, i) => <TimelineItem key={`${entry.type}-${i}`} entry={entry} index={i} />)
+            ) : activeTab === 'crises' ? (
+              hasCrises ? (
+                selectedCrises.map((crisis, i) => <CrisisListItem key={crisis.id} crisis={crisis} index={i} />)
+              ) : (
+                <DiaVazio texto="Nenhuma crise neste dia" />
+              )
+            ) : hasRegistro ? (
+              selectedRegistros.map((r, i) => <DailyRecordListItem key={r.id} registro={r} index={i} />)
+            ) : (
+              <DiaVazio texto="Nenhum evento registrado neste dia" />
+            )}
+          </Animated.View>
+        ) : null}
+
+        {!loading && totalCrises > 0 ? (
+          <Animated.View entering={FadeInUp.duration(300)}>
+            <Card padding="sm" className="gap-3">
+              <Text variant="heading">Resumo do mês</Text>
+              <View className="flex-row gap-3">
+                <Numero valor={String(totalCrises)} rotulo="Número de crises" />
+                <Numero valor={String(criseDays)} rotulo="Número de dias afetados" />
+                {avgIntensity !== null ? (
+                  <Numero valor={avgIntensity.replace('.', ',')} rotulo="intensidade média das crises" />
+                ) : null}
+              </View>
+            </Card>
+          </Animated.View>
+        ) : null}
+
+        {!loading && !error && totalCrises === 0 && Object.keys(registroByDay).length === 0 && selectedDay === null ? (
+          <Animated.View entering={FadeInUp.duration(300)}>
+            <Card padding="sm">
+              <EmptyState
+                icon={CalendarDays}
+                title="Mês sem registros"
+                message={`Nenhuma crise ou evento em ${nomeDoMes} de ${year}.`}
+              />
+            </Card>
+          </Animated.View>
+        ) : null}
+      </View>
+    </Screen>
   );
 }
