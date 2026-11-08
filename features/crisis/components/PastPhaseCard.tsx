@@ -1,239 +1,146 @@
-import Card from '@/components/ui/Card';
-import { Colors } from '@/constants/Colors';
-import { tagStyles } from '@/features/crisis/components/tagStyles';
-import {
-  INTENSITY_CONFIG,
-  LOCATIONS,
-  MEDICATIONS,
-  SIDES,
-  SYMPTOMS,
-  type CrisisRecord,
-} from '@/types/crisis';
 import { ChevronDown, Trash2 } from 'lucide-react-native';
-import { useCallback, useState } from 'react';
-import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useRef, useState } from 'react';
+import { Pressable, View } from 'react-native';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import Chip from '@/components/ui/Chip';
+import Dialog from '@/components/ui/Dialog';
+import SectionDivider from '@/components/ui/SectionDivider';
+import Text from '@/components/ui/Text';
+import { color } from '@/constants/Colors';
+import { IntensityMarker } from '@/features/crisis/components/IntensityScale';
+import { LOCATIONS, MEDICATIONS, SIDES, SYMPTOMS, type CrisisRecord } from '@/types/crisis';
 
-export default function PastPhaseCard({
-  phase,
-  index,
-  onDelete,
-}: {
+interface PastPhaseCardProps {
   phase: CrisisRecord;
   index: number;
   onDelete: () => void;
-}) {
+}
+
+const fmtTime = (d: Date) => d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+export default function PastPhaseCard({ phase, index, onDelete }: PastPhaseCardProps) {
   const [expanded, setExpanded] = useState(false);
+  const [confirmando, setConfirmando] = useState(false);
+  const removerRef = useRef<View>(null);
 
-  const confirmDelete = useCallback(() => {
-    Alert.alert(
-      'Remover fase?',
-      `A Fase ${index + 1} será removida do registro.`,
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        { text: 'Remover', style: 'destructive', onPress: onDelete },
-      ],
-    );
-  }, [index, onDelete]);
-
-  const fmtTime = (d: Date) =>
-    d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-
-  const intensityConfig = phase.intensity !== null ? INTENSITY_CONFIG[phase.intensity] : null;
+  const numero = index + 1;
   const locationData = LOCATIONS.find((l) => l.id === phase.location);
   const sideData = SIDES.find((s) => s.id === phase.side);
-  const symptomNames = phase.symptoms
-    .map((id) => SYMPTOMS.find((s) => s.id === id))
-    .filter(Boolean);
-  const medicationNames = phase.medications
-    .map((id) => MEDICATIONS.find((m) => m.id === id))
-    .filter(Boolean);
+  const symptoms = phase.symptoms.map((id) => SYMPTOMS.find((s) => s.id === id)).filter((s) => !!s);
+  const medicationNames = [
+    ...phase.medications.map((id) => MEDICATIONS.find((m) => m.id === id)?.label).filter((m) => !!m),
+    ...phase.customMedications,
+  ];
 
-  const timeRange = `${fmtTime(phase.startTime)} – ${
-    phase.endTime ? fmtTime(phase.endTime) : 'Em andamento'
-  }`;
+  const timeRange = `${fmtTime(phase.startTime)} – ${phase.endTime ? fmtTime(phase.endTime) : 'Em andamento'}`;
+  const local = [locationData?.label, sideData?.label].filter(Boolean).join(' · ');
 
-  const collapsedDetail = [
-    locationData ? `${locationData.emoji} ${locationData.label}` : null,
-    sideData?.label,
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  const remover = () => {
+    setConfirmando(false);
+    onDelete();
+  };
 
   return (
-    <Card className="mb-3">
-      <TouchableOpacity
+    <Card padding="sm">
+      <Pressable
         onPress={() => setExpanded((v) => !v)}
-        activeOpacity={0.7}
-        style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}
         accessibilityRole="button"
-        accessibilityLabel={`Fase ${index + 1}: ${timeRange}${intensityConfig ? `, intensidade ${phase.intensity} de 10` : ''}${collapsedDetail ? `, ${collapsedDetail}` : ''}`}
+        accessibilityLabel={`Fase ${numero}: ${timeRange}${phase.intensity !== null ? `, intensidade ${phase.intensity} de 10` : ''}${local ? `, ${local}` : ''}`}
         accessibilityState={{ expanded }}
-        accessibilityHint={expanded ? 'Toque para colapsar detalhes' : 'Toque para expandir detalhes'}
+        accessibilityHint={expanded ? 'Toque para recolher os detalhes' : 'Toque para ver os detalhes'}
+        className="min-h-12 flex-row items-center gap-3 active:opacity-80"
       >
-        <View style={{ flex: 1 }}>
-          <Text style={phaseStyles.label}>Fase {index + 1}</Text>
-          <Text style={phaseStyles.timeRange}>{timeRange}</Text>
-          {collapsedDetail ? (
-            <Text style={phaseStyles.collapsedDetail}>{collapsedDetail}</Text>
+        <View className="flex-1 gap-1">
+          <Text variant="caption" weight="semibold" tone="muted">
+            Fase {numero}
+          </Text>
+          <Text weight="semibold">{timeRange}</Text>
+          {local ? (
+            <Text variant="caption" tone="muted">
+              {local}
+            </Text>
           ) : null}
         </View>
-        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginLeft: 12 }}>
-          {intensityConfig && (
-            <Text style={[phaseStyles.intensityBadge, { color: intensityConfig.color }]}>
-              {phase.intensity}/10
-            </Text>
-          )}
-          <ChevronDown
-            size={18}
-            color={Colors.muted}
-            style={{ transform: [{ rotate: expanded ? '180deg' : '0deg' }] }}
-          />
+        {phase.intensity !== null ? <IntensityMarker value={phase.intensity} showLabel={false} /> : null}
+        <View style={{ transform: [{ rotate: expanded ? '180deg' : '0deg' }] }}>
+          <ChevronDown size={20} color={color.contentMuted} />
         </View>
-      </TouchableOpacity>
+      </Pressable>
 
-      {expanded && (
-        <View style={phaseStyles.body}>
-          {intensityConfig && (
-            <View style={phaseStyles.row}>
-              <Text style={phaseStyles.rowLabel}>Intensidade</Text>
-              <Text style={[phaseStyles.rowValue, { color: intensityConfig.color }]}>
-                {phase.intensity}/10 · {intensityConfig.label}
+      {expanded ? (
+        <View className="mt-4 gap-4">
+          <SectionDivider />
+          {phase.intensity !== null ? (
+            <View className="gap-1">
+              <Text variant="caption" weight="semibold" tone="muted">
+                Intensidade
               </Text>
+              <IntensityMarker value={phase.intensity} />
             </View>
-          )}
-          {(locationData || sideData) && (
-            <View style={{ flexDirection: 'row', gap: 32, marginBottom: 10 }}>
-              {locationData && (
-                <View>
-                  <Text style={phaseStyles.rowLabel}>Localização</Text>
-                  <Text style={phaseStyles.rowValue}>
-                    {locationData.emoji} {locationData.label}
-                  </Text>
-                </View>
-              )}
-              {sideData && (
-                <View>
-                  <Text style={phaseStyles.rowLabel}>Lado</Text>
-                  <Text style={phaseStyles.rowValue}>{sideData.label}</Text>
-                </View>
-              )}
+          ) : null}
+          {local ? (
+            <View className="gap-1">
+              <Text variant="caption" weight="semibold" tone="muted">
+                Localização
+              </Text>
+              <Text weight="semibold">{local}</Text>
             </View>
-          )}
-          {symptomNames.length > 0 && (
-            <View style={{ marginBottom: 10 }}>
-              <Text style={[phaseStyles.rowLabel, { marginBottom: 6 }]}>Sintomas</Text>
-              <View style={tagStyles.tagRow}>
-                {symptomNames.map(
-                  (s) =>
-                    s && (
-                      <View key={s.id} style={tagStyles.tag}>
-                        <Text style={tagStyles.tagEmoji}>{s.emoji}</Text>
-                        <Text style={tagStyles.tagText}>{s.label}</Text>
-                      </View>
-                    ),
-                )}
-              </View>
-            </View>
-          )}
-          {(medicationNames.length > 0 || phase.customMedications.length > 0) && (
-            <View style={{ marginBottom: 14 }}>
-              <Text style={[phaseStyles.rowLabel, { marginBottom: 6 }]}>Medicamentos</Text>
-              <View style={tagStyles.tagRow}>
-                {medicationNames.map(
-                  (m) =>
-                    m && (
-                      <View key={m.id} style={[tagStyles.tag, { backgroundColor: `${Colors.accent}15` }]}>
-                        <Text style={tagStyles.tagEmoji}>{m.emoji}</Text>
-                        <Text style={[tagStyles.tagText, { color: Colors.accent }]}>{m.label}</Text>
-                      </View>
-                    ),
-                )}
-                {phase.customMedications.map((name) => (
-                  <View key={name} style={[tagStyles.tag, { backgroundColor: `${Colors.accent}15` }]}>
-                    <Text style={tagStyles.tagEmoji}>💊</Text>
-                    <Text style={[tagStyles.tagText, { color: Colors.accent }]}>{name}</Text>
-                  </View>
+          ) : null}
+          {symptoms.length > 0 ? (
+            <View className="gap-2">
+              <Text variant="caption" weight="semibold" tone="muted">
+                Sintomas
+              </Text>
+              <View className="flex-row flex-wrap gap-2">
+                {symptoms.map((s) => (
+                  <Chip key={s.id} label={s.label} />
                 ))}
               </View>
             </View>
-          )}
-
-          <TouchableOpacity
-            onPress={confirmDelete}
-            style={phaseStyles.deleteBtn}
-            accessibilityRole="button"
-            accessibilityLabel={`Remover fase ${index + 1}`}
-            accessibilityHint="Será solicitada confirmação antes de remover"
-          >
-            <Trash2 size={14} color="#EF4444" />
-            <Text style={phaseStyles.deleteBtnText}>Remover esta fase</Text>
-          </TouchableOpacity>
+          ) : null}
+          {medicationNames.length > 0 ? (
+            <View className="gap-1">
+              <Text variant="caption" weight="semibold" tone="muted">
+                Medicamentos
+              </Text>
+              <Text weight="semibold">{medicationNames.join(', ')}</Text>
+            </View>
+          ) : null}
+          <Button
+            ref={removerRef}
+            title="Remover esta fase"
+            variant="danger"
+            size="md"
+            icon={Trash2}
+            accessibilityLabel={`Remover fase ${numero}`}
+            accessibilityHint="Será pedida confirmação antes de remover"
+            onPress={() => setConfirmando(true)}
+            className="self-start"
+          />
         </View>
-      )}
+      ) : null}
+
+      <Dialog
+        visible={confirmando}
+        title="Remover fase?"
+        onClose={() => setConfirmando(false)}
+        returnFocusTo={removerRef}
+        footer={
+          <View className="flex-row flex-wrap gap-3">
+            <Button title="Cancelar" variant="ghost" onPress={() => setConfirmando(false)} className="flex-grow" />
+            <Button
+              title="Remover"
+              variant="danger"
+              accessibilityLabel={`Remover a fase ${numero}`}
+              onPress={remover}
+              className="flex-grow"
+            />
+          </View>
+        }
+      >
+        <Text tone="muted">A Fase {numero} será removida do registro.</Text>
+      </Dialog>
     </Card>
   );
 }
-
-const phaseStyles = StyleSheet.create({
-  label: {
-    fontSize: 12,
-    fontFamily: 'Epilogue_700Bold',
-    color: Colors.muted,
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-    marginBottom: 2,
-  },
-  timeRange: {
-    fontSize: 15,
-    fontFamily: 'Epilogue_600SemiBold',
-    color: 'white',
-  },
-  collapsedDetail: {
-    fontSize: 12,
-    fontFamily: 'Epilogue_400Regular',
-    color: Colors.muted,
-    marginTop: 3,
-  },
-  intensityBadge: {
-    fontSize: 13,
-    fontFamily: 'Epilogue_700Bold',
-  },
-  body: {
-    marginTop: 14,
-    borderTopWidth: 1,
-    borderTopColor: 'rgba(255,255,255,0.06)',
-    paddingTop: 14,
-  },
-  row: {
-    marginBottom: 10,
-  },
-  rowLabel: {
-    fontSize: 12,
-    fontFamily: 'Epilogue_700Bold',
-    color: Colors.muted,
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-  },
-  rowValue: {
-    fontSize: 14,
-    fontFamily: 'Epilogue_600SemiBold',
-    color: 'white',
-    marginTop: 2,
-  },
-  deleteBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    alignSelf: 'flex-start',
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 10,
-    backgroundColor: 'rgba(239,68,68,0.08)',
-    minHeight: 44,
-  },
-  deleteBtnText: {
-    fontSize: 12,
-    fontFamily: 'Epilogue_600SemiBold',
-    color: '#EF4444',
-  },
-});
