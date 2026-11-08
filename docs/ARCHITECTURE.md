@@ -154,16 +154,19 @@ usa nada dele. Ele sai quando a última tela migrar.
 ### Primitivas
 
 `Text`, `Button`, `IconButton`, `Screen`, `Card`, `Chip`, `ScreenHeader`, `SectionDivider`,
-`EmptyState`, `LoadingState`, `ErrorState`, `TextField`, `TimeField`, `TimeWheel`,
+`EmptyState`, `LoadingState`, `ErrorState`, `TextField`, `TimeField`, `DateField`, `TimeWheel`,
 `KeyboardAwareScroll`, `Dialog`, `ProgressSteps`, `IconBadge`, `OptionCard` e `Notice`, em
 `components/ui/`. Antes de montar
 algo à mão numa tela, veja se uma delas já resolve.
 
 Alguns comportamentos que não aparecem no nome:
 
-- `TimeField` é o campo de horário. Mostra "--:--" até ser preenchido e, ao toque, abre um
-  diálogo flutuante sobre `scrim` com o `TimeWheel`. O diálogo só grava em "Confirmar";
-  fechar descarta.
+- `TimeField` é o campo de horário. Mostra "--:--" até ser preenchido e, ao toque, abre o
+  `TimeWheel` num `Dialog`. O diálogo só grava em "Confirmar"; "Cancelar" e fechar descartam.
+  Com `clearable` (o padrão), o diálogo oferece "Limpar horário" quando já há valor.
+- `DateField` é o campo de data. Ao toque, abre um `Dialog` com três colunas, dia, mês e ano,
+  cada uma com setas de 48 e o ajuste do leitor de tela, que lê a data por extenso. O dia se
+  ajusta ao último dia do mês escolhido. Como o `TimeField`, só grava em "Confirmar".
 - `TimeWheel` é a roda circular de hora e minuto. Aceita toque no número vizinho, digitação
   (toque no número do centro) e o ajuste do leitor de tela. Não exige arrastar.
 - `KeyboardAwareScroll` rola o campo em foco para cima do teclado. O `TextField` e o
@@ -179,18 +182,26 @@ Alguns comportamentos que não aparecem no nome:
   A forma vem sempre da prop, nunca de `rounded-*` no `className`, porque não há garantia de
   qual classe vence.
 - `Button` aceita `ref`, para o `Dialog` devolver o foco a ele ao fechar (`returnFocusTo`).
+- `Button` aceita `iconPosition="end"`, que põe o ícone depois do texto, como no "Avançar"
+  do registro de crise. O padrão é `"start"`. Com `iconOnly`, mostra só o ícone e o `title`
+  vira o `accessibilityLabel`, então o nome falado continua existindo. Sem texto, o botão
+  não tem largura própria: a largura vem do `className`, como o `w-24` do voltar no rodapé
+  do registro.
 - `TextField` aceita `accessory`, um elemento dentro do campo, à direita, e `ref`, que aponta
   para o `TextInput`, para a tela levar o foco ao campo com erro.
 - `Dialog` é o diálogo flutuante sobre `scrim`: título, conteúdo e rodapé, tudo dentro da
   área rolável, para os botões continuarem alcançáveis com a fonte do sistema no máximo. Ao
   abrir, o foco do leitor de tela vai para o título; ao fechar, volta para o elemento passado
-  em `returnFocusTo`. O `TimeField` ainda monta o próprio diálogo e deve migrar para o
-  `Dialog`.
+  em `returnFocusTo`. Fecha pelo voltar do Android e tocando no `scrim`.
+- `Dialog` com `posicao="base"` é o painel inferior, o componente BottomSheet da página
+  Components do Figma. Fica preso na base da tela, com os cantos arredondados só em cima,
+  título em `heading` e no mínimo 24 abaixo do rodapé, respeitando a barra de navegação do
+  Android. Com `botaoFechar`, mostra um X de 48 ao lado do título. Não tem gesto de arrastar:
+  fecha pelo X, pelo voltar do Android e pelo `scrim`. As edições da crise em andamento usam.
 - `Card` aceita `surface="raised"`, com fundo `surface-raised`, e `ref`.
 - `Screen` aceita `footer`, um rodapé fixo fora da área rolável, com borda `line` em cima, que
   respeita a barra de navegação do Android (no mínimo 24 abaixo). Como fica fora da rolagem,
-  nenhum conteúdo fica escondido atrás dele. O cadastro inicial usa; o registro de crise pode
-  migrar para ele.
+  nenhum conteúdo fica escondido atrás dele. O cadastro inicial e o registro de crise usam.
 - `OptionCard` é a opção selecionável em lista. `mode="radio"` é seleção única e
   `mode="checkbox"` é múltipla, com o papel e o `accessibilityState.checked` correspondentes.
   O cartão inteiro é o alvo de toque, e a seleção muda a forma do indicador, não só a cor.
@@ -238,6 +249,14 @@ Toda tela migrada é testada com a fonte do sistema no máximo.
 Exceção: a roda do `TimeWheel` precisa de altura fixa por item para encaixar a rolagem, e o
 número usa altura de linha igual à do item para ficar centralizado. Essa altura é a base (48
 ou 64) multiplicada pela escala de fonte do sistema, então cresce junto com o texto.
+
+Exceção: a escala de dor do `IntensityScale` divide a altura disponível em 11 linhas de
+altura fixa, uma por nível, para o toque e o arraste caírem no nível certo. A linha tem no
+máximo 48 e diminui quando falta espaço. O número de cada linha é `caption`. A escala inteira
+é um só controle `adjustable` para o leitor de tela, que fala o nível e o rótulo, e o número
+grande e o rótulo ao lado repetem o valor escolhido. Por isso o número da linha é apoio
+visual, não a única forma de ler o valor. Com a fonte do sistema no máximo e pouco espaço,
+como no painel de edição, o número da linha pode ficar apertado: a confirmar no aparelho.
 
 DS9. **Espaçamento só da lista fechada.** Em `p`, `px`, `py`, `pt`, `pb`, `pl`, `pr`, `m`
 (e variações) e `gap`, os únicos valores aceitos são:

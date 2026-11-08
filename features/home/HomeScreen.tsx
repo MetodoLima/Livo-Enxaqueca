@@ -332,7 +332,7 @@ export default function HomeScreen() {
                   {isTranscribing ? (
                     <ActivityIndicator size="small" color={color.primary} />
                   ) : isRecordingVoice ? (
-                    <StopCircle size={20} color="white" />
+                    <StopCircle size={20} color={color.content} />
                   ) : (
                     <Mic size={20} color={color.primary} />
                   )}

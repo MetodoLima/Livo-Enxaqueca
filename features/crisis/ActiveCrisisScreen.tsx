@@ -1,12 +1,29 @@
+import { Check, ChevronRight, CircleAlert, Clock, Mic, Plus, X, Zap } from 'lucide-react-native';
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from 'react';
+import { AccessibilityInfo, View } from 'react-native';
+import Animated, { FadeInUp, useReducedMotion } from 'react-native-reanimated';
+import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
-import { IntensityEditor, LocationEditor, MedicationsEditor, SymptomsEditor } from '@/features/crisis/components/EditModals';
-import { Colors, color } from '@/constants/Colors';
-import UiText from '@/components/ui/Text';
+import Chip from '@/components/ui/Chip';
+import Dialog from '@/components/ui/Dialog';
+import IconBadge from '@/components/ui/IconBadge';
+import IconButton from '@/components/ui/IconButton';
+import LoadingState from '@/components/ui/LoadingState';
+import Notice from '@/components/ui/Notice';
+import PulsingMic from '@/components/ui/PulsingMic';
+import Screen from '@/components/ui/Screen';
+import SectionDivider from '@/components/ui/SectionDivider';
+import Text from '@/components/ui/Text';
+import TextField from '@/components/ui/TextField';
+import { color } from '@/constants/Colors';
 import { useCrisis } from '@/contexts/CrisisContext';
+import CrisisEmptyState from '@/features/crisis/components/CrisisEmptyState';
+import { IntensityEditor, LocationEditor, MedicationsEditor, SymptomsEditor } from '@/features/crisis/components/EditModals';
+import { IntensityMarker } from '@/features/crisis/components/IntensityScale';
+import PastPhaseCard from '@/features/crisis/components/PastPhaseCard';
+import { useCrisisAiComplement } from '@/hooks/useCrisisAiComplement';
 import { crisisRepository, ehBancoLocalIndisponivel } from '@/repositories';
-import { tagStyles } from '@/features/crisis/components/tagStyles';
 import {
-  INTENSITY_CONFIG,
   LOCATIONS,
   MEDICATIONS,
   SIDES,
@@ -14,44 +31,65 @@ import {
   crisisToMigraineStructured,
   mergeAiResultIntoCrisis,
 } from '@/types/crisis';
-import PulsingMic from '@/components/ui/PulsingMic';
-import { useCrisisAiComplement } from '@/hooks/useCrisisAiComplement';
-import { useRouter } from 'expo-router';
-import { Check, ChevronRight, Clock, Mic, Plus, Send, X, Zap } from 'lucide-react-native';
-import { useEffect, useState } from 'react';
-import {
-  AccessibilityInfo,
-  ActivityIndicator,
-  Alert,
-  Image,
-  ScrollView,
-  StyleSheet,
-  Switch,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  View,
-} from 'react-native';
-import { LOCATION_ICONS } from './steps/StepLocation';
-import ScreenBackground from '@/components/ui/ScreenBackground';
-import Animated, { FadeInUp, useReducedMotion } from 'react-native-reanimated';
-import PastPhaseCard from '@/features/crisis/components/PastPhaseCard';
-import CrisisEmptyState from '@/features/crisis/components/CrisisEmptyState';
+
+const COMPLEMENTO_DISPONIVEL = false;
+
+type Campo = 'intensity' | 'location' | 'symptoms' | 'medications';
+
+const fmtTime = (d: Date) => d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+
+const fmtSecs = (s: number) =>
+  `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+
+interface ItemDoResumoProps {
+  titulo: string;
+  rotuloEditar: string;
+  onEditar: () => void;
+  editarRef: RefObject<View | null>;
+  children: ReactNode;
+}
+
+function ItemDoResumo({ titulo, rotuloEditar, onEditar, editarRef, children }: ItemDoResumoProps) {
+  return (
+    <Card padding="sm">
+      <View className="flex-row items-center gap-3">
+        <View className="flex-1 gap-1">
+          <Text variant="caption" weight="semibold" tone="muted">
+            {titulo}
+          </Text>
+          {children}
+        </View>
+        <Button ref={editarRef} title="Editar" variant="ghost" size="md" accessibilityLabel={rotuloEditar} onPress={onEditar} />
+      </View>
+    </Card>
+  );
+}
+
+function NaoDefinido({ children }: { children: string }) {
+  return <Text tone="muted">{children}</Text>;
+}
 
 export default function ActiveCrisisScreen() {
   const { activeCrisis, phases, updateActiveCrisis, addPhase, removePhase, clearCrisis, hasActiveCrisis, hydrated } = useCrisis();
-  const router = useRouter();
   const reduceMotion = useReducedMotion();
 
-  const [editingField, setEditingField] = useState<
-    'intensity' | 'location' | 'symptoms' | 'medications' | null
-  >(null);
+  const [editingField, setEditingField] = useState<Campo | null>(null);
   const [salvando, setSalvando] = useState(false);
   const [registrada, setRegistrada] = useState(false);
   const [erroAoFinalizar, setErroAoFinalizar] = useState<string | null>(null);
+  const [confirmandoFim, setConfirmandoFim] = useState(false);
+  const [confirmandoFase, setConfirmandoFase] = useState(false);
 
   const [showVoice, setShowVoice] = useState(false);
   const [text, setText] = useState('');
+
+  const finalizarRef = useRef<View>(null);
+  const novaFaseRef = useRef<View>(null);
+  const complementoRef = useRef<View>(null);
+  const intensidadeRef = useRef<View>(null);
+  const localizacaoRef = useRef<View>(null);
+  const sintomasRef = useRef<View>(null);
+  const medicamentosRef = useRef<View>(null);
 
   const {
     useLocalAi,
@@ -73,46 +111,31 @@ export default function ActiveCrisisScreen() {
   const [savedIntensity, setSavedIntensity] = useState<number | null>(null);
   const [ficouNaFila, setFicouNaFila] = useState(false);
 
-  // COGA P0 (achado #14): Confirmação antes de finalizar
-  const handleFinish = () => {
+  const finalizar = async () => {
     if (salvando || !activeCrisis) return;
-    Alert.alert(
-      'Finalizar esta crise?',
-      'Os dados serão salvos permanentemente.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Finalizar',
-          onPress: async () => {
-            setSalvando(true);
-            setErroAoFinalizar(null);
-            try {
-              const crisisToSave = activeCrisis.endTime
-                ? activeCrisis
-                : { ...activeCrisis, endTime: new Date() };
-              const { enviado } = await crisisRepository.save(crisisToSave, phases);
-              setSavedIntensity(activeCrisis.intensity ?? null);
-              setFicouNaFila(!enviado);
-              setRegistrada(true);
-              clearCrisis();
-              AccessibilityInfo.announceForAccessibility('Crise registrada com sucesso!');
-            } catch (e) {
-              setErroAoFinalizar(
-                ehBancoLocalIndisponivel(e)
-                  ? 'Não foi possível salvar agora. Sua crise continua guardada neste aparelho e você pode finalizá-la quando tiver internet.'
-                  : 'Não foi possível salvar a crise. Ela continua guardada neste aparelho. Tente de novo.',
-              );
-              AccessibilityInfo.announceForAccessibility('Erro ao salvar a crise.');
-            } finally {
-              setSalvando(false);
-            }
-          },
-        },
-      ],
-    );
+    setConfirmandoFim(false);
+    setSalvando(true);
+    setErroAoFinalizar(null);
+    try {
+      const crisisToSave = activeCrisis.endTime ? activeCrisis : { ...activeCrisis, endTime: new Date() };
+      const { enviado } = await crisisRepository.save(crisisToSave, phases);
+      setSavedIntensity(activeCrisis.intensity ?? null);
+      setFicouNaFila(!enviado);
+      setRegistrada(true);
+      clearCrisis();
+      AccessibilityInfo.announceForAccessibility('Crise registrada com sucesso!');
+    } catch (e) {
+      setErroAoFinalizar(
+        ehBancoLocalIndisponivel(e)
+          ? 'Não foi possível salvar agora. Sua crise continua guardada neste aparelho e você pode finalizá-la quando tiver internet.'
+          : 'Não foi possível salvar a crise. Ela continua guardada neste aparelho. Tente de novo.',
+      );
+      AccessibilityInfo.announceForAccessibility('Erro ao salvar a crise.');
+    } finally {
+      setSalvando(false);
+    }
   };
 
-  // COGA (achado #25): Auto-dismiss aumentado de 1.5s para 3s
   useEffect(() => {
     if (!registrada) return;
     const timer = setTimeout(() => {
@@ -138,14 +161,14 @@ export default function ActiveCrisisScreen() {
         <View className="h-12 w-12 items-center justify-center rounded-md bg-success-subtle">
           <Check size={24} color={color.success} />
         </View>
-        <UiText variant="title" className="text-center">Crise registrada!</UiText>
-        <UiText tone="muted" className="text-center">
+        <Text variant="title" className="text-center">Crise registrada!</Text>
+        <Text tone="muted" className="text-center">
           {ficouNaFila
             ? 'Salva no aparelho. Será enviada quando houver internet.'
             : savedIntensity != null
             ? `Intensidade ${savedIntensity}/10`
             : 'Registro salvo com sucesso.'}
-        </UiText>
+        </Text>
       </View>
     );
   }
@@ -155,20 +178,15 @@ export default function ActiveCrisisScreen() {
   if (!hasActiveCrisis || !activeCrisis) return <CrisisEmptyState />;
 
   const crisis = activeCrisis;
-  const intensityConfig = crisis.intensity !== null ? INTENSITY_CONFIG[crisis.intensity] : null;
   const locationData = LOCATIONS.find((l) => l.id === crisis.location);
   const sideData = SIDES.find((s) => s.id === crisis.side);
-  const symptomNames = crisis.symptoms
-    .map((id) => SYMPTOMS.find((s) => s.id === id))
-    .filter(Boolean);
-  const medicationNames = crisis.medications
-    .map((id) => MEDICATIONS.find((m) => m.id === id))
-    .filter(Boolean);
-
-  const fmtTime = (d: Date) =>
-    d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-  const fmtSecs = (s: number) =>
-    `${String(Math.floor(s / 60)).padStart(2, '0')}:${String(s % 60).padStart(2, '0')}`;
+  const local = [locationData?.label, sideData?.label].filter(Boolean).join(' · ');
+  const symptoms = crisis.symptoms.map((id) => SYMPTOMS.find((s) => s.id === id)).filter((s) => !!s);
+  const medicationNames = [
+    ...crisis.medications.map((id) => MEDICATIONS.find((m) => m.id === id)?.label).filter((m) => !!m),
+    ...crisis.customMedications,
+  ];
+  const intensityLabel = crisis.intensity !== null ? `${crisis.intensity} de 10` : 'não definida';
 
   const stopAndProcess = async () => {
     AccessibilityInfo.announceForAccessibility('Analisando seu áudio...');
@@ -204,427 +222,326 @@ export default function ActiveCrisisScreen() {
     AccessibilityInfo.announceForAccessibility('Detalhes adicionados com sucesso!');
   };
 
+  const fecharComplemento = () => {
+    setShowVoice(false);
+    if (isRecording) cancelRecording();
+  };
+
   const getDuration = () => {
     if (!crisis.endTime) return 'Em andamento';
     const diff = crisis.endTime.getTime() - crisis.startTime.getTime();
     const mins = Math.round(diff / 60000);
-    if (mins < 60) return `${mins}m`;
-    return `${Math.floor(mins / 60)}h ${mins % 60}m`;
+    if (mins < 60) return `${mins}min`;
+    return `${Math.floor(mins / 60)}h ${mins % 60}min`;
   };
 
-  // COGA P1 (achado #17): Confirmação antes de registrar nova fase
-  const handleAddPhase = () => {
-    Alert.alert(
-      'Registrar nova fase?',
-      'A fase atual será salva e os campos serão reiniciados para a nova fase.',
-      [
-        { text: 'Cancelar', style: 'cancel' },
-        {
-          text: 'Salvar e continuar',
-          onPress: () => {
-            addPhase();
-            AccessibilityInfo.announceForAccessibility(
-              `Fase ${phases.length + 1} salva. Preencha os dados da nova fase.`
-            );
-          },
-        },
-      ],
-    );
+  const registrarFase = () => {
+    setConfirmandoFase(false);
+    addPhase();
+    AccessibilityInfo.announceForAccessibility(`Fase ${phases.length + 1} salva. Preencha os dados da nova fase.`);
   };
 
   const currentPhaseNumber = phases.length + 1;
-
-  const anim = (delay: number) => reduceMotion ? undefined : FadeInUp.delay(delay);
+  const structured = crisis.aiComplement?.aiResult?.structured;
+  const gatilhos = crisis.triggers;
+  const mostrarAnalise = !!structured?.resumo || gatilhos.length > 0;
 
   return (
-    <ScreenBackground>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 120, paddingHorizontal: 24 }}
-        showsVerticalScrollIndicator={true}
-      >
-        <View style={styles.header}>
-          <Text style={styles.headerTitle} accessibilityRole="header">Resumo da crise</Text>
-          <TouchableOpacity
-            onPress={handleFinish}
-            disabled={salvando}
-            style={[styles.finishBtn, salvando && { opacity: 0.6 }]}
-            accessibilityRole="button"
-            accessibilityLabel="Finalizar e salvar esta crise"
-            accessibilityState={{ disabled: salvando }}
-            accessibilityHint="Será solicitada confirmação"
-          >
-            {salvando
-              ? <ActivityIndicator size="small" color={Colors.accent} />
-              : <Text style={styles.finishBtnText}>Finalizar</Text>}
-          </TouchableOpacity>
-        </View>
+    <Screen scroll className="pt-6">
+      <Animated.View entering={reduceMotion ? undefined : FadeInUp}>
+        <View className="gap-4">
+          <View className="flex-row items-center gap-3">
+            <Text variant="title" className="flex-1">
+              Resumo da crise
+            </Text>
+            <Button
+              ref={finalizarRef}
+              title="Finalizar"
+              size="md"
+              icon={Check}
+              loading={salvando}
+              accessibilityLabel="Finalizar e salvar esta crise"
+              accessibilityHint="Será pedida confirmação"
+              onPress={() => setConfirmandoFim(true)}
+            />
+          </View>
 
-        {erroAoFinalizar && (
-          <Text style={[styles.errorText, { marginBottom: 16 }]} accessibilityRole="alert">{erroAoFinalizar}</Text>
-        )}
+          {erroAoFinalizar ? <Notice icon={CircleAlert} tone="danger">{erroAoFinalizar}</Notice> : null}
 
-        {phases.length > 0 && (
-          <Animated.View entering={anim(50)}>
-            {phases.map((phase, i) => (
-              <PastPhaseCard key={i} phase={phase} index={i} onDelete={() => removePhase(i)} />
-            ))}
-            <View style={styles.phaseDivider}>
-              <View style={styles.phaseDividerLine} />
-              <Text style={styles.phaseDividerLabel}>Fase {currentPhaseNumber}</Text>
-              <View style={styles.phaseDividerLine} />
-            </View>
-          </Animated.View>
-        )}
+          {phases.map((phase, i) => (
+            <PastPhaseCard key={i} phase={phase} index={i} onDelete={() => removePhase(i)} />
+          ))}
 
-        <Animated.View entering={anim(100)}>
-          <Card
-            className="mb-4"
-            accessibilityLabel={`Hora de início: ${fmtTime(crisis.startTime)}. Duração: ${getDuration()}`}
-          >
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-              <View>
-                <Text style={styles.cardLabel}>Hora de início</Text>
-                <Text style={styles.cardValue}>{fmtTime(crisis.startTime)}</Text>
-              </View>
-              <View style={{ alignItems: 'flex-end' }}>
-                <Text style={styles.cardLabel}>Duração</Text>
-                <Text style={[styles.cardValue, { color: crisis.endTime ? Colors.accent : Colors.orange }]}>
-                  {getDuration()}
-                </Text>
-              </View>
-            </View>
-            {!crisis.endTime && (
-              <TouchableOpacity
-                onPress={() => updateActiveCrisis({ endTime: new Date() })}
-                style={styles.endCrisisBtn}
-                accessibilityRole="button"
-                accessibilityLabel="Definir hora de fim como agora"
-              >
-                <Clock size={16} color={Colors.orange} />
-                <Text style={styles.endCrisisBtnText}>Definir hora de fim</Text>
-              </TouchableOpacity>
-            )}
-            {/* COGA P1 (achado #15): Opção de desfazer hora de fim */}
-            {crisis.endTime && (
-              <TouchableOpacity
-                onPress={() => updateActiveCrisis({ endTime: null })}
-                style={styles.undoEndBtn}
-                accessibilityRole="button"
-                accessibilityLabel="Remover hora de fim e voltar para em andamento"
-              >
-                <X size={14} color={Colors.muted} />
-                <Text style={styles.undoEndBtnText}>Remover hora de fim</Text>
-              </TouchableOpacity>
-            )}
-          </Card>
-        </Animated.View>
-
-        <Animated.View entering={anim(200)}>
-          <Card
-            className="mb-4"
-            onPress={() => setEditingField('intensity')}
-            accessibilityLabel={`Intensidade: ${crisis.intensity !== null ? `${crisis.intensity} de 10, ${intensityConfig?.label ?? ''}` : 'não definida'}. Toque para editar`}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-              <View style={[styles.iconBox, { backgroundColor: `${intensityConfig?.color ?? Colors.muted}20` }]}>
-                <Zap size={20} color={intensityConfig?.color ?? Colors.muted} fill={intensityConfig?.color ?? Colors.muted} />
-              </View>
-              <View style={{ marginLeft: 12, flex: 1 }}>
-                <Text style={styles.cardLabel}>Intensidade</Text>
-                <Text style={[styles.cardValue, { color: intensityConfig?.color ?? 'white' }]}>
-                  {crisis.intensity !== null ? `${crisis.intensity}/10` : '–'}
-                  {intensityConfig?.label ? (
-                    <Text style={{ fontSize: 14 }}> · {intensityConfig.label}</Text>
-                  ) : null}
-                </Text>
-              </View>
-              <ChevronRight size={18} color={Colors.muted} importantForAccessibility="no" />
-            </View>
-          </Card>
-        </Animated.View>
-
-        <Animated.View entering={anim(300)}>
-          <TouchableOpacity
-            onPress={() => setEditingField('location')}
-            activeOpacity={0.7}
-            style={{ flexDirection: 'row', gap: 12, marginBottom: 16 }}
-            accessibilityRole="button"
-            accessibilityLabel={`Localização: ${locationData?.label ?? 'não definida'}. Lado: ${sideData?.label ?? 'não definido'}. Toque para editar`}
-          >
-            <Card style={{ flex: 1 }}>
-              <Text style={styles.cardLabel}>Localização</Text>
-              {locationData ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 6 }}>
-                  {LOCATION_ICONS[locationData.id] ? (
-                    <Image
-                      source={LOCATION_ICONS[locationData.id]}
-                      style={{ width: 24, height: 24 }}
-                      resizeMode="contain"
-                    />
-                  ) : (
-                    <Text style={{ fontSize: 22 }}>{locationData.emoji}</Text>
-                  )}
-                  <Text style={styles.smallValue}>{locationData.label}</Text>
-                </View>
-              ) : (
-                <View style={styles.editHint}>
-                  <Text style={styles.editHintText}>Editar</Text>
-                </View>
-              )}
-            </Card>
-            <Card style={{ flex: 1 }}>
-              <Text style={styles.cardLabel}>Lado</Text>
-              {sideData ? (
-                <Text style={[styles.smallValue, { marginTop: 6 }]}>{sideData.label}</Text>
-              ) : (
-                <View style={styles.editHint}>
-                  <Text style={styles.editHintText}>Editar</Text>
-                </View>
-              )}
-            </Card>
-          </TouchableOpacity>
-        </Animated.View>
-
-        <Animated.View entering={anim(400)}>
-          <Card
-            className="mb-4"
-            onPress={() => setEditingField('symptoms')}
-            accessibilityLabel={`Sintomas: ${symptomNames.length > 0 ? symptomNames.map(s => s?.label).filter(Boolean).join(', ') : 'nenhum selecionado'}. Toque para editar`}
-          >
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={[styles.cardLabel, { marginBottom: 10 }]}>Sintomas</Text>
-              <ChevronRight size={16} color={Colors.muted} style={{ marginBottom: 6 }} importantForAccessibility="no" />
-            </View>
-            {symptomNames.length > 0 ? (
-              <View style={tagStyles.tagRow}>
-                {symptomNames.map((s) => s && (
-                  <View key={s.id} style={tagStyles.tag}>
-                    <Text style={tagStyles.tagEmoji}>{s.emoji}</Text>
-                    <Text style={tagStyles.tagText}>{s.label}</Text>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <View style={styles.editHint}>
-                <Text style={styles.editHintText}>Editar</Text>
-              </View>
-            )}
-          </Card>
-        </Animated.View>
-
-        <Animated.View entering={anim(450)}>
-          <Card
-            className="mb-4"
-            onPress={() => setEditingField('medications')}
-            accessibilityLabel={`Medicamentos: ${(medicationNames.length > 0 || crisis.customMedications.length > 0) ? [...medicationNames.map(m => m?.label), ...crisis.customMedications].filter(Boolean).join(', ') : 'nenhum selecionado'}. Toque para editar`}
-          >
-            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-              <Text style={[styles.cardLabel, { marginBottom: 10 }]}>Medicamentos</Text>
-              <ChevronRight size={16} color={Colors.muted} style={{ marginBottom: 6 }} importantForAccessibility="no" />
-            </View>
-            {(medicationNames.length > 0 || crisis.customMedications.length > 0) ? (
-              <View style={tagStyles.tagRow}>
-                {medicationNames.map((m) => m && (
-                  <View key={m.id} style={[tagStyles.tag, { backgroundColor: `${Colors.accent}15` }]}>
-                    <Text style={tagStyles.tagEmoji}>{m.emoji}</Text>
-                    <Text style={[tagStyles.tagText, { color: Colors.accent }]}>{m.label}</Text>
-                  </View>
-                ))}
-                {crisis.customMedications.map((name) => (
-                  <View key={name} style={[tagStyles.tag, { backgroundColor: `${Colors.accent}15` }]}>
-                    <Text style={tagStyles.tagEmoji}>💊</Text>
-                    <Text style={[tagStyles.tagText, { color: Colors.accent }]}>{name}</Text>
-                  </View>
-                ))}
-              </View>
-            ) : (
-              <View style={styles.editHint}>
-                <Text style={styles.editHintText}>Editar</Text>
-              </View>
-            )}
-          </Card>
-        </Animated.View>
-
-        <Animated.View entering={anim(500)}>
-          <TouchableOpacity
-            onPress={handleAddPhase}
-            style={styles.addPhaseBtn}
-            activeOpacity={0.75}
-            accessibilityRole="button"
-            accessibilityLabel="Registrar nova fase da crise"
-            accessibilityHint="Salva a fase atual e permite registrar uma nova"
-          >
-            <View style={styles.addPhaseIconCircle}>
-              <Plus size={18} color={Colors.purple} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <Text style={styles.addPhaseTitle}>Registrar nova fase</Text>
-              <Text style={styles.addPhaseSub}>
-                {phases.length === 0
-                  ? 'A dor mudou? Salve este momento e atualize'
-                  : `Fase ${currentPhaseNumber} em andamento · toque para registrar outra`}
+          <View className="flex-row gap-3">
+            <Card padding="sm" className="flex-1 gap-1">
+              <Text variant="caption" weight="semibold" tone="muted">
+                Hora de início
               </Text>
-            </View>
-            <ChevronRight size={18} color={`${Colors.purple}60`} importantForAccessibility="no" />
-          </TouchableOpacity>
-        </Animated.View>
+              <Text variant="heading">{fmtTime(crisis.startTime)}</Text>
+            </Card>
+            <Card padding="sm" className="flex-1 gap-1">
+              <Text variant="caption" weight="semibold" tone="muted">
+                Duração
+              </Text>
+              <Text variant="heading" tone={crisis.endTime ? 'content' : 'attention'}>
+                {getDuration()}
+              </Text>
+            </Card>
+          </View>
 
-        {(() => {
-          const structured = crisis.aiComplement?.aiResult?.structured;
-          const gatilhos = crisis.triggers;
-          if (!structured?.resumo && gatilhos.length === 0) return null;
-          return (
-            <Animated.View entering={anim(560)}>
-              <Card className="mb-4" variant="accent-border">
-                <Text style={styles.cardLabel}>Análise da IA</Text>
-                {structured?.resumo && (
-                  <Text style={styles.aiSummary}>{structured.resumo}</Text>
-                )}
-                {gatilhos.length > 0 && (
-                  <View style={{ marginTop: structured?.resumo ? 14 : 4 }}>
-                    <Text style={[styles.cardLabel, { marginBottom: 8 }]}>Possíveis gatilhos</Text>
-                    {gatilhos.map((g, i) => (
-                      <View key={i} style={styles.gatilhoRow}>
-                        <Zap size={13} color={Colors.orange} style={{ marginRight: 6 }} />
-                        <Text style={styles.gatilhoText}>{g}</Text>
-                        <TouchableOpacity
-                          onPress={() =>
-                            updateActiveCrisis({
-                              triggers: crisis.triggers.filter((_, idx) => idx !== i),
-                            })
-                          }
-                          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                          accessibilityRole="button"
-                          accessibilityLabel={`Remover gatilho: ${g}`}
-                        >
-                          <X size={14} color={Colors.muted} />
-                        </TouchableOpacity>
-                      </View>
-                    ))}
-                  </View>
-                )}
-              </Card>
-            </Animated.View>
-          );
-        })()}
-
-        <Animated.View entering={anim(620)}>
-          {!showVoice ? (
-            <TouchableOpacity
-              onPress={() => setShowVoice(true)}
-              style={styles.voiceEntryBtn}
-              accessibilityRole="button"
-              accessibilityLabel="Adicionar mais detalhes por voz ou texto"
-            >
-              <Mic size={22} color={Colors.accent} />
-              <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={styles.voiceEntryTitle}>Adicionar mais detalhes</Text>
-                <Text style={styles.voiceEntrySub}>Por voz ou texto</Text>
-              </View>
-              <ChevronRight size={20} color={Colors.muted} importantForAccessibility="no" />
-            </TouchableOpacity>
+          {crisis.endTime ? (
+            <Button
+              title="Remover hora de fim"
+              variant="ghost"
+              size="md"
+              icon={X}
+              accessibilityLabel="Remover hora de fim e voltar para em andamento"
+              onPress={() => updateActiveCrisis({ endTime: null })}
+            />
           ) : (
-            <Card className="mb-4">
-              <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 16 }}>
-                <Text style={[styles.cardLabel, { marginBottom: 0 }]}>Complementar registro</Text>
-                <TouchableOpacity
-                  onPress={() => { setShowVoice(false); if (isRecording) cancelRecording(); }}
-                  accessibilityRole="button"
-                  accessibilityLabel="Fechar painel de complemento"
-                >
-                  <X size={20} color={Colors.muted} />
-                </TouchableOpacity>
-              </View>
+            <Button
+              title="Definir hora de fim"
+              variant="secondary"
+              size="md"
+              icon={Clock}
+              accessibilityLabel="Definir hora de fim como agora"
+              onPress={() => updateActiveCrisis({ endTime: new Date() })}
+            />
+          )}
 
-              {isProcessing ? (
-                <View style={{ alignItems: 'center', paddingVertical: 24 }} accessible={true} accessibilityLabel="Analisando seus dados. Aguarde.">
-                  <ActivityIndicator size="large" color={Colors.accent} />
-                  <Text style={[styles.cardLabel, { marginTop: 12, textAlign: 'center' }]}>
-                    {stageLabel ?? 'Analisando...'}
+          <SectionDivider label={`Fase ${currentPhaseNumber}`} />
+
+          <ItemDoResumo
+            titulo="Intensidade"
+            rotuloEditar={`Editar intensidade, atual ${intensityLabel}`}
+            onEditar={() => setEditingField('intensity')}
+            editarRef={intensidadeRef}
+          >
+            {crisis.intensity !== null ? (
+              <IntensityMarker value={crisis.intensity} />
+            ) : (
+              <NaoDefinido>Não definida</NaoDefinido>
+            )}
+          </ItemDoResumo>
+
+          <ItemDoResumo
+            titulo="Localização"
+            rotuloEditar={`Editar localização, atual ${local || 'não definida'}`}
+            onEditar={() => setEditingField('location')}
+            editarRef={localizacaoRef}
+          >
+            {local ? <Text weight="semibold">{local}</Text> : <NaoDefinido>Não definida</NaoDefinido>}
+          </ItemDoResumo>
+
+          <ItemDoResumo
+            titulo="Sintomas"
+            rotuloEditar="Editar sintomas"
+            onEditar={() => setEditingField('symptoms')}
+            editarRef={sintomasRef}
+          >
+            {symptoms.length > 0 ? (
+              <View className="flex-row flex-wrap gap-2">
+                {symptoms.map((s) => (
+                  <Chip key={s.id} label={s.label} />
+                ))}
+              </View>
+            ) : (
+              <NaoDefinido>Nenhum selecionado</NaoDefinido>
+            )}
+          </ItemDoResumo>
+
+          <ItemDoResumo
+            titulo="Medicamentos"
+            rotuloEditar="Editar medicamentos"
+            onEditar={() => setEditingField('medications')}
+            editarRef={medicamentosRef}
+          >
+            {medicationNames.length > 0 ? (
+              <Text weight="semibold">{medicationNames.join(', ')}</Text>
+            ) : (
+              <NaoDefinido>Nenhum selecionado</NaoDefinido>
+            )}
+          </ItemDoResumo>
+
+          <Card
+            ref={novaFaseRef}
+            padding="sm"
+            onPress={() => setConfirmandoFase(true)}
+            accessibilityLabel="Registrar nova fase da crise. Salva a fase atual e começa uma nova."
+          >
+            <View className="flex-row items-center gap-3">
+              <IconBadge icon={Plus} tone="primary" />
+              <View className="flex-1 gap-1">
+                <Text weight="semibold">Registrar nova fase</Text>
+                <Text variant="caption" tone="muted">
+                  Salva a fase atual e começa uma nova
+                </Text>
+              </View>
+              <ChevronRight size={20} color={color.contentMuted} />
+            </View>
+          </Card>
+
+          {mostrarAnalise ? (
+            <Card padding="sm" variant="accent-border" className="gap-3">
+              <Text variant="caption" weight="semibold" tone="muted">
+                Análise da IA
+              </Text>
+              {structured?.resumo ? <Text>{structured.resumo}</Text> : null}
+              {gatilhos.length > 0 ? (
+                <View className="gap-1">
+                  <Text variant="caption" weight="semibold" tone="muted">
+                    Possíveis gatilhos
                   </Text>
-                </View>
-              ) : (
-                <>
-                  {onDeviceAvailable && (
-                    <View style={styles.localAiRow}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={styles.localAiLabel}>IA local (beta)</Text>
-                        <Text style={styles.localAiHint}>
-                          {useLocalAi ? 'Processa no aparelho, sem enviar dados' : 'Processa no servidor'}
-                        </Text>
-                      </View>
-                      <Switch
-                        value={useLocalAi}
-                        onValueChange={toggleLocalAi}
-                        trackColor={{ false: 'rgba(139,163,167,0.3)', true: Colors.accent }}
+                  {gatilhos.map((g, i) => (
+                    <View key={i} className="flex-row items-center gap-2">
+                      <Zap size={16} color={color.attention} />
+                      <Text className="flex-1">{g}</Text>
+                      <IconButton
+                        icon={X}
+                        accessibilityLabel={`Remover gatilho: ${g}`}
+                        onPress={() =>
+                          updateActiveCrisis({
+                            triggers: crisis.triggers.filter((_, idx) => idx !== i),
+                          })
+                        }
                       />
                     </View>
-                  )}
-
-                  {audioAvailable && (
-                    <View style={{ alignItems: 'center', marginBottom: 20 }}>
-                      {isRecording ? (
-                        <>
-                          <PulsingMic onStop={stopAndProcess} size={72} iconSize={28} />
-                          <Text style={styles.recTime} accessibilityLiveRegion="polite">{fmtSecs(recordSecs)}</Text>
-                        </>
-                      ) : (
-                        <TouchableOpacity
-                          onPress={startRecording}
-                          style={styles.micBtn}
-                          accessibilityRole="button"
-                          accessibilityLabel="Gravar áudio"
-                          accessibilityHint="Toque para iniciar a gravação"
-                        >
-                          <Mic size={28} color="white" />
-                        </TouchableOpacity>
-                      )}
-                    </View>
-                  )}
-
-                  <TextInput
-                    value={text}
-                    onChangeText={setText}
-                    placeholder="Escreva detalhes adicionais..."
-                    placeholderTextColor={Colors.muted}
-                    multiline
-                    style={styles.textArea}
-                    editable={!isRecording}
-                    accessibilityLabel="Detalhes adicionais em texto"
-                  />
-
-                  {(error || micError) && (
-                    <Text style={styles.errorText} accessibilityRole="alert">{error || micError}</Text>
-                  )}
-
-                  {text.trim().length > 0 && !isRecording && (
-                    <TouchableOpacity
-                      onPress={submitText}
-                      style={styles.sendBtn}
-                      accessibilityRole="button"
-                      accessibilityLabel="Analisar texto escrito"
-                    >
-                      <Send size={16} color="white" style={{ marginRight: 8 }} />
-                      <Text style={styles.sendBtnText}>Analisar</Text>
-                    </TouchableOpacity>
-                  )}
-                </>
-              )}
+                  ))}
+                </View>
+              ) : null}
             </Card>
+          ) : null}
+
+          {COMPLEMENTO_DISPONIVEL ? (
+            <Card
+              ref={complementoRef}
+              padding="sm"
+              onPress={() => setShowVoice(true)}
+              accessibilityLabel="Adicionar mais detalhes por voz ou texto"
+            >
+              <View className="flex-row items-center gap-3">
+                <IconBadge icon={Mic} tone="primary" />
+                <View className="flex-1 gap-1">
+                  <Text weight="semibold">Adicionar mais detalhes</Text>
+                  <Text variant="caption" tone="muted">
+                    Por voz ou texto
+                  </Text>
+                </View>
+                <ChevronRight size={20} color={color.contentMuted} />
+              </View>
+            </Card>
+          ) : null}
+        </View>
+      </Animated.View>
+
+      <Dialog
+        visible={confirmandoFim}
+        title="Finalizar esta crise?"
+        onClose={() => setConfirmandoFim(false)}
+        returnFocusTo={finalizarRef}
+        footer={
+          <View className="flex-row flex-wrap gap-3">
+            <Button title="Cancelar" variant="ghost" onPress={() => setConfirmandoFim(false)} className="flex-grow" />
+            <Button title="Finalizar" accessibilityLabel="Finalizar e salvar a crise" onPress={finalizar} className="flex-grow" />
+          </View>
+        }
+      >
+        <Text tone="muted">Os dados serão salvos permanentemente.</Text>
+      </Dialog>
+
+      <Dialog
+        visible={confirmandoFase}
+        title="Registrar nova fase?"
+        onClose={() => setConfirmandoFase(false)}
+        returnFocusTo={novaFaseRef}
+        footer={
+          <View className="flex-row flex-wrap gap-3">
+            <Button title="Cancelar" variant="ghost" onPress={() => setConfirmandoFase(false)} className="flex-grow" />
+            <Button
+              title="Confirmar"
+              accessibilityLabel="Salvar a fase atual e começar uma nova"
+              onPress={registrarFase}
+              className="flex-grow"
+            />
+          </View>
+        }
+      >
+        <Text tone="muted">A fase atual será salva e os campos serão reiniciados para a nova fase.</Text>
+      </Dialog>
+
+      {COMPLEMENTO_DISPONIVEL ? (
+        <Dialog
+          visible={showVoice}
+          title="Complementar registro"
+          onClose={fecharComplemento}
+          returnFocusTo={complementoRef}
+          posicao="base"
+          botaoFechar
+          footer={
+            isProcessing ? null : (
+              <Button
+                title="Analisar"
+                accessibilityLabel="Analisar texto escrito"
+                disabled={!text.trim() || isRecording}
+                onPress={submitText}
+              />
+            )
+          }
+        >
+          {isProcessing ? (
+            <LoadingState label={stageLabel ?? 'Analisando...'} />
+          ) : (
+            <View className="gap-4">
+              {onDeviceAvailable ? (
+                <Chip label="IA local (beta)" tone="primary" selected={useLocalAi} onPress={toggleLocalAi} />
+              ) : null}
+              {isRecording ? (
+                <View className="items-center gap-2">
+                  <PulsingMic onStop={stopAndProcess} size={72} iconSize={28} />
+                  <Text weight="semibold" tone="danger" accessibilityLiveRegion="polite">
+                    {fmtSecs(recordSecs)}
+                  </Text>
+                </View>
+              ) : null}
+              <TextField
+                label="Detalhes"
+                value={text}
+                onChangeText={setText}
+                placeholder="Escreva detalhes adicionais..."
+                hint="Ex: acordei com dor, tomei ibuprofeno, estresse no trabalho..."
+                multiline
+                editable={!isRecording}
+                accessibilityLabel="Detalhes adicionais em texto"
+                accessory={
+                  audioAvailable && !isRecording ? (
+                    <IconButton
+                      icon={Mic}
+                      tone="primary"
+                      filled
+                      accessibilityLabel="Gravar áudio"
+                      accessibilityHint="Toque para iniciar a gravação"
+                      onPress={startRecording}
+                    />
+                  ) : undefined
+                }
+              />
+              {error || micError ? <Notice icon={CircleAlert} tone="danger">{(error || micError) ?? ''}</Notice> : null}
+            </View>
           )}
-        </Animated.View>
-      </ScrollView>
+        </Dialog>
+      ) : null}
 
       <IntensityEditor
         visible={editingField === 'intensity'}
         onClose={() => setEditingField(null)}
+        returnFocusTo={intensidadeRef}
         value={crisis.intensity}
         onChange={(v) => updateActiveCrisis({ intensity: v })}
       />
       <LocationEditor
         visible={editingField === 'location'}
         onClose={() => setEditingField(null)}
+        returnFocusTo={localizacaoRef}
         location={crisis.location}
         side={crisis.side}
         onChange={updateActiveCrisis}
@@ -632,291 +549,18 @@ export default function ActiveCrisisScreen() {
       <SymptomsEditor
         visible={editingField === 'symptoms'}
         onClose={() => setEditingField(null)}
+        returnFocusTo={sintomasRef}
         symptoms={crisis.symptoms}
         onChange={(symptoms) => updateActiveCrisis({ symptoms })}
       />
       <MedicationsEditor
         visible={editingField === 'medications'}
         onClose={() => setEditingField(null)}
+        returnFocusTo={medicamentosRef}
         medications={crisis.medications}
         customMedications={crisis.customMedications}
         onChange={updateActiveCrisis}
       />
-    </ScreenBackground>
+    </Screen>
   );
 }
-
-const styles = StyleSheet.create({
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingTop: 40,
-    paddingBottom: 24,
-  },
-  headerTitle: {
-    fontSize: 22,
-    fontFamily: 'Epilogue_700Bold',
-    color: 'white',
-  },
-  finishBtn: {
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 12,
-    backgroundColor: `${Colors.accent}25`,
-    borderWidth: 2,
-    borderColor: Colors.accent,
-    minHeight: 44,
-    justifyContent: 'center',
-  },
-  finishBtnText: {
-    fontSize: 14,
-    fontFamily: 'Epilogue_600SemiBold',
-    color: Colors.accent,
-  },
-
-  phaseDivider: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
-    marginTop: 4,
-    gap: 10,
-  },
-  phaseDividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: 'rgba(255,255,255,0.15)',
-  },
-  phaseDividerLabel: {
-    fontSize: 12,
-    fontFamily: 'Epilogue_700Bold',
-    color: Colors.muted,
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-  },
-
-  cardLabel: {
-    fontSize: 12,
-    fontFamily: 'Epilogue_700Bold',
-    color: Colors.muted,
-    textTransform: 'uppercase',
-    letterSpacing: 1.5,
-    marginBottom: 4,
-  },
-  cardValue: {
-    fontSize: 22,
-    fontFamily: 'Epilogue_700Bold',
-    color: 'white',
-  },
-  smallValue: {
-    fontSize: 16,
-    fontFamily: 'Epilogue_600SemiBold',
-    color: 'white',
-  },
-  iconBox: {
-    width: 44,
-    height: 44,
-    borderRadius: 14,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-
-  editHint: {
-    marginTop: 8,
-    paddingVertical: 8,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    backgroundColor: 'rgba(255,255,255,0.05)',
-    alignSelf: 'flex-start',
-  },
-  editHintText: {
-    fontSize: 13,
-    fontFamily: 'Epilogue_600SemiBold',
-    color: Colors.accent,
-  },
-
-  endCrisisBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginTop: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 16,
-    borderRadius: 12,
-    backgroundColor: `${Colors.orange}15`,
-    alignSelf: 'flex-start',
-    minHeight: 44,
-  },
-  endCrisisBtnText: {
-    fontSize: 13,
-    fontFamily: 'Epilogue_600SemiBold',
-    color: Colors.orange,
-  },
-  // COGA: Botão para desfazer hora de fim
-  undoEndBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 10,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    borderRadius: 10,
-    alignSelf: 'flex-start',
-    minHeight: 44,
-  },
-  undoEndBtnText: {
-    fontSize: 12,
-    fontFamily: 'Epilogue_600SemiBold',
-    color: Colors.muted,
-  },
-
-  addPhaseBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 14,
-    padding: 18,
-    borderRadius: 18,
-    backgroundColor: `${Colors.purple}12`,
-    borderWidth: 1.5,
-    borderColor: `${Colors.purple}35`,
-    marginBottom: 16,
-    minHeight: 56,
-  },
-  addPhaseIconCircle: {
-    width: 38,
-    height: 38,
-    borderRadius: 19,
-    backgroundColor: `${Colors.purple}22`,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  addPhaseTitle: {
-    fontSize: 15,
-    fontFamily: 'Epilogue_700Bold',
-    color: 'white',
-  },
-  addPhaseSub: {
-    fontSize: 12,
-    fontFamily: 'Epilogue_400Regular',
-    color: Colors.muted,
-    marginTop: 2,
-  },
-
-  aiSummary: {
-    fontSize: 15,
-    fontFamily: 'Epilogue_400Regular',
-    color: Colors.soft,
-    lineHeight: 22,
-    marginTop: 6,
-  },
-  gatilhoRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 6,
-  },
-  gatilhoText: {
-    fontSize: 14,
-    fontFamily: 'Epilogue_400Regular',
-    color: Colors.soft,
-    flex: 1,
-  },
-
-  voiceEntryBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 20,
-    borderRadius: 20,
-    backgroundColor: 'rgba(255,255,255,0.03)',
-    borderWidth: 1,
-    borderColor: 'rgba(139,163,167,0.12)',
-    borderStyle: 'dashed',
-    marginBottom: 12,
-    minHeight: 56,
-  },
-  voiceEntryTitle: {
-    fontSize: 15,
-    fontFamily: 'Epilogue_600SemiBold',
-    color: 'white',
-  },
-  voiceEntrySub: {
-    fontSize: 12,
-    fontFamily: 'Epilogue_400Regular',
-    color: Colors.muted,
-    marginTop: 2,
-  },
-
-  localAiRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(139,163,167,0.18)',
-    borderRadius: 14,
-    padding: 12,
-    marginBottom: 20,
-  },
-  localAiLabel: {
-    fontSize: 14,
-    fontFamily: 'Epilogue_600SemiBold',
-    color: 'white',
-  },
-  localAiHint: {
-    fontSize: 12,
-    fontFamily: 'Epilogue_400Regular',
-    color: Colors.muted,
-    marginTop: 2,
-  },
-  micBtn: {
-    width: 72,
-    height: 72,
-    borderRadius: 36,
-    backgroundColor: Colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: Colors.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  recTime: {
-    fontSize: 14,
-    fontFamily: 'Epilogue_600SemiBold',
-    color: '#EF4444',
-    marginTop: 8,
-  },
-  textArea: {
-    backgroundColor: 'rgba(255,255,255,0.04)',
-    borderWidth: 1,
-    borderColor: 'rgba(139,163,167,0.18)',
-    borderRadius: 14,
-    padding: 14,
-    color: 'white',
-    fontFamily: 'Epilogue_400Regular',
-    fontSize: 14,
-    minHeight: 80,
-    textAlignVertical: 'top',
-    marginBottom: 10,
-  },
-  errorText: {
-    color: '#EF4444',
-    fontSize: 13,
-    fontFamily: 'Epilogue_400Regular',
-    textAlign: 'center',
-    marginBottom: 10,
-  },
-  sendBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: Colors.accent,
-    paddingVertical: 14,
-    borderRadius: 14,
-    minHeight: 48,
-  },
-  sendBtnText: {
-    color: 'white',
-    fontSize: 14,
-    fontFamily: 'Epilogue_700Bold',
-  },
-});
