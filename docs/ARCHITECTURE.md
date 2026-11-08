@@ -255,8 +255,7 @@ altura fixa, uma por nível, para o toque e o arraste caírem no nível certo. A
 máximo 48 e diminui quando falta espaço. O número de cada linha é `caption`. A escala inteira
 é um só controle `adjustable` para o leitor de tela, que fala o nível e o rótulo, e o número
 grande e o rótulo ao lado repetem o valor escolhido. Por isso o número da linha é apoio
-visual, não a única forma de ler o valor. Com a fonte do sistema no máximo e pouco espaço,
-como no painel de edição, o número da linha pode ficar apertado: a confirmar no aparelho.
+visual, não a única forma de ler o valor.
 
 DS9. **Espaçamento só da lista fechada.** Em `p`, `px`, `py`, `pt`, `pb`, `pl`, `pr`, `m`
 (e variações) e `gap`, os únicos valores aceitos são:
