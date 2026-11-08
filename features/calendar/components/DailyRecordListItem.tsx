@@ -1,10 +1,13 @@
-import { View, Text, TouchableOpacity } from 'react-native';
-import { ChevronRight as ArrowRight, Clock } from 'lucide-react-native';
+import { ChevronRight, Clock } from 'lucide-react-native';
+import { Image, View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
-import { Colors } from '@/constants/Colors';
-import { RegistroCalendarDay } from '@/features/daily-record/useDailyRecordCalendar';
-import { formatLitros, formatSleep, moodEmoji, moodLabel } from '@/lib/format';
+import Card from '@/components/ui/Card';
+import Text from '@/components/ui/Text';
+import { color } from '@/constants/Colors';
+import { MOODS } from '@/constants/data';
+import type { RegistroCalendarDay } from '@/features/daily-record/useDailyRecordCalendar';
+import { formatLitros, formatSleep, moodLabel } from '@/lib/format';
 
 export default function DailyRecordListItem({ registro, index }: { registro: RegistroCalendarDay; index: number }) {
   const router = useRouter();
@@ -12,66 +15,55 @@ export default function DailyRecordListItem({ registro, index }: { registro: Reg
   const rotina = [
     registro.horasSono !== null && `${formatSleep(registro.horasSono)} sono`,
     registro.mlAgua !== null && `${formatLitros(registro.mlAgua)} água`,
-  ].filter(Boolean).join(' · ');
+  ]
+    .filter(Boolean)
+    .join(' · ');
   const primeiraLinhaDoRelato = registro.relato?.trim().split('\n')[0] || null;
+  const humor = registro.humor ? MOODS.find((m) => m.id === registro.humor) : undefined;
+  const texto = primeiraLinhaDoRelato ?? (registro.humor ? moodLabel(registro.humor) : null) ?? rotina;
+
+  const rotulo = [
+    `Evento às ${hora}`,
+    registro.humor ? `humor ${moodLabel(registro.humor)}` : '',
+    primeiraLinhaDoRelato ?? '',
+    rotina,
+    !registro.enviado ? 'ainda não enviado, guardado neste aparelho' : '',
+  ]
+    .filter(Boolean)
+    .join(', ');
 
   return (
     <Animated.View entering={FadeInDown.delay(index * 60).duration(250)}>
-      <TouchableOpacity
-        onPress={() => router.push({
-          pathname: '/daily-record/[id]',
-          params: {
-            id: String(registro.id),
-            data: JSON.stringify(registro),
-          },
-        })}
-        activeOpacity={0.7}
-        style={{
-          flexDirection: 'row', alignItems: 'center',
-          backgroundColor: '#112236', borderRadius: 16,
-          marginBottom: 10, padding: 16,
-          borderLeftWidth: 3, borderLeftColor: Colors.accent,
-        }}
+      <Card
+        padding="sm"
+        accessibilityLabel={rotulo}
+        onPress={() =>
+          router.push({
+            pathname: '/daily-record/[id]',
+            params: {
+              id: String(registro.id),
+              data: JSON.stringify(registro),
+            },
+          })
+        }
       >
-        <View style={{ marginRight: 14 }}>
-          <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 11 }}>HORA</Text>
-          <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 15, marginTop: 2 }}>
-            {hora}
+        <View className="flex-row items-center gap-3">
+          <View>
+            <Text variant="caption" tone="muted">
+              Hora
+            </Text>
+            <Text variant="heading">{hora}</Text>
+          </View>
+          {humor ? (
+            <Image source={humor.image} className="h-8 w-8" resizeMode="contain" accessibilityIgnoresInvertColors />
+          ) : null}
+          <Text numberOfLines={2} className="flex-1">
+            {texto}
           </Text>
+          {!registro.enviado ? <Clock size={20} color={color.attention} /> : null}
+          <ChevronRight size={20} color={color.contentMuted} />
         </View>
-
-        <View style={{ width: 1, height: 36, backgroundColor: '#1E3A52', marginRight: 14 }} />
-
-        <View style={{ flex: 1 }}>
-          {registro.humor ? (
-            <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 14 }}>
-              {moodEmoji(registro.humor)}{' '}
-              <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 12 }}>
-                {moodLabel(registro.humor)}
-              </Text>
-            </Text>
-          ) : primeiraLinhaDoRelato ? (
-            <Text numberOfLines={1} style={{ color: 'white', fontFamily: 'Epilogue_400Regular', fontSize: 14 }}>
-              {primeiraLinhaDoRelato}
-            </Text>
-          ) : null}
-          {rotina ? (
-            <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 12, marginTop: registro.humor || primeiraLinhaDoRelato ? 3 : 0 }}>
-              {rotina}
-            </Text>
-          ) : null}
-        </View>
-
-        {!registro.enviado && (
-          <Clock
-            size={14}
-            color={Colors.muted}
-            style={{ marginRight: 8 }}
-            accessibilityLabel="Ainda não enviado, guardado neste aparelho"
-          />
-        )}
-        <ArrowRight size={16} color={Colors.muted} />
-      </TouchableOpacity>
+      </Card>
     </Animated.View>
   );
 }

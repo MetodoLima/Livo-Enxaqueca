@@ -1,66 +1,75 @@
-import { View, Text, TouchableOpacity } from 'react-native';
-import { ChevronRight as ArrowRight, Clock } from 'lucide-react-native';
+import { ChevronRight, Clock } from 'lucide-react-native';
+import { View } from 'react-native';
 import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
-import { Colors } from '@/constants/Colors';
-import { CrisisDay } from '@/features/crisis/useCrisisCalendar';
-import { formatDuration, formatTime, intensityColor, intensityLabel } from '@/lib/format';
+import Card from '@/components/ui/Card';
+import Text from '@/components/ui/Text';
+import { color } from '@/constants/Colors';
+import { IntensityMarker } from '@/features/crisis/components/IntensityScale';
+import type { CrisisDay } from '@/features/crisis/useCrisisCalendar';
+import { formatDuration, formatTime, intensityLabel } from '@/lib/format';
+import { locationLabel } from '@/types/crisis';
 
 export default function CrisisListItem({ crisis, index }: { crisis: CrisisDay; index: number }) {
   const router = useRouter();
-  const color = intensityColor(crisis.intensidadeDor);
-  const label = intensityLabel(crisis.intensidadeDor);
-  const duration = formatDuration(crisis.inicioCrise, crisis.fimCrise);
+  const hora = formatTime(crisis.inicioCrise);
+  const duracao = formatDuration(crisis.inicioCrise, crisis.fimCrise);
+  const regioes = [...new Set(crisis.fases.map((f) => f.regiaoDor).filter((r): r is string => !!r))];
+  const local = regioes.map(locationLabel).join(', ');
+  const detalhe = [duracao, local].filter(Boolean).join(' · ');
+
+  const rotulo = [
+    `Crise às ${hora}`,
+    crisis.intensidadeDor !== null
+      ? `intensidade ${crisis.intensidadeDor} de 10, ${intensityLabel(crisis.intensidadeDor)}`
+      : 'intensidade não registrada',
+    duracao,
+    local,
+    !crisis.enviado ? 'ainda não enviada, guardada neste aparelho' : '',
+  ]
+    .filter(Boolean)
+    .join(', ');
 
   return (
     <Animated.View entering={FadeInDown.delay(index * 60).duration(250)}>
-      <TouchableOpacity
-        onPress={() => router.push({
-          pathname: '/crisis/[id]',
-          params: {
-            id: String(crisis.id),
-            data: JSON.stringify({
-              ...crisis,
-              inicioCrise: crisis.inicioCrise.toISOString(),
-              fimCrise: crisis.fimCrise ? crisis.fimCrise.toISOString() : null,
-            }),
-          },
-        })}
-        activeOpacity={0.7}
-        style={{
-          flexDirection: 'row', alignItems: 'center',
-          backgroundColor: '#112236', borderRadius: 16,
-          marginBottom: 10, padding: 16,
-          borderLeftWidth: 3, borderLeftColor: color,
-        }}
+      <Card
+        padding="sm"
+        accessibilityLabel={rotulo}
+        onPress={() =>
+          router.push({
+            pathname: '/crisis/[id]',
+            params: {
+              id: String(crisis.id),
+              data: JSON.stringify({
+                ...crisis,
+                inicioCrise: crisis.inicioCrise.toISOString(),
+                fimCrise: crisis.fimCrise ? crisis.fimCrise.toISOString() : null,
+              }),
+            },
+          })
+        }
       >
-        <View style={{ marginRight: 14 }}>
-          <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 11 }}>INÍCIO</Text>
-          <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 15, marginTop: 2 }}>
-            {formatTime(crisis.inicioCrise)}
-          </Text>
+        <View className="flex-row items-center gap-3">
+          <View>
+            <Text variant="caption" tone="muted">
+              Início
+            </Text>
+            <Text variant="heading">{hora}</Text>
+          </View>
+          <View className="flex-1 gap-1">
+            {crisis.intensidadeDor !== null ? (
+              <IntensityMarker value={crisis.intensidadeDor} />
+            ) : (
+              <Text weight="semibold">Intensidade não registrada</Text>
+            )}
+            <Text variant="caption" tone="muted">
+              {detalhe}
+            </Text>
+          </View>
+          {!crisis.enviado ? <Clock size={20} color={color.attention} /> : null}
+          <ChevronRight size={20} color={color.contentMuted} />
         </View>
-        <View style={{ width: 1, height: 36, backgroundColor: '#1E3A52', marginRight: 14 }} />
-        <View style={{ flex: 1 }}>
-          <Text style={{ color, fontFamily: 'Epilogue_700Bold', fontSize: 14 }}>
-            {crisis.intensidadeDor !== null ? `${crisis.intensidadeDor}/10` : '—'}{' '}
-            <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 12 }}>{label}</Text>
-          </Text>
-          <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 12, marginTop: 3 }}>
-            {duration}
-            {crisis.sintomas.length > 0 && ` · ${crisis.sintomas.length} sintoma${crisis.sintomas.length > 1 ? 's' : ''}`}
-          </Text>
-        </View>
-        {!crisis.enviado && (
-          <Clock
-            size={14}
-            color={Colors.muted}
-            style={{ marginRight: 8 }}
-            accessibilityLabel="Ainda não enviado, guardado neste aparelho"
-          />
-        )}
-        <ArrowRight size={16} color={Colors.muted} />
-      </TouchableOpacity>
+      </Card>
     </Animated.View>
   );
 }

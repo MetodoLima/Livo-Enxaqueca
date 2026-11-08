@@ -1,57 +1,45 @@
-import React, { useMemo } from 'react';
-import {
-  View,
-  Text,
-  ScrollView,
-  TouchableOpacity,
-  SafeAreaView,
-} from 'react-native';
+import { useMemo, type ReactNode } from 'react';
+import { Image, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ArrowLeft, Moon, Droplets, FileText, Smile } from 'lucide-react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
-import { Colors } from '@/constants/Colors';
-import { formatDateTime, formatLitros, formatSleep, moodEmoji, moodLabel } from '@/lib/format';
+import { CalendarDays, Droplets, Moon } from 'lucide-react-native';
+import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
+import Card from '@/components/ui/Card';
+import EmptyState from '@/components/ui/EmptyState';
+import IconBadge from '@/components/ui/IconBadge';
+import Screen from '@/components/ui/Screen';
+import ScreenHeader from '@/components/ui/ScreenHeader';
+import Text from '@/components/ui/Text';
+import { MOODS } from '@/constants/data';
+import { formatDiaPorExtenso, formatLitros, formatSleep, formatTime, moodLabel } from '@/lib/format';
+import type { RegistroCalendarDay } from '@/features/daily-record/useDailyRecordCalendar';
 
-const HUMOR_COLOR: Record<string, string> = {
-  terrible: '#EF4444', bad: '#F97316', 'so-so': '#EAB308', okay: '#22C55E', great: '#10B981',
-};
-
-function Section({ icon, label, children, delay = 0 }: {
-  icon: React.ReactNode;
-  label: string;
-  children: React.ReactNode;
-  delay?: number;
-}) {
+function Valor({ rotulo, valor }: { rotulo: string; valor: string }) {
   return (
-    <Animated.View
-      entering={FadeInDown.delay(delay).duration(300)}
-      style={{ backgroundColor: '#112236', borderRadius: 20, padding: 20, marginBottom: 12 }}
-    >
-      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 14 }}>
-        {icon}
-        <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_600SemiBold', fontSize: 11, letterSpacing: 1, textTransform: 'uppercase' }}>
-          {label}
-        </Text>
-      </View>
-      {children}
-    </Animated.View>
-  );
-}
-
-function Row({ label, value, valueColor }: { label: string; value: string; valueColor?: string }) {
-  return (
-    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-      <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 13 }}>{label}</Text>
-      <Text style={{ color: valueColor ?? 'white', fontFamily: 'Epilogue_600SemiBold', fontSize: 13 }}>{value}</Text>
+    <View className="flex-1 gap-1">
+      <Text variant="caption" weight="semibold" tone="muted">
+        {rotulo}
+      </Text>
+      <Text weight="semibold">{valor}</Text>
     </View>
   );
 }
 
+function Secao({ delay, reduceMotion, children }: { delay: number; reduceMotion: boolean; children: ReactNode }) {
+  return (
+    <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(delay).duration(300)}>
+      <Card padding="sm" className="gap-3">
+        {children}
+      </Card>
+    </Animated.View>
+  );
+}
+
 export default function DailyRecordDetailScreen() {
+  const reduceMotion = useReducedMotion();
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string; data: string }>();
 
-  const registro = useMemo(() => {
+  const registro = useMemo<RegistroCalendarDay | null>(() => {
     try {
       return JSON.parse(params.data);
     } catch {
@@ -61,111 +49,66 @@ export default function DailyRecordDetailScreen() {
 
   if (!registro) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bgDark, alignItems: 'center', justifyContent: 'center' }}>
-        <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular' }}>Registro não encontrado.</Text>
-      </SafeAreaView>
+      <Screen>
+        <ScreenHeader title="Detalhes do evento" onBack={() => router.back()} />
+        <EmptyState
+          icon={CalendarDays}
+          title="Registro não encontrado."
+          message="Ele pode ter sido removido em outro aparelho."
+          className="py-6"
+        />
+      </Screen>
     );
   }
 
-  const humor = registro.humor as string | null;
-  const humorColor = humor ? HUMOR_COLOR[humor] : Colors.accent;
+  const criadoEm = new Date(registro.createdAt);
+  const humor = registro.humor ? MOODS.find((m) => m.id === registro.humor) : undefined;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bgDark }}>
+    <Screen scroll>
+      <ScreenHeader
+        title="Detalhes do evento"
+        subtitle={`${formatDiaPorExtenso(criadoEm)} · ${formatTime(criadoEm)}`}
+        onBack={() => router.back()}
+      />
 
-      <View style={{
-        flexDirection: 'row', alignItems: 'center',
-        paddingHorizontal: 24, paddingTop: 16, paddingBottom: 12,
-        borderBottomWidth: 1, borderBottomColor: '#1E3A52',
-      }}>
-        <TouchableOpacity
-          onPress={() => router.back()}
-          style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#1E3A52', alignItems: 'center', justifyContent: 'center', marginRight: 14 }}
-        >
-          <ArrowLeft size={18} color="white" />
-        </TouchableOpacity>
-        <Text style={{ color: 'white', fontFamily: 'Epilogue_700Bold', fontSize: 18, flex: 1 }}>
-          Detalhes do Evento
-        </Text>
-      </View>
-
-      <ScrollView
-        contentContainerStyle={{ padding: 24, paddingBottom: 60 }}
-        showsVerticalScrollIndicator={false}
-      >
-        {humor && (
-          <Animated.View
-            entering={FadeInDown.duration(350)}
-            style={{
-              backgroundColor: `${humorColor}15`,
-              borderRadius: 24, padding: 24,
-              alignItems: 'center', marginBottom: 20,
-              borderWidth: 1, borderColor: `${humorColor}30`,
-            }}
-          >
-            <Text style={{ fontSize: 52, marginBottom: 8 }}>{moodEmoji(humor)}</Text>
-            <Text style={{ color: humorColor, fontFamily: 'Epilogue_700Bold', fontSize: 24 }}>
-              {moodLabel(humor)}
-            </Text>
-            <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 13, marginTop: 6 }}>
-              {formatDateTime(new Date(registro.createdAt))}
-            </Text>
-          </Animated.View>
-        )}
-
-        {!humor && (
-          <Animated.View
-            entering={FadeInDown.duration(350)}
-            style={{
-              backgroundColor: `${Colors.accent}15`,
-              borderRadius: 24, padding: 24,
-              alignItems: 'center', marginBottom: 20,
-              borderWidth: 1, borderColor: `${Colors.accent}30`,
-            }}
-          >
-            <Text style={{ fontSize: 52, marginBottom: 8 }}>📋</Text>
-            <Text style={{ color: Colors.muted, fontFamily: 'Epilogue_400Regular', fontSize: 13, marginTop: 6 }}>
-              {formatDateTime(new Date(registro.createdAt))}
-            </Text>
-          </Animated.View>
-        )}
-
-        {(registro.horasSono !== null || registro.mlAgua !== null) && (
-          <Section icon={<Moon size={14} color={Colors.muted} />} label="Rotina" delay={80}>
-            <View style={{ gap: 10 }}>
-              {registro.horasSono !== null && (
-                <Row
-                  label="Sono"
-                  value={formatSleep(registro.horasSono)}
-                  valueColor={Colors.purple ?? '#8B6FC0'}
-                />
-              )}
-              {registro.horasSono !== null && registro.mlAgua !== null && (
-                <View style={{ height: 1, backgroundColor: '#1E3A52' }} />
-              )}
-              {registro.mlAgua !== null && (
-                <Row
-                  label="Água"
-                  value={formatLitros(registro.mlAgua)}
-                  valueColor={Colors.accent}
-                />
-              )}
+      <View className="gap-4">
+        {registro.humor ? (
+          <Secao delay={0} reduceMotion={reduceMotion}>
+            <View className="flex-row items-center gap-4" accessible accessibilityLabel={`Humor: ${moodLabel(registro.humor)}`}>
+              {humor ? (
+                <Image source={humor.image} className="h-14 w-14" resizeMode="contain" accessibilityIgnoresInvertColors />
+              ) : null}
+              <Valor rotulo="Humor" valor={moodLabel(registro.humor)} />
             </View>
-          </Section>
-        )}
+          </Secao>
+        ) : null}
 
-        {registro.relato && (
-          <Section icon={<FileText size={14} color={Colors.muted} />} label="Relato" delay={160}>
-            <Text style={{
-              color: 'white', fontFamily: 'Epilogue_400Regular',
-              fontSize: 14, lineHeight: 22, fontStyle: 'italic',
-            }}>
-              "{registro.relato}"
-            </Text>
-          </Section>
-        )}
+        {registro.horasSono !== null || registro.mlAgua !== null ? (
+          <Secao delay={80} reduceMotion={reduceMotion}>
+            <Text variant="heading">Rotina</Text>
+            {registro.horasSono !== null ? (
+              <View className="flex-row items-center gap-3" accessible accessibilityLabel={`Sono: ${formatSleep(registro.horasSono)}`}>
+                <IconBadge icon={Moon} tone="secondary" />
+                <Valor rotulo="Sono" valor={formatSleep(registro.horasSono)} />
+              </View>
+            ) : null}
+            {registro.mlAgua !== null ? (
+              <View className="flex-row items-center gap-3" accessible accessibilityLabel={`Água: ${formatLitros(registro.mlAgua)}`}>
+                <IconBadge icon={Droplets} tone="primary" />
+                <Valor rotulo="Água" valor={formatLitros(registro.mlAgua)} />
+              </View>
+            ) : null}
+          </Secao>
+        ) : null}
 
-      </ScrollView>
-    </SafeAreaView>
+        {registro.relato ? (
+          <Secao delay={160} reduceMotion={reduceMotion}>
+            <Text variant="heading">Relato</Text>
+            <Text>{registro.relato}</Text>
+          </Secao>
+        ) : null}
+      </View>
+    </Screen>
   );
 }
