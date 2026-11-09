@@ -1,5 +1,6 @@
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
+import Dialog from '@/components/ui/Dialog';
 import IconBadge from '@/components/ui/IconBadge';
 import Screen from '@/components/ui/Screen';
 import Text from '@/components/ui/Text';
@@ -31,8 +32,8 @@ import { crisisRepository, dailyRecordRepository, momentRepository, type Registr
 import { isSttModelDownloaded, STT_MODEL_SIZE_LABEL } from '@/services/onDeviceComplement';
 import { useRouter } from 'expo-router';
 import { CalendarDays, Check, Droplets, Mic, Moon, Send, StopCircle, TrendingDown } from 'lucide-react-native';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { AccessibilityInfo, ActivityIndicator, Alert, Image, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect, useRef, useState, type RefObject } from 'react';
+import { AccessibilityInfo, ActivityIndicator, Image, TouchableOpacity, View } from 'react-native';
 
 const VAO_DOS_CARTOES = 12;
 
@@ -81,6 +82,15 @@ export default function HomeScreen() {
   const [larguraDaFileira, setLarguraDaFileira] = useState(0);
   const aguaRef = useRef<View>(null);
   const sonoRef = useRef<View>(null);
+  const micRef = useRef<View>(null);
+  const enviarRef = useRef<View>(null);
+  const [confirmandoModelo, setConfirmandoModelo] = useState(false);
+  const [erroVisivel, setErroVisivel] = useState(false);
+  const [erroAoSalvar, setErroAoSalvar] = useState<{
+    titulo: string;
+    mensagem: string;
+    voltarPara: RefObject<View | null>;
+  }>({ titulo: '', mensagem: '', voltarPara: enviarRef });
 
   const [ultimoFim, setUltimoFim] = useState<Date | null | undefined>(undefined);
   const [crisesThisMonth, setCrisesThisMonth] = useState<number | null>(null);
@@ -110,14 +120,7 @@ export default function HomeScreen() {
     }
 
     if (!isSttModelDownloaded()) {
-      Alert.alert(
-        'Baixar modelo de voz?',
-        `A transcrição por voz baixa o modelo Whisper (${STT_MODEL_SIZE_LABEL}) na primeira vez que for usada. Isso pode demorar e consumir dados móveis.`,
-        [
-          { text: 'Cancelar', style: 'cancel' },
-          { text: 'Gravar', onPress: () => startVoiceRecording() },
-        ],
-      );
+      setConfirmandoModelo(true);
       return;
     }
 
@@ -205,10 +208,12 @@ export default function HomeScreen() {
     const gravou = await salvar({ humor: humorEnviado, relato: relato.trim() || null });
 
     if (!gravou) {
-      Alert.alert(
-        'Não foi possível salvar agora',
-        'O que você preencheu continua aqui. Tente de novo.',
-      );
+      setErroAoSalvar({
+        titulo: 'Não foi possível salvar agora',
+        mensagem: 'O que você preencheu continua aqui. Tente de novo.',
+        voltarPara: enviarRef,
+      });
+      setErroVisivel(true);
       return;
     }
 
@@ -219,6 +224,7 @@ export default function HomeScreen() {
   const salvarDia = async (
     patch: Parameters<typeof dailyRecordRepository.salvarDia>[1],
     anuncio: string,
+    voltarPara: RefObject<View | null>,
   ) => {
     try {
       const { enviado } = await dailyRecordRepository.salvarDia(today, patch);
@@ -227,13 +233,18 @@ export default function HomeScreen() {
         enviado ? anuncio : `${anuncio} Salvo no aparelho, será enviado quando houver internet.`,
       );
     } catch {
-      Alert.alert('Não foi possível salvar agora', 'Tente de novo em instantes.');
+      setErroAoSalvar({
+        titulo: 'Não foi possível salvar agora',
+        mensagem: 'Tente de novo em instantes.',
+        voltarPara,
+      });
+      setErroVisivel(true);
     }
   };
 
   const confirmarAgua = (ml: number | null) => {
     setAguaAberta(false);
-    salvarDia({ mlAgua: ml }, ml === null ? 'Água removida.' : 'Água registrada.');
+    salvarDia({ mlAgua: ml }, ml === null ? 'Água removida.' : 'Água registrada.', aguaRef);
   };
 
   const confirmarSono = (dormiAs: Horario, acordeiAs: Horario) => {
@@ -241,6 +252,7 @@ export default function HomeScreen() {
     salvarDia(
       { sono: { dormiAs: formatHorario(dormiAs), acordeiAs: formatHorario(acordeiAs) } },
       'Sono registrado.',
+      sonoRef,
     );
   };
 
@@ -320,6 +332,7 @@ export default function HomeScreen() {
             accessory={
               voiceAvailable ? (
                 <TouchableOpacity
+                  ref={micRef}
                   onPress={handleMicPress}
                   disabled={isTranscribing}
                   accessibilityRole="button"
@@ -350,6 +363,7 @@ export default function HomeScreen() {
           />
 
           <Button
+            ref={enviarRef}
             title={saved ? savedMessage : 'Enviar'}
             variant="secondary"
             icon={saved ? Check : Send}
@@ -440,6 +454,38 @@ export default function HomeScreen() {
         onConfirm={confirmarSono}
         returnFocusTo={sonoRef}
       />
+      <Dialog
+        visible={confirmandoModelo}
+        title="Baixar modelo de voz?"
+        onClose={() => setConfirmandoModelo(false)}
+        returnFocusTo={micRef}
+        footer={
+          <View className="flex-row flex-wrap gap-3">
+            <Button title="Cancelar" variant="ghost" onPress={() => setConfirmandoModelo(false)} className="flex-grow" />
+            <Button
+              title="Gravar"
+              onPress={() => {
+                setConfirmandoModelo(false);
+                startVoiceRecording();
+              }}
+              className="flex-grow"
+            />
+          </View>
+        }
+      >
+        <Text tone="muted">
+          {`A transcrição por voz baixa o modelo Whisper (${STT_MODEL_SIZE_LABEL}) na primeira vez que for usada. Isso pode demorar e consumir dados móveis.`}
+        </Text>
+      </Dialog>
+      <Dialog
+        visible={erroVisivel}
+        title={erroAoSalvar.titulo}
+        onClose={() => setErroVisivel(false)}
+        returnFocusTo={erroAoSalvar.voltarPara}
+        footer={<Button title="Entendi" onPress={() => setErroVisivel(false)} />}
+      >
+        <Text tone="muted">{erroAoSalvar.mensagem}</Text>
+      </Dialog>
     </Screen>
   );
 }

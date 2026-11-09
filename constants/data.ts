@@ -1,5 +1,5 @@
 import { Moon, Droplets, Plus, Mic } from 'lucide-react-native';
-import { Colors } from './Colors';
+import { color } from './Colors';
 import { ImageSourcePropType } from 'react-native';
 
 export const MOODS = [
@@ -13,8 +13,8 @@ export const MOODS = [
 export type MoodId = (typeof MOODS)[number]['id'];
 
 export const HABITS = [
-  { icon: Moon, label: 'Sono', color: Colors.purple },
-  { icon: Droplets, label: 'Água', color: Colors.accent },
-  { icon: Plus, label: 'Hábitos', color: Colors.muted },
-  { icon: Mic, label: 'Voz', color: Colors.orange },
+  { icon: Moon, label: 'Sono', color: color.secondary },
+  { icon: Droplets, label: 'Água', color: color.primary },
+  { icon: Plus, label: 'Hábitos', color: color.contentMuted },
+  { icon: Mic, label: 'Voz', color: color.attention },
 ] as const;

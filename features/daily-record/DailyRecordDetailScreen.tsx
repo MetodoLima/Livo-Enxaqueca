@@ -2,7 +2,6 @@ import { useMemo, type ReactNode } from 'react';
 import { Image, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { CalendarDays, Droplets, Moon } from 'lucide-react-native';
-import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
 import Card from '@/components/ui/Card';
 import EmptyState from '@/components/ui/EmptyState';
 import IconBadge from '@/components/ui/IconBadge';
@@ -24,18 +23,15 @@ function Valor({ rotulo, valor }: { rotulo: string; valor: string }) {
   );
 }
 
-function Secao({ delay, reduceMotion, children }: { delay: number; reduceMotion: boolean; children: ReactNode }) {
+function Secao({ children }: { children: ReactNode }) {
   return (
-    <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(delay).duration(300)}>
-      <Card padding="sm" className="gap-3">
-        {children}
-      </Card>
-    </Animated.View>
+    <Card padding="sm" className="gap-3">
+      {children}
+    </Card>
   );
 }
 
 export default function DailyRecordDetailScreen() {
-  const reduceMotion = useReducedMotion();
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string; data: string }>();
 
@@ -74,7 +70,7 @@ export default function DailyRecordDetailScreen() {
 
       <View className="gap-4">
         {registro.humor ? (
-          <Secao delay={0} reduceMotion={reduceMotion}>
+          <Secao>
             <View className="flex-row items-center gap-4" accessible accessibilityLabel={`Humor: ${moodLabel(registro.humor)}`}>
               {humor ? (
                 <Image source={humor.image} className="h-14 w-14" resizeMode="contain" accessibilityIgnoresInvertColors />
@@ -85,7 +81,7 @@ export default function DailyRecordDetailScreen() {
         ) : null}
 
         {registro.horasSono !== null || registro.mlAgua !== null ? (
-          <Secao delay={80} reduceMotion={reduceMotion}>
+          <Secao>
             <Text variant="heading">Rotina</Text>
             {registro.horasSono !== null ? (
               <View className="flex-row items-center gap-3" accessible accessibilityLabel={`Sono: ${formatSleep(registro.horasSono)}`}>
@@ -103,7 +99,7 @@ export default function DailyRecordDetailScreen() {
         ) : null}
 
         {registro.relato ? (
-          <Secao delay={160} reduceMotion={reduceMotion}>
+          <Secao>
             <Text variant="heading">Relato</Text>
             <Text>{registro.relato}</Text>
           </Secao>

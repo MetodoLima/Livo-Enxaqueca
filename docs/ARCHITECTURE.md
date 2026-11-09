@@ -122,6 +122,13 @@ dia nada é herdado.
    - Tabela apagada por migração sai também do keepalive
      (`.github/workflows/keep-supabase-awake.yml`), se for a que ele consulta.
 
+10. **Funcionalidade que depende do servidor de IA fica atrás de
+    `SERVIDOR_DE_IA_DISPONIVEL`.** A constante mora em `services/api.ts` e hoje vale
+    `false`, porque o servidor de IA não está no ar. Enquanto for `false`, a tela esconde a
+    funcionalidade inteira, sem apagar o código: o complemento da crise em andamento
+    (`ActiveCrisisScreen`) e a análise qualitativa dos Insights. Quando o servidor voltar,
+    basta trocar o valor.
+
 ## Design system
 
 O Livo é usado por quem está em crise de enxaqueca: fotofobia, náusea, dificuldade de

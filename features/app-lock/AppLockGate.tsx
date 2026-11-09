@@ -1,7 +1,6 @@
 import React from 'react';
 import { Modal, View } from 'react-native';
 import AppLockScreen from '@/features/app-lock/AppLockScreen';
-import { Colors } from '@/constants/Colors';
 import { useAppLock } from '@/features/app-lock/AppLockContext';
 
 export function AppLockGate({ children }: { children: React.ReactNode }) {
@@ -21,7 +20,7 @@ export function AppLockGate({ children }: { children: React.ReactNode }) {
       >
         {locked
           ? <AppLockScreen />
-          : <View style={{ flex: 1, backgroundColor: Colors.bgDark }} />}
+          : <View className="flex-1 bg-canvas" />}
       </Modal>
     </>
   );

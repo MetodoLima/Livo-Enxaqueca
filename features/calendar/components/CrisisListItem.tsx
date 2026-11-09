@@ -1,6 +1,5 @@
 import { ChevronRight, Clock } from 'lucide-react-native';
 import { View } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import Card from '@/components/ui/Card';
 import Text from '@/components/ui/Text';
@@ -10,7 +9,7 @@ import type { CrisisDay } from '@/features/crisis/useCrisisCalendar';
 import { formatDuration, formatTime, intensityLabel } from '@/lib/format';
 import { locationLabel } from '@/types/crisis';
 
-export default function CrisisListItem({ crisis, index }: { crisis: CrisisDay; index: number }) {
+export default function CrisisListItem({ crisis }: { crisis: CrisisDay; index: number }) {
   const router = useRouter();
   const hora = formatTime(crisis.inicioCrise);
   const duracao = formatDuration(crisis.inicioCrise, crisis.fimCrise);
@@ -31,45 +30,43 @@ export default function CrisisListItem({ crisis, index }: { crisis: CrisisDay; i
     .join(', ');
 
   return (
-    <Animated.View entering={FadeInDown.delay(index * 60).duration(250)}>
-      <Card
-        padding="sm"
-        accessibilityLabel={rotulo}
-        onPress={() =>
-          router.push({
-            pathname: '/crisis/[id]',
-            params: {
-              id: String(crisis.id),
-              data: JSON.stringify({
-                ...crisis,
-                inicioCrise: crisis.inicioCrise.toISOString(),
-                fimCrise: crisis.fimCrise ? crisis.fimCrise.toISOString() : null,
-              }),
-            },
-          })
-        }
-      >
-        <View className="flex-row items-center gap-3">
-          <View>
-            <Text variant="caption" tone="muted">
-              Início
-            </Text>
-            <Text variant="heading">{hora}</Text>
-          </View>
-          <View className="flex-1 gap-1">
-            {crisis.intensidadeDor !== null ? (
-              <IntensityMarker value={crisis.intensidadeDor} />
-            ) : (
-              <Text weight="semibold">Intensidade não registrada</Text>
-            )}
-            <Text variant="caption" tone="muted">
-              {detalhe}
-            </Text>
-          </View>
-          {!crisis.enviado ? <Clock size={20} color={color.attention} /> : null}
-          <ChevronRight size={20} color={color.contentMuted} />
+    <Card
+      padding="sm"
+      accessibilityLabel={rotulo}
+      onPress={() =>
+        router.push({
+          pathname: '/crisis/[id]',
+          params: {
+            id: String(crisis.id),
+            data: JSON.stringify({
+              ...crisis,
+              inicioCrise: crisis.inicioCrise.toISOString(),
+              fimCrise: crisis.fimCrise ? crisis.fimCrise.toISOString() : null,
+            }),
+          },
+        })
+      }
+    >
+      <View className="flex-row items-center gap-3">
+        <View>
+          <Text variant="caption" tone="muted">
+            Início
+          </Text>
+          <Text variant="heading">{hora}</Text>
         </View>
-      </Card>
-    </Animated.View>
+        <View className="flex-1 gap-1">
+          {crisis.intensidadeDor !== null ? (
+            <IntensityMarker value={crisis.intensidadeDor} />
+          ) : (
+            <Text weight="semibold">Intensidade não registrada</Text>
+          )}
+          <Text variant="caption" tone="muted">
+            {detalhe}
+          </Text>
+        </View>
+        {!crisis.enviado ? <Clock size={20} color={color.attention} /> : null}
+        <ChevronRight size={20} color={color.contentMuted} />
+      </View>
+    </Card>
   );
 }

@@ -1,32 +1,34 @@
-import { Text, View } from 'react-native';
-import { LinearGradient } from 'expo-linear-gradient';
-import { InsightItem } from '@/features/insights/useInsights';
+import { View } from 'react-native';
+import Text from '@/components/ui/Text';
+import type { InsightItem } from '@/features/insights/useInsights';
 
-export default function BarList({ items, gradientColors }: { items: InsightItem[]; gradientColors: readonly [string, string, ...string[]] }) {
+export type BarTone = 'attention' | 'secondary' | 'primary';
+
+const BAR_BG: Record<BarTone, string> = {
+  attention: 'bg-attention',
+  secondary: 'bg-secondary',
+  primary: 'bg-primary',
+};
+
+export default function BarList({ items, tone }: { items: InsightItem[]; tone: BarTone }) {
   if (items.length === 0) {
     return (
-      <Text className="text-muted text-sm font-epilogue text-center py-2">
+      <Text tone="muted" className="text-center">
         Nenhum dado registrado
       </Text>
     );
   }
+
   return (
     <View className="gap-4">
       {items.map((item) => (
-        <View key={item.nome}>
-          <View className="flex-row justify-between mb-1">
-            <Text className="text-white font-epilogue-medium text-[15px] flex-1 mr-2" numberOfLines={1}>
-              {item.nome}
-            </Text>
-            <Text className="text-white text-[14px] font-epilogue-bold">{item.pct}%</Text>
+        <View key={item.nome} className="gap-1" accessible accessibilityLabel={`${item.nome}: ${item.pct}%`}>
+          <View className="flex-row items-center gap-2">
+            <Text className="flex-1">{item.nome}</Text>
+            <Text weight="semibold">{item.pct}%</Text>
           </View>
-          <View className="h-2 bg-black/30 rounded-full overflow-hidden">
-            <LinearGradient
-              colors={gradientColors}
-              start={{ x: 0, y: 0 }}
-              end={{ x: 1, y: 0 }}
-              style={{ width: `${item.pct}%`, height: '100%', borderRadius: 9999 }}
-            />
+          <View className="h-2 overflow-hidden rounded-full bg-surface-raised">
+            <View className={`h-2 rounded-full ${BAR_BG[tone]}`} style={{ width: `${item.pct}%` }} />
           </View>
         </View>
       ))}

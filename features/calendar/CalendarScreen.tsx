@@ -1,7 +1,6 @@
 import { useState, useCallback } from 'react';
 import { View, LayoutAnimation, Platform, UIManager } from 'react-native';
 import { AlertCircle, CalendarDays, ChevronLeft, ChevronRight } from 'lucide-react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
 import Card from '@/components/ui/Card';
 import EmptyState from '@/components/ui/EmptyState';
 import IconButton from '@/components/ui/IconButton';
@@ -214,12 +213,12 @@ export default function CalendarScreen() {
 
         {error ? (
           <Notice icon={AlertCircle} tone="danger">
-            {`Erro ao carregar dados: ${error}`}
+            Não foi possível carregar este mês. Verifique a conexão e tente de novo.
           </Notice>
         ) : null}
 
         {selectedDay !== null ? (
-          <Animated.View entering={FadeInUp.duration(250)} className="gap-3">
+          <View className="gap-3">
             <View className="gap-1">
               <Text variant="heading">
                 Detalhes do dia · {selectedDay} de {nomeDoMes}
@@ -248,11 +247,11 @@ export default function CalendarScreen() {
             ) : (
               <DiaVazio texto="Nenhum evento registrado neste dia" />
             )}
-          </Animated.View>
+          </View>
         ) : null}
 
         {!loading && totalCrises > 0 ? (
-          <Animated.View entering={FadeInUp.duration(300)}>
+          <View>
             <Card padding="sm" className="gap-3">
               <Text variant="heading">Resumo do mês</Text>
               <View className="flex-row gap-3">
@@ -263,11 +262,11 @@ export default function CalendarScreen() {
                 ) : null}
               </View>
             </Card>
-          </Animated.View>
+          </View>
         ) : null}
 
         {!loading && !error && totalCrises === 0 && Object.keys(registroByDay).length === 0 && selectedDay === null ? (
-          <Animated.View entering={FadeInUp.duration(300)}>
+          <View>
             <Card padding="sm">
               <EmptyState
                 icon={CalendarDays}
@@ -275,7 +274,7 @@ export default function CalendarScreen() {
                 message={`Nenhuma crise ou evento em ${nomeDoMes} de ${year}.`}
               />
             </Card>
-          </Animated.View>
+          </View>
         ) : null}
       </View>
     </Screen>

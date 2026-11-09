@@ -1,31 +1,79 @@
+import { Bell, ChevronRight, FileText, LogOut, Moon, Shield, User, type LucideIcon } from 'lucide-react-native';
+import { useRef, useState, type RefObject } from 'react';
+import { Modal, View } from 'react-native';
+import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
-import ExportModal from '@/features/profile/ExportModal';
-import ScreenBackground from '@/components/ui/ScreenBackground';
-import { Colors } from '@/constants/Colors';
+import Chip from '@/components/ui/Chip';
+import Dialog from '@/components/ui/Dialog';
+import IconBadge from '@/components/ui/IconBadge';
+import Screen from '@/components/ui/Screen';
+import ScreenHeader from '@/components/ui/ScreenHeader';
+import Text from '@/components/ui/Text';
+import { color } from '@/constants/Colors';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAppLock } from '@/features/app-lock/AppLockContext';
-import { usePdfExport } from '@/features/profile/usePdfExport';
 import AppLockScreen from '@/features/app-lock/AppLockScreen';
+import ExportModal from '@/features/profile/ExportModal';
+import { usePdfExport } from '@/features/profile/usePdfExport';
 import { sessionRepository } from '@/repositories';
-import { Bell as BellIcon, ChevronRight, FileText, LogOut, Moon as MoonIcon, Shield, User } from 'lucide-react-native';
-import React, { useState } from 'react';
-import { Alert, Modal, ScrollView, Text, TouchableOpacity, View } from 'react-native';
-import Animated, { FadeInUp } from 'react-native-reanimated';
 
-const menuItems = [
-  { icon: Shield, label: 'Dados de saúde', desc: 'Perfil médico e alergias' },
-  { icon: MoonIcon, label: 'Preferências', desc: 'Tema, notificações, idioma' },
-  { icon: BellIcon, label: 'Lembretes', desc: 'Medicações e hidratação' },
-  { icon: FileText, label: 'Exportar dados', desc: 'PDF para seu médico' },
-  { icon: Shield, label: 'Segurança', desc: 'PIN e biometria' },
-];
+interface ItemDoMenuProps {
+  icon: LucideIcon;
+  label: string;
+  desc: string;
+  onPress?: () => void;
+  ref?: RefObject<View | null>;
+}
+
+function ItemDoMenu({ icon, label, desc, onPress, ref }: ItemDoMenuProps) {
+  const conteudo = (
+    <View className="flex-row items-center gap-3">
+      <IconBadge icon={icon} tone="neutral" />
+      <View className="flex-1 gap-1">
+        <Text weight="semibold">{label}</Text>
+        <Text variant="caption" tone="muted">
+          {desc}
+        </Text>
+      </View>
+      {onPress ? <ChevronRight size={20} color={color.contentMuted} /> : <Chip label="Em breve" />}
+    </View>
+  );
+
+  if (onPress) {
+    return (
+      <Card ref={ref} padding="sm" accessibilityLabel={`${label}. ${desc}`} onPress={onPress}>
+        {conteudo}
+      </Card>
+    );
+  }
+
+  return (
+    <Card padding="sm">
+      <View
+        accessible
+        accessibilityRole="button"
+        accessibilityLabel={`${label}. ${desc}. Em breve`}
+        accessibilityState={{ disabled: true }}
+        accessibilityHint="Esta opção ainda não está disponível"
+      >
+        {conteudo}
+      </View>
+    </Card>
+  );
+}
 
 export default function ProfileScreen() {
   const { user } = useAuth();
   const [exportModalVisible, setExportModalVisible] = useState(false);
   const [appLockModalVisible, setAppLockModalVisible] = useState(false);
+  const [confirmandoSaida, setConfirmandoSaida] = useState(false);
+  const [erroNoRelatorio, setErroNoRelatorio] = useState(false);
   const { config } = useAppLock();
   const { exportPdf, loading: pdfLoading } = usePdfExport();
+  const exportarRef = useRef<View>(null);
+  const sairRef = useRef<View>(null);
+
+  const nome = user?.user_metadata?.name ? `${user.user_metadata.name}` : 'Visitante';
 
   const handleExport = async (months: number) => {
     const userName = user?.user_metadata?.name ?? user?.email ?? 'Paciente';
@@ -34,91 +82,94 @@ export default function ProfileScreen() {
       setExportModalVisible(false);
     } catch {
       setExportModalVisible(false);
-      Alert.alert('Erro', 'Não foi possível gerar o relatório. Tente novamente.');
+      setErroNoRelatorio(true);
     }
   };
 
-  const handleMenuPress = (label: string) => {
-    if (label === 'Exportar dados') {
-      setExportModalVisible(true);
-    } else if (label === 'Segurança') {
-      setAppLockModalVisible(true);
-    }
-  };
-
-  const handleLogout = async () => {
-    Alert.alert('Sair da conta', 'Tem certeza que deseja sair?', [
-      { text: 'Cancelar', style: 'cancel' },
-      { text: 'Sair', style: 'destructive', onPress: async () => await sessionRepository.signOut() },
-    ]);
+  const sair = async () => {
+    setConfirmandoSaida(false);
+    await sessionRepository.signOut();
   };
 
   return (
-    <ScreenBackground>
-      <ScrollView
-        style={{ flex: 1 }}
-        contentContainerStyle={{ flexGrow: 1, paddingBottom: 160, paddingHorizontal: 24, paddingTop: 40 }}
-        showsVerticalScrollIndicator={false}
-      >
-        <Animated.View entering={FadeInUp} className="mb-8">
-          <Text className="text-[28px] text-white font-epilogue-light">
-            Seu <Text className="font-epilogue-bold">Perfil</Text>
-          </Text>
-        </Animated.View>
+    <Screen scroll>
+      <ScreenHeader title="Perfil" />
 
-        <Animated.View entering={FadeInUp.delay(100)}>
-          <Card className="flex-row items-center mb-8">
-            <View className="w-16 h-16 rounded-full bg-accent items-center justify-center mr-4">
-              <User size={32} color="white" />
+      <View className="gap-4">
+        <Card padding="sm">
+          <View className="flex-row items-center gap-3" accessible accessibilityLabel={`${nome}${user?.email ? `, ${user.email}` : ''}`}>
+            <View className="h-14 w-14 items-center justify-center rounded-full bg-primary-subtle">
+              <User size={24} color={color.primary} />
             </View>
-            <View>
-              <Text className="text-xl text-white font-epilogue-bold">
-                {user?.user_metadata?.name ? `${user.user_metadata.name}` : 'Visitante'}
-              </Text>
+            <View className="flex-1 gap-1">
+              <Text variant="heading">{nome}</Text>
+              {user?.email ? (
+                <Text variant="caption" tone="muted">
+                  {user.email}
+                </Text>
+              ) : null}
             </View>
-          </Card>
-        </Animated.View>
+          </View>
+        </Card>
 
-        <Animated.View entering={FadeInUp.delay(200)} className="gap-3">
-          {menuItems.map((item) => (
-            <TouchableOpacity
-              key={item.label}
-              onPress={() => handleMenuPress(item.label)}
-              className="flex-row items-center p-4 rounded-2xl mb-2"
-              style={{ backgroundColor: '#232533', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.10)' }}
-            >
-              <View className="w-12 h-12 rounded-xl bg-accent/10 items-center justify-center mr-4">
-                <item.icon size={20} color={Colors.accent} />
-              </View>
-              <View className="flex-1">
-                <Text className="text-white font-epilogue-semi">{item.label}</Text>
-                <Text className="text-[11px] text-muted font-epilogue">{item.desc}</Text>
-              </View>
-              <ChevronRight size={18} color={Colors.muted} />
-            </TouchableOpacity>
-          ))}
-        </Animated.View>
+        <ItemDoMenu icon={Shield} label="Dados de saúde" desc="Perfil médico e alergias" />
+        <ItemDoMenu icon={Moon} label="Preferências" desc="Tema, notificações, idioma" />
+        <ItemDoMenu icon={Bell} label="Lembretes" desc="Medicações e hidratação" />
+        <ItemDoMenu
+          ref={exportarRef}
+          icon={FileText}
+          label="Exportar dados"
+          desc="PDF para seu médico"
+          onPress={() => setExportModalVisible(true)}
+        />
+        <ItemDoMenu icon={Shield} label="Segurança" desc="PIN e biometria" onPress={() => setAppLockModalVisible(true)} />
 
-        <Animated.View entering={FadeInUp.delay(400)} className="mt-8 mb-10">
-          <TouchableOpacity onPress={handleLogout} className="flex-row items-center justify-center gap-2 py-4">
-            <LogOut size={20} color="#EF4444" />
-            <Text className="text-red-500 font-epilogue-bold">Sair da conta</Text>
-          </TouchableOpacity>
-        </Animated.View>
-      </ScrollView>
+        <Button
+          ref={sairRef}
+          title="Sair da conta"
+          variant="danger"
+          icon={LogOut}
+          onPress={() => setConfirmandoSaida(true)}
+          className="mt-4"
+        />
+      </View>
 
       <ExportModal
         visible={exportModalVisible}
         loading={pdfLoading}
         onClose={() => setExportModalVisible(false)}
         onSelect={handleExport}
+        returnFocusTo={exportarRef}
       />
+
+      <Dialog
+        visible={erroNoRelatorio}
+        title="Não foi possível gerar o relatório"
+        onClose={() => setErroNoRelatorio(false)}
+        returnFocusTo={exportarRef}
+        footer={<Button title="Entendi" onPress={() => setErroNoRelatorio(false)} />}
+      >
+        <Text tone="muted">Tente novamente.</Text>
+      </Dialog>
+
+      <Dialog
+        visible={confirmandoSaida}
+        title="Sair da conta?"
+        onClose={() => setConfirmandoSaida(false)}
+        returnFocusTo={sairRef}
+        footer={
+          <View className="flex-row flex-wrap gap-3">
+            <Button title="Cancelar" variant="ghost" onPress={() => setConfirmandoSaida(false)} className="flex-grow" />
+            <Button title="Sair" variant="danger" onPress={sair} className="flex-grow" />
+          </View>
+        }
+      >
+        <Text tone="muted">Você vai precisar entrar de novo para ver seus registros.</Text>
+      </Dialog>
+
       <Modal visible={appLockModalVisible} animationType="slide" onRequestClose={() => setAppLockModalVisible(false)}>
-        <AppLockScreen
-          mode={config ? 'manage' : 'setup'}
-          onClose={() => setAppLockModalVisible(false)}
-        />
+        <AppLockScreen mode={config ? 'manage' : 'setup'} onClose={() => setAppLockModalVisible(false)} />
       </Modal>
-    </ScreenBackground>
+    </Screen>
   );
 }

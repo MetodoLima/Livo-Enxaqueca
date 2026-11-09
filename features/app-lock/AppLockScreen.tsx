@@ -1,6 +1,17 @@
 import React, { useEffect, useState } from 'react';
-import { ActivityIndicator, SafeAreaView, Switch, Text, TextInput, TouchableOpacity, View } from 'react-native';
-import { Colors } from '@/constants/Colors';
+import { Switch, View } from 'react-native';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { CircleAlert, Shield } from 'lucide-react-native';
+import Button from '@/components/ui/Button';
+import Card from '@/components/ui/Card';
+import Chip from '@/components/ui/Chip';
+import IconBadge from '@/components/ui/IconBadge';
+import Notice from '@/components/ui/Notice';
+import Screen from '@/components/ui/Screen';
+import ScreenHeader from '@/components/ui/ScreenHeader';
+import Text from '@/components/ui/Text';
+import TextField from '@/components/ui/TextField';
+import { color } from '@/constants/Colors';
 import { useAppLock } from '@/features/app-lock/AppLockContext';
 import { isValidPin } from '@/features/app-lock/appLockStore';
 
@@ -13,6 +24,45 @@ function formatWait(ms: number): string {
   const seconds = Math.ceil(ms / 1000);
   if (seconds < 60) return `${seconds} s`;
   return `${Math.ceil(seconds / 60)} min`;
+}
+
+const TRILHO = { false: color.surfaceRaised, true: color.primaryStrong };
+
+function Interruptor({
+  titulo,
+  descricao,
+  value,
+  onValueChange,
+  disabled,
+}: {
+  titulo: string;
+  descricao: string;
+  value: boolean;
+  onValueChange: (v: boolean) => void;
+  disabled?: boolean;
+}) {
+  return (
+    <Card padding="sm">
+      <View className="min-h-12 flex-row items-center gap-4">
+        <View className="flex-1 gap-1">
+          <Text weight="semibold">{titulo}</Text>
+          <Text variant="caption" tone="muted">
+            {descricao}
+          </Text>
+        </View>
+        <Switch
+          value={value}
+          onValueChange={onValueChange}
+          disabled={disabled}
+          trackColor={TRILHO}
+          thumbColor={color.content}
+          ios_backgroundColor={color.surfaceRaised}
+          accessibilityLabel={titulo}
+          accessibilityHint={descricao}
+        />
+      </View>
+    </Card>
+  );
 }
 
 export default function AppLockScreen({ mode = 'unlock', onClose }: AppLockScreenProps) {
@@ -149,173 +199,179 @@ export default function AppLockScreen({ mode = 'unlock', onClose }: AppLockScree
     }
   };
 
-  return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bgDark }}>
-      <View style={{ flex: 1, justifyContent: 'center', paddingHorizontal: 28 }}>
-        <Text style={{ color: 'white', fontSize: 28, fontWeight: '700', marginBottom: 10 }}>
-          {setupMode ? 'Proteger aplicativo' : manageMode ? 'Segurança do Livo' : 'Desbloquear Livo'}
-        </Text>
-        <Text style={{ color: Colors.muted, fontSize: 15, marginBottom: 28 }}>
-          {setupMode
-            ? 'Crie um PIN para proteger seus dados neste dispositivo.'
-            : manageMode
-              ? 'Controle a proteção local do Livo sem alterar sua sessão da conta.'
-            : 'Use sua biometria ou informe o PIN para continuar.'}
-        </Text>
+  const handleBiometricUnlock = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      const unlocked = await unlockWithBiometric();
+      if (!unlocked) setError('A biometria não desbloqueou o aplicativo.');
+    } catch {
+      setError('Não foi possível usar a biometria.');
+    } finally {
+      setBusy(false);
+    }
+  };
 
-        {manageMode && (
-          <View style={{ marginBottom: 22 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <View style={{ flex: 1, paddingRight: 16 }}>
-                <Text style={{ color: 'white', fontSize: 16 }}>Segurança do aplicativo</Text>
-                <Text style={{ color: Colors.muted, fontSize: 13, marginTop: 4 }}>
-                  {securityEnabled ? 'Protege o acesso ao Livo com um PIN.' : 'O AppLock está desativado.'}
-                </Text>
-              </View>
-              <Switch value={securityEnabled} onValueChange={handleSecurityChange} disabled={busy} />
-            </View>
-          </View>
-        )}
+  const aviso = pinWaiting
+    ? `Muitas tentativas erradas. Tente o PIN de novo em ${formatWait(pinWaitMs)}.`
+    : error;
+  const dicaDeEspera = pinWaiting ? 'Aguarde o fim do tempo de espera para tentar de novo' : undefined;
 
-        {manageMode && securityEnabled && (
-          <View style={{ marginBottom: 18 }}>
-            <Text style={{ color: 'white', fontSize: 16 }}>PIN</Text>
-            <Text style={{ color: Colors.muted, fontSize: 13, marginTop: 4 }}>
-              Ativo e sempre disponível como fallback.
-            </Text>
-          </View>
-        )}
-
-        {manageMode && !securityEnabled && reactivationMode && (
-          <View style={{ marginBottom: 18 }}>
-            <Text style={{ color: 'white', fontSize: 16, marginBottom: 10 }}>Confirme o PIN para reativar</Text>
-            <TextInput
-              autoFocus
-              value={reactivationPin}
-              onChangeText={setReactivationPin}
-              placeholder="PIN atual"
-              placeholderTextColor={Colors.muted}
-              keyboardType="number-pad"
-              secureTextEntry
-              maxLength={6}
-              style={{ color: 'white', backgroundColor: '#112236', borderRadius: 12, padding: 16, marginBottom: 12 }}
+  if (manageMode) {
+    return (
+      <SafeAreaProvider>
+        <Screen scroll>
+          <ScreenHeader title="Segurança do aplicativo" onBack={onClose} />
+          <View className="gap-4">
+            <Interruptor
+              titulo="Segurança do aplicativo"
+              descricao={securityEnabled ? 'Protege o acesso ao Livo com um PIN.' : 'O AppLock está desativado.'}
+              value={securityEnabled}
+              onValueChange={handleSecurityChange}
+              disabled={busy}
             />
-            <TouchableOpacity
-              onPress={handleReactivate}
-              disabled={busy || pinWaiting}
-              style={{ backgroundColor: Colors.accent, borderRadius: 12, padding: 16, alignItems: 'center', opacity: pinWaiting ? 0.5 : 1 }}
-            >
-              {busy ? <ActivityIndicator color="white" /> : <Text style={{ color: 'white', fontWeight: '700' }}>Reativar segurança</Text>}
-            </TouchableOpacity>
-          </View>
-        )}
 
-        {setupMode && (
-          <TextInput
-            value={confirmation}
-            onChangeText={setConfirmation}
-            placeholder="Confirme o PIN"
-            placeholderTextColor={Colors.muted}
-            keyboardType="number-pad"
-            secureTextEntry
-            maxLength={6}
-            style={{ color: 'white', backgroundColor: '#112236', borderRadius: 12, padding: 16, marginBottom: 12 }}
-          />
-        )}
-        {!manageMode && <TextInput
-          autoFocus
-          value={pin}
-          onChangeText={setPin}
-          placeholder={setupMode ? 'PIN de 4 a 6 dígitos' : 'PIN'}
-          placeholderTextColor={Colors.muted}
-          keyboardType="number-pad"
-          secureTextEntry
-          maxLength={6}
-          style={{ color: 'white', backgroundColor: '#112236', borderRadius: 12, padding: 16, marginBottom: 14 }}
-        />}
+            {securityEnabled ? (
+              <Card padding="sm">
+                <View className="flex-row items-center gap-3">
+                  <IconBadge icon={Shield} />
+                  <View className="flex-1 gap-1">
+                    <Text weight="semibold">PIN</Text>
+                    <Text variant="caption" tone="muted">
+                      Ativo e sempre disponível como fallback.
+                    </Text>
+                  </View>
+                  <Chip label="Ativo" tone="success" />
+                </View>
+              </Card>
+            ) : null}
 
-        {setupMode && biometricAvailable && (
-          <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 18 }}>
-            <Text style={{ color: 'white', fontSize: 15 }}>Ativar biometria</Text>
-            <Switch value={useBiometric} onValueChange={setUseBiometric} />
-          </View>
-        )}
+            {!securityEnabled && reactivationMode ? (
+              <Card padding="sm" className="gap-4">
+                <View className="flex-row items-center gap-3">
+                  <IconBadge icon={Shield} />
+                  <Text weight="semibold" className="flex-1">
+                    Confirme o PIN para reativar
+                  </Text>
+                </View>
+                <TextField
+                  label="PIN atual"
+                  autoFocus
+                  value={reactivationPin}
+                  onChangeText={setReactivationPin}
+                  keyboardType="number-pad"
+                  secureTextEntry
+                  maxLength={6}
+                />
+                <Button
+                  title="Reativar segurança"
+                  icon={Shield}
+                  onPress={handleReactivate}
+                  loading={busy}
+                  disabled={pinWaiting}
+                  accessibilityHint={dicaDeEspera}
+                />
+              </Card>
+            ) : null}
 
-        {manageMode && securityEnabled && (
-          <View style={{ marginBottom: 18 }}>
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <View style={{ flex: 1, paddingRight: 16 }}>
-                <Text style={{ color: 'white', fontSize: 16 }}>Biometria</Text>
-                <Text style={{ color: Colors.muted, fontSize: 13, marginTop: 4 }}>
-                  {biometricAvailable
+            {securityEnabled ? (
+              <Interruptor
+                titulo="Biometria"
+                descricao={
+                  biometricAvailable
                     ? 'Use a biometria para desbloquear mais rapidamente.'
-                    : 'Nenhuma biometria cadastrada neste dispositivo.'}
-                </Text>
-              </View>
-              <Switch
+                    : 'Nenhuma biometria cadastrada neste dispositivo.'
+                }
                 value={config?.biometricEnabled ?? false}
                 onValueChange={handleBiometricChange}
                 disabled={busy || (!biometricAvailable && !config?.biometricEnabled)}
               />
-            </View>
+            ) : null}
+
+            {aviso ? (
+              <Notice icon={CircleAlert} tone="danger">
+                {aviso}
+              </Notice>
+            ) : null}
           </View>
-        )}
+        </Screen>
+      </SafeAreaProvider>
+    );
+  }
 
-        {pinWaiting ? (
-          <Text style={{ color: '#EF7777', marginBottom: 14 }}>
-            Muitas tentativas erradas. Tente o PIN de novo em {formatWait(pinWaitMs)}.
-          </Text>
-        ) : (
-          error && <Text style={{ color: '#EF7777', marginBottom: 14 }}>{error}</Text>
-        )}
+  return (
+    <SafeAreaProvider>
+      <Screen scroll className="justify-center">
+        <Text variant="title">{setupMode ? 'Proteger aplicativo' : 'Desbloquear Livo'}</Text>
+        <Text tone="muted" className="mb-6 mt-2">
+          {setupMode
+            ? 'Crie um PIN para proteger seus dados neste dispositivo.'
+            : 'Use sua biometria ou informe o PIN para continuar.'}
+        </Text>
 
-        {!manageMode && <TouchableOpacity
-          onPress={setupMode ? handleSetup : handleUnlock}
-          disabled={busy || pinWaiting}
-          style={{
-            backgroundColor: Colors.accent,
-            borderRadius: 12,
-            padding: 16,
-            alignItems: 'center',
-            opacity: pinWaiting ? 0.5 : 1,
-          }}
-        >
-          {busy ? <ActivityIndicator color="white" /> : <Text style={{ color: 'white', fontWeight: '700' }}>{setupMode ? 'Salvar PIN' : 'Desbloquear'}</Text>}
-        </TouchableOpacity>}
+        <View className="gap-4">
+          {setupMode ? (
+            <TextField
+              label="Confirme o PIN"
+              value={confirmation}
+              onChangeText={setConfirmation}
+              keyboardType="number-pad"
+              secureTextEntry
+              maxLength={6}
+            />
+          ) : null}
+          <TextField
+            label="PIN"
+            autoFocus
+            value={pin}
+            onChangeText={setPin}
+            placeholder={setupMode ? '4 a 6 dígitos' : undefined}
+            keyboardType="number-pad"
+            secureTextEntry
+            maxLength={6}
+          />
 
-        {!setupMode && !manageMode && biometricAvailable && config?.biometricEnabled && (
-          <TouchableOpacity
-            onPress={async () => {
-              setBusy(true);
-              setError(null);
-              try {
-                const unlocked = await unlockWithBiometric();
-                if (!unlocked) setError('A biometria não desbloqueou o aplicativo.');
-              } catch {
-                setError('Não foi possível usar a biometria.');
-              } finally {
-                setBusy(false);
-              }
-            }}
-            disabled={busy}
-            style={{ padding: 16, alignItems: 'center', marginTop: 8 }}
-          >
-            <Text style={{ color: Colors.accent, fontWeight: '700' }}>Usar biometria</Text>
-          </TouchableOpacity>
-        )}
+          {setupMode && biometricAvailable ? (
+            <View className="min-h-12 flex-row items-center justify-between gap-4">
+              <Text className="flex-1">Ativar biometria</Text>
+              <Switch
+                value={useBiometric}
+                onValueChange={setUseBiometric}
+                trackColor={TRILHO}
+                thumbColor={color.content}
+                ios_backgroundColor={color.surfaceRaised}
+                accessibilityLabel="Ativar biometria"
+              />
+            </View>
+          ) : null}
 
-        {manageMode && onClose && (
-          <TouchableOpacity onPress={onClose} style={{ padding: 16, alignItems: 'center', marginTop: 8 }}>
-            <Text style={{ color: Colors.muted }}>Fechar</Text>
-          </TouchableOpacity>
-        )}
+          {aviso ? (
+            <Notice icon={CircleAlert} tone="danger">
+              {aviso}
+            </Notice>
+          ) : null}
 
-        {setupMode && onClose && (
-          <TouchableOpacity onPress={onClose} style={{ padding: 16, alignItems: 'center', marginTop: 8 }}>
-            <Text style={{ color: Colors.muted }}>Cancelar</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-    </SafeAreaView>
+          <Button
+            title={setupMode ? 'Salvar PIN' : 'Desbloquear'}
+            onPress={setupMode ? handleSetup : handleUnlock}
+            loading={busy}
+            disabled={pinWaiting}
+            accessibilityHint={dicaDeEspera}
+          />
+
+          {!setupMode && biometricAvailable && config?.biometricEnabled ? (
+            <Button
+              title="Usar biometria"
+              variant="ghost"
+              onPress={handleBiometricUnlock}
+              disabled={busy}
+              accessibilityHint={busy ? 'Aguarde a verificação em andamento' : undefined}
+            />
+          ) : null}
+
+          {setupMode && onClose ? <Button title="Cancelar" variant="ghost" onPress={onClose} /> : null}
+        </View>
+      </Screen>
+    </SafeAreaProvider>
   );
 }

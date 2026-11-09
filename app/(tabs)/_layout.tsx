@@ -1,10 +1,19 @@
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home, Calendar, Wind, BarChart2, User } from 'lucide-react-native';
-import { Colors, color } from '@/constants/Colors';
+import Text from '@/components/ui/Text';
+import { color } from '@/constants/Colors';
 import { useCrisis } from '@/contexts/CrisisContext';
+
+function Rotulo({ texto, focused }: { texto: string; focused: boolean }) {
+  return (
+    <Text variant="caption" tone={focused ? 'primary' : 'muted'}>
+      {texto}
+    </Text>
+  );
+}
 
 export default function TabLayout() {
   const { hasActiveCrisis } = useCrisis();
@@ -13,16 +22,16 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: Colors.accent,
-        tabBarInactiveTintColor: Colors.muted,
+        tabBarActiveTintColor: color.primary,
+        tabBarInactiveTintColor: color.contentMuted,
         tabBarStyle: {
-          backgroundColor: Colors.bgDark,
+          backgroundColor: color.surface,
           borderTopWidth: 0,
           elevation: 0,
           shadowOpacity: 0,
           height: 70 + insets.bottom,
-          paddingBottom: 10 + insets.bottom,
-          paddingTop: 6,
+          paddingBottom: 12 + insets.bottom,
+          paddingTop: 8,
         },
         headerShown: false,
       }}>
@@ -30,14 +39,16 @@ export default function TabLayout() {
         name="index"
         options={{
           title: 'Início',
-          tabBarIcon: ({ color }) => <Home size={24} color={color} />,
+          tabBarLabel: ({ focused }) => <Rotulo texto="Início" focused={focused} />,
+          tabBarIcon: (props) => <Home size={24} color={props.color} />,
         }}
       />
       <Tabs.Screen
         name="calendar"
         options={{
           title: 'Histórico',
-          tabBarIcon: ({ color }) => <Calendar size={24} color={color} />,
+          tabBarLabel: ({ focused }) => <Rotulo texto="Histórico" focused={focused} />,
+          tabBarIcon: (props) => <Calendar size={24} color={props.color} />,
         }}
       />
 
@@ -45,13 +56,13 @@ export default function TabLayout() {
         name="crisis"
         options={{
           title: '',
+          tabBarAccessibilityLabel: hasActiveCrisis ? 'Crise em andamento' : 'Crise',
           tabBarIcon: ({ focused }) => (
-            <View style={[
-              styles.centerBtn,
-              hasActiveCrisis && styles.centerBtnActive,
-              focused && styles.centerBtnFocused,
-            ]}>
-              <Wind size={24} color={hasActiveCrisis ? color.canvas : 'white'} />
+            <View
+              className={`mb-5 h-14 w-14 items-center justify-center rounded-full ${hasActiveCrisis ? 'bg-danger' : 'bg-primary'}`}
+              style={focused ? { transform: [{ scale: 1.08 }] } : undefined}
+            >
+              <Wind size={24} color={color.canvas} />
             </View>
           ),
           tabBarLabel: () => null,
@@ -62,41 +73,18 @@ export default function TabLayout() {
         name="insights"
         options={{
           title: 'Insights',
-          tabBarIcon: ({ color }) => <BarChart2 size={24} color={color} />,
+          tabBarLabel: ({ focused }) => <Rotulo texto="Insights" focused={focused} />,
+          tabBarIcon: (props) => <BarChart2 size={24} color={props.color} />,
         }}
       />
       <Tabs.Screen
         name="profile"
         options={{
           title: 'Perfil',
-          tabBarIcon: ({ color }) => <User size={24} color={color} />,
+          tabBarLabel: ({ focused }) => <Rotulo texto="Perfil" focused={focused} />,
+          tabBarIcon: (props) => <User size={24} color={props.color} />,
         }}
       />
     </Tabs>
   );
 }
-
-const styles = StyleSheet.create({
-  centerBtn: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: Colors.accent,
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: 20,
-    shadowColor: Colors.accent,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.4,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  centerBtnActive: {
-    backgroundColor: color.danger,
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  centerBtnFocused: {
-    transform: [{ scale: 1.08 }],
-  },
-});
