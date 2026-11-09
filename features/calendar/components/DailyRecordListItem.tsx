@@ -1,6 +1,5 @@
 import { ChevronRight, Clock } from 'lucide-react-native';
 import { Image, View } from 'react-native';
-import Animated, { FadeInDown } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
 import Card from '@/components/ui/Card';
 import Text from '@/components/ui/Text';
@@ -9,7 +8,7 @@ import { MOODS } from '@/constants/data';
 import type { RegistroCalendarDay } from '@/features/daily-record/useDailyRecordCalendar';
 import { formatLitros, formatSleep, moodLabel } from '@/lib/format';
 
-export default function DailyRecordListItem({ registro, index }: { registro: RegistroCalendarDay; index: number }) {
+export default function DailyRecordListItem({ registro }: { registro: RegistroCalendarDay; index: number }) {
   const router = useRouter();
   const hora = new Date(registro.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   const rotina = [
@@ -33,37 +32,35 @@ export default function DailyRecordListItem({ registro, index }: { registro: Reg
     .join(', ');
 
   return (
-    <Animated.View entering={FadeInDown.delay(index * 60).duration(250)}>
-      <Card
-        padding="sm"
-        accessibilityLabel={rotulo}
-        onPress={() =>
-          router.push({
-            pathname: '/daily-record/[id]',
-            params: {
-              id: String(registro.id),
-              data: JSON.stringify(registro),
-            },
-          })
-        }
-      >
-        <View className="flex-row items-center gap-3">
-          <View>
-            <Text variant="caption" tone="muted">
-              Hora
-            </Text>
-            <Text variant="heading">{hora}</Text>
-          </View>
-          {humor ? (
-            <Image source={humor.image} className="h-8 w-8" resizeMode="contain" accessibilityIgnoresInvertColors />
-          ) : null}
-          <Text numberOfLines={2} className="flex-1">
-            {texto}
+    <Card
+      padding="sm"
+      accessibilityLabel={rotulo}
+      onPress={() =>
+        router.push({
+          pathname: '/daily-record/[id]',
+          params: {
+            id: String(registro.id),
+            data: JSON.stringify(registro),
+          },
+        })
+      }
+    >
+      <View className="flex-row items-center gap-3">
+        <View>
+          <Text variant="caption" tone="muted">
+            Hora
           </Text>
-          {!registro.enviado ? <Clock size={20} color={color.attention} /> : null}
-          <ChevronRight size={20} color={color.contentMuted} />
+          <Text variant="heading">{hora}</Text>
         </View>
-      </Card>
-    </Animated.View>
+        {humor ? (
+          <Image source={humor.image} className="h-8 w-8" resizeMode="contain" accessibilityIgnoresInvertColors />
+        ) : null}
+        <Text numberOfLines={2} className="flex-1">
+          {texto}
+        </Text>
+        {!registro.enviado ? <Clock size={20} color={color.attention} /> : null}
+        <ChevronRight size={20} color={color.contentMuted} />
+      </View>
+    </Card>
   );
 }

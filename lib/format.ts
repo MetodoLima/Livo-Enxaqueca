@@ -1,4 +1,3 @@
-import { Colors } from '@/constants/Colors';
 import { INTENSITY_CONFIG } from '@/types/crisis';
 
 export function toLocalDateString(date: Date): string {
@@ -118,19 +117,9 @@ export function duracaoSono(dormir: Horario, acordar: Horario): number {
   return Math.round(minutosDeSono(dormir, acordar) / 6) / 10;
 }
 
-export function intensityColor(intensity: number | null): string {
-  if (intensity === null) return Colors.muted;
-  return INTENSITY_CONFIG.find((c) => c.value === intensity)?.color ?? Colors.muted;
-}
-
 export function intensityLabel(intensity: number | null): string {
   if (intensity === null) return 'Não registrada';
   return INTENSITY_CONFIG.find((c) => c.value === intensity)?.label ?? `${intensity}/10`;
-}
-
-export function intensityEmoji(intensity: number | null): string {
-  if (intensity === null) return '❓';
-  return INTENSITY_CONFIG.find((c) => c.value === intensity)?.emoji ?? '😐';
 }
 
 const MOOD_LABEL: Record<string, string> = {

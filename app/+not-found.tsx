@@ -1,16 +1,19 @@
 import { Link, Stack } from 'expo-router';
-import { View, Text } from 'react-native';
+import { CircleAlert } from 'lucide-react-native';
+import Button from '@/components/ui/Button';
+import EmptyState from '@/components/ui/EmptyState';
+import Screen from '@/components/ui/Screen';
 
 export default function NotFoundScreen() {
   return (
     <>
       <Stack.Screen options={{ title: 'Oops!' }} />
-      <View className="flex-1 items-center justify-center p-5 bg-bg-dark">
-        <Text className="text-xl text-white font-epilogue-bold">Essa tela não existe.</Text>
-        <Link href="/" className="mt-4 py-4">
-          <Text className="text-sm text-accent font-epilogue">Ir para o início</Text>
+      <Screen className="justify-center">
+        <EmptyState icon={CircleAlert} title="Essa tela não existe." />
+        <Link href="/" asChild>
+          <Button title="Ir para o início" variant="secondary" />
         </Link>
-      </View>
+      </Screen>
     </>
   );
 }

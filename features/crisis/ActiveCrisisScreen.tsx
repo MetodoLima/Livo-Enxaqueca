@@ -23,6 +23,7 @@ import { IntensityMarker } from '@/features/crisis/components/IntensityScale';
 import PastPhaseCard from '@/features/crisis/components/PastPhaseCard';
 import { useCrisisAiComplement } from '@/hooks/useCrisisAiComplement';
 import { crisisRepository, ehBancoLocalIndisponivel } from '@/repositories';
+import { SERVIDOR_DE_IA_DISPONIVEL } from '@/services/api';
 import {
   LOCATIONS,
   MEDICATIONS,
@@ -31,8 +32,6 @@ import {
   crisisToMigraineStructured,
   mergeAiResultIntoCrisis,
 } from '@/types/crisis';
-
-const COMPLEMENTO_DISPONIVEL = false;
 
 type Campo = 'intensity' | 'location' | 'symptoms' | 'medications';
 
@@ -412,7 +411,7 @@ export default function ActiveCrisisScreen() {
             </Card>
           ) : null}
 
-          {COMPLEMENTO_DISPONIVEL ? (
+          {SERVIDOR_DE_IA_DISPONIVEL ? (
             <Card
               ref={complementoRef}
               padding="sm"
@@ -469,7 +468,7 @@ export default function ActiveCrisisScreen() {
         <Text tone="muted">A fase atual será salva e os campos serão reiniciados para a nova fase.</Text>
       </Dialog>
 
-      {COMPLEMENTO_DISPONIVEL ? (
+      {SERVIDOR_DE_IA_DISPONIVEL ? (
         <Dialog
           visible={showVoice}
           title="Complementar registro"

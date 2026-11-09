@@ -25,7 +25,7 @@ import {
   Epilogue_600SemiBold,
   Epilogue_700Bold,
 } from '@expo-google-fonts/epilogue';
-import { Colors } from '@/constants/Colors';
+import { color } from '@/constants/Colors';
 
 export {
   ErrorBoundary,
@@ -41,8 +41,8 @@ const LivoTheme = {
   ...DarkTheme,
   colors: {
     ...DarkTheme.colors,
-    background: Colors.bgDark,
-    card: Colors.bgDark,
+    background: color.canvas,
+    card: color.canvas,
   },
 };
 

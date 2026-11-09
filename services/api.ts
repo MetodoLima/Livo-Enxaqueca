@@ -7,6 +7,8 @@ const devHost =
 
 export const API_BASE_URL = `http://${devHost}:8000`;
 
+export const SERVIDOR_DE_IA_DISPONIVEL = false;
+
 export interface SintomasAssociados {
   nausea: boolean;
   vomito: boolean;

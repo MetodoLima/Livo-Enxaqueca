@@ -2,7 +2,6 @@ import { useMemo } from 'react';
 import { Image, View } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { CalendarDays } from 'lucide-react-native';
-import Animated, { FadeInDown, useReducedMotion } from 'react-native-reanimated';
 import Card from '@/components/ui/Card';
 import EmptyState from '@/components/ui/EmptyState';
 import Screen from '@/components/ui/Screen';
@@ -26,7 +25,6 @@ const mesmoDia = (a: Date, b: Date) =>
   a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 
 export default function CrisisDetailScreen() {
-  const reduceMotion = useReducedMotion();
   const router = useRouter();
   const params = useLocalSearchParams<{ id: string; data: string }>();
 
@@ -71,45 +69,41 @@ export default function CrisisDetailScreen() {
       <ScreenHeader title="Detalhes da crise" subtitle={formatDiaPorExtenso(inicio)} onBack={() => router.back()} />
 
       <View className="gap-4">
-        <Animated.View entering={reduceMotion ? undefined : FadeInDown.duration(350)}>
-          <Card padding="sm">
-            <View
-              className="flex-row items-center gap-4"
-              accessible
-              accessibilityLabel={`Pico de intensidade: ${
-                maxIntensidade !== null ? `${maxIntensidade} de 10, ${intensityLabel(maxIntensidade)}` : 'não registrado'
-              }`}
-            >
+        <Card padding="sm">
+          <View
+            className="flex-row items-center gap-4"
+            accessible
+            accessibilityLabel={`Pico de intensidade: ${
+              maxIntensidade !== null ? `${maxIntensidade} de 10, ${intensityLabel(maxIntensidade)}` : 'não registrado'
+            }`}
+          >
+            {maxIntensidade !== null ? (
+              <Image
+                source={imagemDa(maxIntensidade)}
+                className="h-20 w-20"
+                resizeMode="contain"
+                accessibilityIgnoresInvertColors
+              />
+            ) : null}
+            <View className="flex-1 gap-1">
               {maxIntensidade !== null ? (
-                <Image
-                  source={imagemDa(maxIntensidade)}
-                  className="h-20 w-20"
-                  resizeMode="contain"
-                  accessibilityIgnoresInvertColors
-                />
-              ) : null}
-              <View className="flex-1 gap-1">
-                {maxIntensidade !== null ? (
-                  <IntensityMarker value={maxIntensidade} />
-                ) : (
-                  <Text weight="semibold">Não registrada</Text>
-                )}
-                <Text variant="caption" tone="muted">
-                  pico de intensidade
-                </Text>
-              </View>
+                <IntensityMarker value={maxIntensidade} />
+              ) : (
+                <Text weight="semibold">Não registrada</Text>
+              )}
+              <Text variant="caption" tone="muted">
+                pico de intensidade
+              </Text>
             </View>
-          </Card>
-        </Animated.View>
+          </View>
+        </Card>
 
-        <Animated.View entering={reduceMotion ? undefined : FadeInDown.delay(80).duration(300)}>
-          <Card padding="sm" className="gap-3">
-            <Text variant="heading">Tempo</Text>
-            <Linha rotulo="Início" valor={inicioTexto} />
-            <Linha rotulo="Fim" valor={fimTexto} />
-            <Linha rotulo="Duração total" valor={duracao} forte />
-          </Card>
-        </Animated.View>
+        <Card padding="sm" className="gap-3">
+          <Text variant="heading">Tempo</Text>
+          <Linha rotulo="Início" valor={inicioTexto} />
+          <Linha rotulo="Fim" valor={fimTexto} />
+          <Linha rotulo="Duração total" valor={duracao} forte />
+        </Card>
 
         <View className="gap-3 pt-2">
           <Text variant="heading">Fases da crise</Text>
