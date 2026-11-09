@@ -26,6 +26,8 @@ import {
   Epilogue_700Bold,
 } from '@expo-google-fonts/epilogue';
 import { color } from '@/constants/Colors';
+import { ARQUIVOS_DE_FONTE } from '@/constants/typography';
+import { PreferencesProvider, usePreferences } from '@/contexts/PreferencesContext';
 
 export {
   ErrorBoundary,
@@ -175,6 +177,7 @@ function RootLayoutNav() {
         <Stack.Screen name="emergency" options={{ presentation: 'modal', headerShown: false }} />
         <Stack.Screen name="record-crisis" options={{ presentation: 'modal', headerShown: false }} />
         <Stack.Screen name="crisis/[id]" options={{ headerShown: false }} />
+        <Stack.Screen name="appearance" options={{ headerShown: false }} />
       </Stack>
     </ThemeProvider>
   );
@@ -191,12 +194,22 @@ function ProtectedAppProviders() {
 }
 
 export default function RootLayout() {
+  return (
+    <PreferencesProvider>
+      <RootContent />
+    </PreferencesProvider>
+  );
+}
+
+function RootContent() {
+  const { pronto } = usePreferences();
   const [loaded, error] = useFonts({
     Epilogue_300Light,
     Epilogue_400Regular,
     Epilogue_500Medium,
     Epilogue_600SemiBold,
     Epilogue_700Bold,
+    ...ARQUIVOS_DE_FONTE,
     ...FontAwesome.font,
   });
 
@@ -205,12 +218,12 @@ export default function RootLayout() {
   }, [error]);
 
   useEffect(() => {
-    if (loaded) {
+    if (loaded && pronto) {
       SplashScreen.hideAsync();
     }
-  }, [loaded]);
+  }, [loaded, pronto]);
 
-  if (!loaded) {
+  if (!loaded || !pronto) {
     return null;
   }
 

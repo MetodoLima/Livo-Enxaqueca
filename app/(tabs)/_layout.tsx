@@ -1,10 +1,12 @@
 import React from 'react';
-import { View } from 'react-native';
+import { useWindowDimensions, View } from 'react-native';
 import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home, Calendar, Wind, BarChart2, User } from 'lucide-react-native';
 import Text from '@/components/ui/Text';
 import { color } from '@/constants/Colors';
+import { escalaMaximaDoSistema, estiloDeTexto } from '@/constants/typography';
+import { usePreferences } from '@/contexts/PreferencesContext';
 import { useCrisis } from '@/contexts/CrisisContext';
 
 function Rotulo({ texto, focused }: { texto: string; focused: boolean }) {
@@ -18,6 +20,12 @@ function Rotulo({ texto, focused }: { texto: string; focused: boolean }) {
 export default function TabLayout() {
   const { hasActiveCrisis } = useCrisis();
   const insets = useSafeAreaInsets();
+  const { fontScale } = useWindowDimensions();
+  const { preferencias } = usePreferences();
+  const linhaDoRotulo = Math.ceil(
+    (estiloDeTexto('caption', 'regular', preferencias).lineHeight ?? 0) *
+      Math.min(fontScale, escalaMaximaDoSistema(preferencias)),
+  );
 
   return (
     <Tabs
@@ -29,7 +37,7 @@ export default function TabLayout() {
           borderTopWidth: 0,
           elevation: 0,
           shadowOpacity: 0,
-          height: 70 + insets.bottom,
+          height: 52 + linhaDoRotulo + insets.bottom,
           paddingBottom: 12 + insets.bottom,
           paddingTop: 8,
         },

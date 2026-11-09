@@ -1,4 +1,5 @@
-import { Bell, ChevronRight, FileText, LogOut, Moon, Shield, User, type LucideIcon } from 'lucide-react-native';
+import { useRouter } from 'expo-router';
+import { Bell, ChevronRight, FileText, LogOut, Shield, Type, User, type LucideIcon } from 'lucide-react-native';
 import { useRef, useState, type RefObject } from 'react';
 import { Modal, View } from 'react-native';
 import Button from '@/components/ui/Button';
@@ -64,6 +65,7 @@ function ItemDoMenu({ icon, label, desc, onPress, ref }: ItemDoMenuProps) {
 
 export default function ProfileScreen() {
   const { user } = useAuth();
+  const router = useRouter();
   const [exportModalVisible, setExportModalVisible] = useState(false);
   const [appLockModalVisible, setAppLockModalVisible] = useState(false);
   const [confirmandoSaida, setConfirmandoSaida] = useState(false);
@@ -113,7 +115,12 @@ export default function ProfileScreen() {
         </Card>
 
         <ItemDoMenu icon={Shield} label="Dados de saúde" desc="Perfil médico e alergias" />
-        <ItemDoMenu icon={Moon} label="Preferências" desc="Tema, notificações, idioma" />
+        <ItemDoMenu
+          icon={Type}
+          label="Aparência"
+          desc="Tamanho, fonte e espaçamento do texto"
+          onPress={() => router.push('/appearance')}
+        />
         <ItemDoMenu icon={Bell} label="Lembretes" desc="Medicações e hidratação" />
         <ItemDoMenu
           ref={exportarRef}

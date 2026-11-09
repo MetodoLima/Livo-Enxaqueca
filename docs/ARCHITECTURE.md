@@ -137,7 +137,8 @@ para toda tela nova e para toda tela migrada, e são cobradas em revisão de pul
 
 ### Tokens
 
-Ficam em `constants/colors.json` e `tailwind.config.js`. Em tela, são usados por classe. Onde
+Ficam em `constants/colors.json` e `tailwind.config.js`; a tipografia fica em
+`constants/typography.ts` (ver Tipografia). Em tela, são usados por classe. Onde
 `className` não chega (cor de ícone, `placeholderTextColor`), use `color`, `painColor` ou
 `moodColor` de `constants/Colors.ts`.
 
@@ -150,7 +151,7 @@ Ficam em `constants/colors.json` e `tailwind.config.js`. Em tela, são usados po
 | Papel | `secondary`, `attention`, `danger`, `success`, cada um com `-subtle` |
 | Outros | `scrim` (fundo atrás de modal) |
 | Domínio | `pain-0` a `pain-10` (intensidade), `mood-*` (humor) |
-| Tipografia | `text-caption` 13, `text-body` 16, `text-heading` 18, `text-title` 24, `text-display` 32, `text-hero` 48 |
+| Tipografia | `variant` do `Text`: `caption` 13, `body` 16, `heading` 18, `title` 24, `display` 32, `hero` 48 (tamanho base, antes das preferências) |
 | Espaçamento | escala do Tailwind restrita (ver regra DS9), mais `gutter` 24 e `section` 32 |
 | Raio | `rounded-sm` 8, `rounded-md` 16, `rounded-lg` 24, `rounded-full` |
 
@@ -162,7 +163,8 @@ usa nada dele. Ele sai quando a última tela migrar.
 
 `Text`, `Button`, `IconButton`, `Screen`, `Card`, `Chip`, `ScreenHeader`, `SectionDivider`,
 `EmptyState`, `LoadingState`, `ErrorState`, `TextField`, `TimeField`, `DateField`, `TimeWheel`,
-`KeyboardAwareScroll`, `Dialog`, `ProgressSteps`, `IconBadge`, `OptionCard` e `Notice`, em
+`KeyboardAwareScroll`, `Dialog`, `ProgressSteps`, `IconBadge`, `OptionCard`, `ChoiceGroup`,
+`SwitchRow` e `Notice`, em
 `components/ui/`. Antes de montar
 algo à mão numa tela, veja se uma delas já resolve.
 
@@ -218,10 +220,54 @@ Alguns comportamentos que não aparecem no nome:
   `*-subtle` e a borda do `tone`. `primary` é dica, `attention` é alerta.
 - `Text` aceita `tone="canvas"`, para texto sobre fundo sólido claro, como o contador de
   crises do calendário sobre `danger` (5,91:1).
+- `ChoiceGroup` é a escolha única com opções lado a lado, de largura igual, medida pela
+  largura da fileira (DS15). Tem `accessibilityRole="radiogroup"`, e cada opção é `radio`
+  com `checked`. Aceita `renderSample`, uma amostra acima do rótulo, como o "A" de cada
+  tamanho na tela de Aparência. O texto quebra linha e a opção cresce, sem cortar.
+- `SwitchRow` é o interruptor em cartão: título, descrição e o `Switch` nas cores dos
+  tokens. O título vira o nome falado e a descrição vira a dica. A Segurança e a Aparência
+  usam.
+- `Text` aceita `amostra`, que troca parte das preferências só naquele texto. Serve para
+  mostrar como fica cada opção antes de escolher. Fora da tela de Aparência, não use.
 - `TimeWheel` aceita `visibleItems` (3 ou 5) e `onInteraction`, que avisa quando a pessoa
   mexeu na roda. A roda sempre mostra um número, então um valor que a pessoa precisa
   informar só conta como preenchido depois de `onInteraction`: valor que ninguém escolheu
   não é dado da pessoa.
+
+### Tipografia
+
+O `Text` é o único ponto de tipografia. A escala base, as famílias e os multiplicadores
+ficam em `constants/typography.ts`, e `estiloDeTexto(variante, peso, preferências)` calcula
+família, tamanho, altura de linha e espaço entre letras. O `TextField` e a digitação do
+`TimeWheel` usam a mesma função. Não existem classes de tamanho de texto no Tailwind.
+
+A pessoa ajusta o texto em Perfil → Aparência. As preferências ficam no aparelho, não na
+conta, em `livo.preferencias.v1` no AsyncStorage, com um campo de versão. Valor inválido ou
+de outra versão volta ao padrão. A splash espera a leitura por até 500 ms; se estourar ou
+falhar, o app abre no padrão. O `PreferencesProvider` só troca o valor quando uma preferência
+muda de fato, então os textos só são redesenhados nessa hora.
+
+| Ajuste | Padrão | Médio ou Grande | Amplo ou Maior |
+|---|---|---|---|
+| Tamanho | 1 | 1,15 | 1,3 |
+| Espaço entre linhas (sobre a altura de linha do token) | 1 | 1,15 | 1,3 |
+| Espaço entre letras | 0 | 0,05 em | 0,12 em |
+
+- **Negrito** sobe um degrau: regular vira semibold, semibold e bold viram bold.
+- **Fontes:** Padrão é Epilogue, Legível é Atkinson Hyperlegible Next, e Dislexia é
+  OpenDyslexic. A OpenDyslexic não tem semibold e usa Bold no lugar, e a altura de linha
+  dela é multiplicada por 1,2, porque as ascendentes cortam no Android. As três carregam na
+  abertura do app. Os arquivos ficam em `assets/fonts/`, com a licença SIL OFL 1.1 de cada
+  uma ao lado, e não são modificados (a OpenDyslexic tem nome reservado).
+- **Escala do sistema:** continua ligada e se soma à preferência. O `Text` limita a escala
+  do sistema a `2 / multiplicador do tamanho`, então o texto nunca passa de 2× o token, o que
+  cumpre os 200% da WCAG 1.4.4. Fica 2 no Padrão, 1,74 no Grande e 1,54 no Maior.
+- **O que fica fixo:** ícones, porque a opção é de texto e os de 24 já ficam em áreas de
+  48, e o PDF de exportação, porque é documento e tem tipografia própria.
+- **Exceção conhecida:** a `EmergencyScreen` ainda usa o `Text` do React Native com classes
+  próprias e não segue as preferências. Sai quando ela migrar para o design system.
+- **Controles com altura calculada:** a barra de abas soma a altura de linha do rótulo
+  (`caption`) à base. No padrão continua com 70.
 
 ### Regras do design system
 
@@ -248,7 +294,8 @@ dia selecionado usa `primary`, que passa de 3:1.
 
 DS5. **Texto só pelo `Text`.** Proibido `fontSize`, `fontFamily`, `fontWeight` e
 `lineHeight` soltos, e as classes `text-sm`, `text-lg`, `text-[15px]` e `font-epilogue-*`
-direto na tela. Tamanho, peso e cor vêm de `variant`, `weight` e `tone`.
+direto na tela. Tamanho, peso e cor vêm de `variant`, `weight` e `tone`; família, tamanho
+final, altura de linha e espaço entre letras vêm das preferências, pelo `Text`.
 
 DS6. **Um botão `primary` por tela.** O resto é `secondary` ou `ghost`.
 
@@ -262,19 +309,26 @@ largura (a largura útil de 312 dividida por 7). Sete colunas de 48 não cabem n
 inclusive as setas de mês e os filtros, segue a regra de 48.
 
 DS8. **Texto nunca dentro de altura fixa.** Em contêiner que tem texto, use `min-h-*`,
-nunca `h-*` nem `max-h-*`. Proibido `allowFontScaling={false}` e `maxFontSizeMultiplier`.
-Toda tela migrada é testada com a fonte do sistema no máximo.
+nunca `h-*` nem `max-h-*`. Proibido `allowFontScaling={false}` e `maxFontSizeMultiplier`
+na tela: o teto de escala é do `Text` (ver Tipografia). Toda tela migrada é testada com a
+fonte do sistema no máximo e com Aparência em Maior e Dislexia.
 
 Exceção: a roda do `TimeWheel` precisa de altura fixa por item para encaixar a rolagem, e o
 número usa altura de linha igual à do item para ficar centralizado. Essa altura é a base (48
-ou 64) multiplicada pela escala de fonte do sistema, então cresce junto com o texto.
+ou 64) multiplicada pelo tamanho escolhido, pela escala do sistema (com o mesmo teto do
+`Text`) e pelo ajuste de altura de linha da fonte, então cresce junto com o texto.
 
 Exceção: a escala de dor do `IntensityScale` divide a altura disponível em 11 linhas de
 altura fixa, uma por nível, para o toque e o arraste caírem no nível certo. A linha tem no
-máximo 48 e diminui quando falta espaço. O número de cada linha é `caption`. A escala inteira
+máximo 48 e diminui quando falta espaço. O número de cada linha é `caption`, e a coluna dos
+números cresce com ele, com largura mínima de 24. A escala inteira
 é um só controle `adjustable` para o leitor de tela, que fala o nível e o rótulo, e o número
 grande e o rótulo ao lado repetem o valor escolhido. Por isso o número da linha é apoio
 visual, não a única forma de ler o valor.
+
+Exceção: o número do dia no calendário do Histórico encolhe até 70% para caber em uma
+linha (`adjustsFontSizeToFit`), porque a largura da célula é fixa pelas sete colunas. O
+`accessibilityLabel` do dia continua dizendo a data inteira.
 
 DS9. **Espaçamento só da lista fechada.** Em `p`, `px`, `py`, `pt`, `pb`, `pl`, `pr`, `m`
 (e variações) e `gap`, os únicos valores aceitos são:

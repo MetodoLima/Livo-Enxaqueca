@@ -63,7 +63,9 @@ export default function CalendarDay({
       className={`min-h-11 flex-1 items-center justify-center gap-0.5 overflow-visible rounded-sm pb-1.5 ${fundo} active:opacity-80`}
       style={crises > 1 ? { zIndex: 1 } : undefined}
     >
-      <Text weight={temCrise ? 'bold' : 'regular'}>{day}</Text>
+      <Text weight={temCrise ? 'bold' : 'regular'} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
+        {day}
+      </Text>
       <View className="min-h-1.5 flex-row items-center gap-1">
         {temCrise ? <View className={`h-1.5 w-1.5 rounded-full ${PAIN_BG[dorMaxima]}`} /> : null}
         {temEvento ? <View className="h-1.5 w-1.5 bg-secondary" /> : null}

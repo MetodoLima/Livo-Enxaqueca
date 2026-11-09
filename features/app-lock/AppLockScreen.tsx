@@ -9,6 +9,7 @@ import IconBadge from '@/components/ui/IconBadge';
 import Notice from '@/components/ui/Notice';
 import Screen from '@/components/ui/Screen';
 import ScreenHeader from '@/components/ui/ScreenHeader';
+import SwitchRow from '@/components/ui/SwitchRow';
 import Text from '@/components/ui/Text';
 import TextField from '@/components/ui/TextField';
 import { color } from '@/constants/Colors';
@@ -27,43 +28,6 @@ function formatWait(ms: number): string {
 }
 
 const TRILHO = { false: color.surfaceRaised, true: color.primaryStrong };
-
-function Interruptor({
-  titulo,
-  descricao,
-  value,
-  onValueChange,
-  disabled,
-}: {
-  titulo: string;
-  descricao: string;
-  value: boolean;
-  onValueChange: (v: boolean) => void;
-  disabled?: boolean;
-}) {
-  return (
-    <Card padding="sm">
-      <View className="min-h-12 flex-row items-center gap-4">
-        <View className="flex-1 gap-1">
-          <Text weight="semibold">{titulo}</Text>
-          <Text variant="caption" tone="muted">
-            {descricao}
-          </Text>
-        </View>
-        <Switch
-          value={value}
-          onValueChange={onValueChange}
-          disabled={disabled}
-          trackColor={TRILHO}
-          thumbColor={color.content}
-          ios_backgroundColor={color.surfaceRaised}
-          accessibilityLabel={titulo}
-          accessibilityHint={descricao}
-        />
-      </View>
-    </Card>
-  );
-}
 
 export default function AppLockScreen({ mode = 'unlock', onClose }: AppLockScreenProps) {
   const {
@@ -223,9 +187,9 @@ export default function AppLockScreen({ mode = 'unlock', onClose }: AppLockScree
         <Screen scroll>
           <ScreenHeader title="Segurança do aplicativo" onBack={onClose} />
           <View className="gap-4">
-            <Interruptor
-              titulo="Segurança do aplicativo"
-              descricao={securityEnabled ? 'Protege o acesso ao Livo com um PIN.' : 'O AppLock está desativado.'}
+            <SwitchRow
+              label="Segurança do aplicativo"
+              description={securityEnabled ? 'Protege o acesso ao Livo com um PIN.' : 'O AppLock está desativado.'}
               value={securityEnabled}
               onValueChange={handleSecurityChange}
               disabled={busy}
@@ -275,9 +239,9 @@ export default function AppLockScreen({ mode = 'unlock', onClose }: AppLockScree
             ) : null}
 
             {securityEnabled ? (
-              <Interruptor
-                titulo="Biometria"
-                descricao={
+              <SwitchRow
+                label="Biometria"
+                description={
                   biometricAvailable
                     ? 'Use a biometria para desbloquear mais rapidamente.'
                     : 'Nenhuma biometria cadastrada neste dispositivo.'

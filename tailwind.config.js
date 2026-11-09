@@ -22,14 +22,6 @@ module.exports = {
         ...group(palette.mood, 'mood-'),
         ...group(palette.legacy),
       },
-      fontSize: {
-        caption: ["13px", { lineHeight: "18px" }],
-        body: ["16px", { lineHeight: "24px" }],
-        heading: ["18px", { lineHeight: "24px" }],
-        title: ["24px", { lineHeight: "30px" }],
-        display: ["32px", { lineHeight: "38px" }],
-        hero: ["48px", { lineHeight: "52px" }],
-      },
       fontFamily: {
         epilogue: ["Epilogue_400Regular"],
         "epilogue-light": ["Epilogue_300Light"],

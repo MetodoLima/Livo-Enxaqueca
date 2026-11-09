@@ -11,6 +11,13 @@ import {
 import { useRevelarAcimaDoTeclado } from '@/components/ui/KeyboardAwareScroll';
 import Text from '@/components/ui/Text';
 import { color } from '@/constants/Colors';
+import {
+  AJUSTE_DE_LINHA_DA_FONTE,
+  escalaMaximaDoSistema,
+  estiloDeTexto,
+  fatorDeEscala,
+} from '@/constants/typography';
+import { usePreferences } from '@/contexts/PreferencesContext';
 import type { Horario } from '@/lib/format';
 
 const COPIAS = 3;
@@ -24,7 +31,6 @@ export type TimeWheelVisibleItems = 3 | 5;
 const ITEM: Record<TimeWheelSize, number> = { md: 48, lg: 64 };
 const COLUNA: Record<TimeWheelSize, string> = { md: 'w-16', lg: 'w-24' };
 const NUMERO: Record<TimeWheelSize, 'heading' | 'title'> = { md: 'heading', lg: 'title' };
-const DIGITACAO: Record<TimeWheelSize, string> = { md: 'text-heading', lg: 'text-title' };
 
 const pad = (n: number) => String(n).padStart(2, '0');
 const modulo = (n: number, total: number) => ((n % total) + total) % total;
@@ -87,6 +93,7 @@ function ColunaDaRoda({
   const [texto, setTexto] = useState(pad(valor));
   const faixaRef = useRef<View>(null);
   const revelar = useRevelarAcimaDoTeclado();
+  const { preferencias } = usePreferences();
   const quantidade = total * COPIAS;
   const [centros, setCentros] = useState<number[]>([total + valor]);
   const centrosRef = useRef(centros);
@@ -267,7 +274,9 @@ function ColunaDaRoda({
             }}
             onSubmitEditing={() => confirmar(texto, false)}
             onBlur={() => confirmar(texto, false)}
-            className={`flex-1 rounded-md border border-primary bg-surface-raised text-center font-epilogue-bold text-content ${DIGITACAO[size]}`}
+            className="flex-1 rounded-md border border-primary bg-surface-raised text-center text-content"
+            style={estiloDeTexto(NUMERO[size], 'bold', preferencias)}
+            maxFontSizeMultiplier={escalaMaximaDoSistema(preferencias)}
           />
         </View>
       ) : null}
@@ -297,7 +306,10 @@ export default function TimeWheel({
   className = '',
 }: TimeWheelProps) {
   const { fontScale } = useWindowDimensions();
-  const altura = Math.round(ITEM[size] * Math.max(1, fontScale));
+  const { preferencias } = usePreferences();
+  const altura = Math.round(
+    ITEM[size] * fatorDeEscala(preferencias, fontScale) * AJUSTE_DE_LINHA_DA_FONTE[preferencias.fonte],
+  );
   const [editando, setEditando] = useState<Coluna | null>(null);
 
   const fimDaDigitacao = (coluna: Coluna, n: number | null, completo: boolean) => {
