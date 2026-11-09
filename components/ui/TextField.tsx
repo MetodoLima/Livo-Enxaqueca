@@ -3,6 +3,8 @@ import { TextInput, View, type TextInputProps } from 'react-native';
 import { useRevelarAcimaDoTeclado } from '@/components/ui/KeyboardAwareScroll';
 import Text from '@/components/ui/Text';
 import { color } from '@/constants/Colors';
+import { escalaMaximaDoSistema, estiloDeTexto } from '@/constants/typography';
+import { usePreferences } from '@/contexts/PreferencesContext';
 
 export interface TextFieldProps extends Omit<TextInputProps, 'style' | 'placeholderTextColor'> {
   label: string;
@@ -28,6 +30,7 @@ export default function TextField({
   const [focused, setFocused] = useState(false);
   const containerRef = useRef<View>(null);
   const revelar = useRevelarAcimaDoTeclado();
+  const { preferencias } = usePreferences();
   const border = error ? 'border-danger' : focused ? 'border-primary' : 'border-line-strong';
 
   return (
@@ -53,7 +56,9 @@ export default function TextField({
             setFocused(false);
             onBlur?.(e);
           }}
-          className={`rounded-md border bg-surface-raised py-3 pl-4 font-epilogue text-body text-content ${accessory ? 'pr-14' : 'pr-4'} ${multiline ? 'min-h-28' : 'min-h-14'} ${border}`}
+          className={`rounded-md border bg-surface-raised py-3 pl-4 text-content ${accessory ? 'pr-14' : 'pr-4'} ${multiline ? 'min-h-28' : 'min-h-14'} ${border}`}
+          style={estiloDeTexto('body', 'regular', preferencias)}
+          maxFontSizeMultiplier={escalaMaximaDoSistema(preferencias)}
           {...props}
         />
         {accessory ? <View className="absolute right-2 top-2">{accessory}</View> : null}

@@ -173,12 +173,12 @@ export default function IntensityScale({ value: inicial, onChange, className = '
             if (e.nativeEvent.actionName === 'increment') mover(1);
             if (e.nativeEvent.actionName === 'decrement') mover(-1);
           }}
-          className="w-20"
+          className="min-w-20"
           style={{ height: alturaDaLinha * VALORES.length }}
           {...panResponder.panHandlers}
         >
           <View pointerEvents="none" className="flex-1 flex-row gap-2">
-            <View className="w-6">
+            <View className="min-w-6">
               {VALORES.map((n) => (
                 <View key={n} className="items-end justify-center" style={{ height: alturaDaLinha }}>
                   <Text
