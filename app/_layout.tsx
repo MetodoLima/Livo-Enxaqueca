@@ -25,8 +25,7 @@ import {
   Epilogue_600SemiBold,
   Epilogue_700Bold,
 } from '@expo-google-fonts/epilogue';
-import TemaRaiz from '@/components/ui/TemaRaiz';
-import { PALETAS } from '@/constants/temas';
+import { useThemeVars } from '@/constants/Colors';
 import { useTema } from '@/hooks/useTema';
 import { ARQUIVOS_DE_FONTE } from '@/constants/typography';
 import { PreferencesProvider, usePreferences } from '@/contexts/PreferencesContext';
@@ -122,22 +121,21 @@ function RootLayoutNav() {
   const segments = useSegments();
   const router = useRouter();
   const navigationState = useRootNavigationState();
-  const { tema } = useTema();
+  const { tema, color } = useTema();
   const livoTheme = useMemo(() => {
-    const { roles } = PALETAS[tema];
     const base = tema === 'claro' ? DefaultTheme : DarkTheme;
     return {
       ...base,
       colors: {
         ...base.colors,
-        background: roles.canvas,
-        card: roles.canvas,
-        text: roles.content,
-        border: roles.line,
-        primary: roles.primary,
+        background: color.canvas,
+        card: color.canvas,
+        text: color.content,
+        border: color.line,
+        primary: color.primary,
       },
     };
-  }, [tema]);
+  }, [tema, color]);
 
   useEffect(() => {
     if (localSessionStatus === 'loading' || !navigationState?.key) return;
@@ -212,6 +210,7 @@ export default function RootLayout() {
 
 function RootContent() {
   const { pronto } = usePreferences();
+  const themeVars = useThemeVars();
   const [loaded, error] = useFonts({
     Epilogue_300Light,
     Epilogue_400Regular,
@@ -237,19 +236,17 @@ function RootContent() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
-      <TemaRaiz>
-        <ConnectivityProvider>
-          <AuthRefreshCoordinator />
-          <AuthProvider>
-            <AppLockProvider>
-              <AppLockGate>
-                <ProtectedAppProviders />
-              </AppLockGate>
-            </AppLockProvider>
-          </AuthProvider>
-        </ConnectivityProvider>
-      </TemaRaiz>
+    <GestureHandlerRootView style={[{ flex: 1 }, themeVars]}>
+      <ConnectivityProvider>
+        <AuthRefreshCoordinator />
+        <AuthProvider>
+          <AppLockProvider>
+            <AppLockGate>
+              <ProtectedAppProviders />
+            </AppLockGate>
+          </AppLockProvider>
+        </AuthProvider>
+      </ConnectivityProvider>
     </GestureHandlerRootView>
   );
 }

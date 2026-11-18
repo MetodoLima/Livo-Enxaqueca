@@ -241,11 +241,20 @@ ficam em `constants/typography.ts`, e `estiloDeTexto(variante, peso, preferênci
 família, tamanho, altura de linha e espaço entre letras. O `TextField` e a digitação do
 `TimeWheel` usam a mesma função. Não existem classes de tamanho de texto no Tailwind.
 
-A pessoa ajusta o texto em Perfil → Aparência. As preferências ficam no aparelho, não na
+A pessoa ajusta o texto e as cores em Perfil → Aparência. As preferências ficam no aparelho, não na
 conta, em `livo.preferencias.v1` no AsyncStorage, com um campo de versão. Valor inválido ou
 de outra versão volta ao padrão. A splash espera a leitura por até 500 ms; se estourar ou
 falhar, o app abre no padrão. O `PreferencesProvider` só troca o valor quando uma preferência
-muda de fato, então os textos só são redesenhados nessa hora.
+muda de fato, então os textos e cores só são redesenhados nessa hora.
+
+### Intensidade de cores
+
+A pessoa pode escolher entre três intensidades visuais de interface:
+- **Normal:** cores originais do app, sem alterações.
+- **Suaves:** reduz a saturação das cores em 50%, preservando a luminância relativa e o contraste, para pessoas com fotofobia ou sensibilidade visual.
+- **Sem cor:** converte a paleta para escala de cinza baseada na luminância relativa (Rec. 709), eliminando a percepção de cores sem perder hierarquia e legibilidade.
+
+A intensidade é ortogonal ao tema (escuro, claro e alto contraste, em `constants/temas.ts` e `constants/colors.json`, campo `tema` das preferências): a escolha do tema define a paleta base e a intensidade é aplicada por cima. A função a função `resolverPaleta(tema, intensidade)` deriva as cores em tempo de execução a partir de qualquer paleta base (tema escuro, claro ou alto contraste), sem paletas fixas intermediárias. As cores chegam ao NativeWind por variáveis CSS (`vars()`) e ao JavaScript pelos proxies reativos de `constants/Colors.ts` e pelo hook `useThemeColors()`.
 
 | Ajuste | Padrão | Médio ou Grande | Amplo ou Maior |
 |---|---|---|---|

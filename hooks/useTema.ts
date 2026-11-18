@@ -1,13 +1,9 @@
-import { useMemo } from 'react';
-import { PALETAS } from '@/constants/temas';
+import { useThemeColors } from '@/constants/Colors';
 import { usePreferences } from '@/contexts/PreferencesContext';
 
-/** Cores do tema ativo para o que não passa por className (ícones, switches, navegação). */
+/** Cores do tema ativo (já com a intensidade aplicada) para o que não passa por className. */
 export function useTema() {
   const { preferencias } = usePreferences();
-  const tema = preferencias.tema;
-  return useMemo(() => {
-    const { roles, pain, mood } = PALETAS[tema];
-    return { tema, color: roles, painColor: pain, moodColor: mood };
-  }, [tema]);
+  const { roles, pain, mood } = useThemeColors();
+  return { tema: preferencias.tema, color: roles, painColor: pain, moodColor: mood };
 }

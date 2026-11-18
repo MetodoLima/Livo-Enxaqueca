@@ -8,6 +8,7 @@ import Screen from '@/components/ui/Screen';
 import ScreenHeader from '@/components/ui/ScreenHeader';
 import SwitchRow from '@/components/ui/SwitchRow';
 import Text from '@/components/ui/Text';
+import { resolverPaleta, type IntensidadeCores } from '@/constants/Colors';
 import { PALETAS, ROTULO_DO_TEMA, TEMAS as LISTA_DE_TEMAS, type Tema } from '@/constants/temas';
 import type { Espaco, Fonte, Tamanho } from '@/constants/typography';
 import { usePreferences } from '@/contexts/PreferencesContext';
@@ -18,6 +19,51 @@ function comAmostra<T extends string>(
 ): ChoiceOption<T>[] {
   return opcoes.map((opcao) => ({ ...opcao, renderSample: (selecionada) => amostra(opcao.value, selecionada) }));
 }
+
+const INTENSIDADES: readonly ChoiceOption<IntensidadeCores>[] = [
+  {
+    value: 'normal',
+    label: 'Normal',
+    renderSample: () => {
+      const paleta = resolverPaleta('escuro', 'normal');
+      return (
+        <View className="flex-row items-center gap-1.5 py-1">
+          <View className="h-3.5 w-3.5 rounded-full" style={{ backgroundColor: paleta.roles.primary }} />
+          <View className="h-3.5 w-3.5 rounded-full" style={{ backgroundColor: paleta.roles.attention }} />
+          <View className="h-3.5 w-3.5 rounded-full" style={{ backgroundColor: paleta.roles.danger }} />
+        </View>
+      );
+    },
+  },
+  {
+    value: 'suaves',
+    label: 'Suaves',
+    renderSample: () => {
+      const paleta = resolverPaleta('escuro', 'suaves');
+      return (
+        <View className="flex-row items-center gap-1.5 py-1">
+          <View className="h-3.5 w-3.5 rounded-full" style={{ backgroundColor: paleta.roles.primary }} />
+          <View className="h-3.5 w-3.5 rounded-full" style={{ backgroundColor: paleta.roles.attention }} />
+          <View className="h-3.5 w-3.5 rounded-full" style={{ backgroundColor: paleta.roles.danger }} />
+        </View>
+      );
+    },
+  },
+  {
+    value: 'sem-cor',
+    label: 'Sem cor',
+    renderSample: () => {
+      const paleta = resolverPaleta('escuro', 'sem-cor');
+      return (
+        <View className="flex-row items-center gap-1.5 py-1">
+          <View className="h-3.5 w-3.5 rounded-full" style={{ backgroundColor: paleta.roles.primary }} />
+          <View className="h-3.5 w-3.5 rounded-full" style={{ backgroundColor: paleta.roles.attention }} />
+          <View className="h-3.5 w-3.5 rounded-full" style={{ backgroundColor: paleta.roles.danger }} />
+        </View>
+      );
+    },
+  },
+];
 
 const TAMANHOS = comAmostra<Tamanho>(
   [
@@ -87,9 +133,19 @@ export default function AppearanceScreen() {
     AccessibilityInfo.announceForAccessibility('Preferências de aparência restauradas');
   };
 
+  const mudarIntensidade = (intensidadeCores: IntensidadeCores) => {
+    definir({ intensidadeCores });
+    const avisos: Record<IntensidadeCores, string> = {
+      normal: 'Intensidade de cores normal ativada',
+      suaves: 'Intensidade de cores suaves ativada',
+      'sem-cor': 'Intensidade sem cor ativada',
+    };
+    AccessibilityInfo.announceForAccessibility(avisos[intensidadeCores]);
+  };
+
   return (
     <Screen scroll>
-      <ScreenHeader title="Aparência" subtitle="Ajuste o tema e o texto do app" onBack={() => router.back()} />
+      <ScreenHeader title="Aparência" subtitle="Ajuste o tema, as cores e o texto do app" onBack={() => router.back()} />
 
       <View className="gap-6">
         <Card padding="sm" className="gap-2">
@@ -99,7 +155,13 @@ export default function AppearanceScreen() {
           <Text variant="heading" accessibilityRole="text">
             Crise registrada
           </Text>
-          <Text>Intensidade 6 · Forte. Você pode editar os detalhes depois.</Text>
+          <View className="flex-row items-center gap-2">
+            <View className="h-3 w-3 rounded-full bg-primary" />
+            <Text tone="primary" weight="semibold">
+              Intensidade 6 · Forte
+            </Text>
+          </View>
+          <Text>Você pode editar os detalhes depois.</Text>
         </Card>
 
         <TituloDaSecao>Tema</TituloDaSecao>
@@ -110,6 +172,16 @@ export default function AppearanceScreen() {
           options={TEMAS}
           value={preferencias.tema}
           onChange={(tema) => definir({ tema })}
+        />
+
+        <TituloDaSecao>Cores</TituloDaSecao>
+
+        <ChoiceGroup
+          label="Intensidade de cores"
+          description="Normal, cores suaves para sensibilidade ou sem cor em escala de cinza"
+          options={INTENSIDADES}
+          value={preferencias.intensidadeCores}
+          onChange={mudarIntensidade}
         />
 
         <TituloDaSecao>Texto</TituloDaSecao>
