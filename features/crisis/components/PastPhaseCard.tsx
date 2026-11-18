@@ -7,7 +7,7 @@ import Chip from '@/components/ui/Chip';
 import Dialog from '@/components/ui/Dialog';
 import SectionDivider from '@/components/ui/SectionDivider';
 import Text from '@/components/ui/Text';
-import { color } from '@/constants/Colors';
+import { useTema } from '@/hooks/useTema';
 import { IntensityMarker } from '@/features/crisis/components/IntensityScale';
 import { LOCATIONS, MEDICATIONS, SIDES, SYMPTOMS, type CrisisRecord } from '@/types/crisis';
 
@@ -20,6 +20,7 @@ interface PastPhaseCardProps {
 const fmtTime = (d: Date) => d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 
 export default function PastPhaseCard({ phase, index, onDelete }: PastPhaseCardProps) {
+  const { color } = useTema();
   const [expanded, setExpanded] = useState(false);
   const [confirmando, setConfirmando] = useState(false);
   const removerRef = useRef<View>(null);

@@ -1,6 +1,6 @@
 import "../global.css";
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -25,7 +25,8 @@ import {
   Epilogue_600SemiBold,
   Epilogue_700Bold,
 } from '@expo-google-fonts/epilogue';
-import { color, useThemeVars } from '@/constants/Colors';
+import { useThemeVars } from '@/constants/Colors';
+import { useTema } from '@/hooks/useTema';
 import { ARQUIVOS_DE_FONTE } from '@/constants/typography';
 import { PreferencesProvider, usePreferences } from '@/contexts/PreferencesContext';
 
@@ -38,15 +39,6 @@ export const unstable_settings = {
 };
 
 SplashScreen.preventAutoHideAsync();
-
-const LivoTheme = {
-  ...DarkTheme,
-  colors: {
-    ...DarkTheme.colors,
-    background: color.canvas,
-    card: color.canvas,
-  },
-};
 
 function AuthRefreshCoordinator() {
   const { status: connectivityStatus } = useConnectivity();
@@ -126,22 +118,24 @@ function RootLayoutNav() {
     offlineSessionStatus,
   } = useAuth();
   const { status: connectivityStatus } = useConnectivity();
-  const { preferencias } = usePreferences();
   const segments = useSegments();
   const router = useRouter();
   const navigationState = useRootNavigationState();
-
-  const navTheme = useMemo(
-    () => ({
-      ...DarkTheme,
+  const { tema, color } = useTema();
+  const livoTheme = useMemo(() => {
+    const base = tema === 'claro' ? DefaultTheme : DarkTheme;
+    return {
+      ...base,
       colors: {
-        ...DarkTheme.colors,
+        ...base.colors,
         background: color.canvas,
         card: color.canvas,
+        text: color.content,
+        border: color.line,
+        primary: color.primary,
       },
-    }),
-    [preferencias.intensidadeCores],
-  );
+    };
+  }, [tema, color]);
 
   useEffect(() => {
     if (localSessionStatus === 'loading' || !navigationState?.key) return;
@@ -182,7 +176,7 @@ function RootLayoutNav() {
   ]);
 
   return (
-    <ThemeProvider value={navTheme}>
+    <ThemeProvider value={livoTheme}>
       <Stack>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

@@ -3,12 +3,13 @@ import { Image, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Card from '@/components/ui/Card';
 import Text from '@/components/ui/Text';
-import { color } from '@/constants/Colors';
+import { useTema } from '@/hooks/useTema';
 import { MOODS } from '@/constants/data';
 import type { RegistroCalendarDay } from '@/features/daily-record/useDailyRecordCalendar';
 import { formatLitros, formatSleep, moodLabel } from '@/lib/format';
 
 export default function DailyRecordListItem({ registro }: { registro: RegistroCalendarDay; index: number }) {
+  const { color } = useTema();
   const router = useRouter();
   const hora = new Date(registro.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   const rotina = [

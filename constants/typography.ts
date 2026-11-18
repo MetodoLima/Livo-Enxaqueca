@@ -1,4 +1,5 @@
 import type { TextStyle } from 'react-native';
+import { TEMA_PADRAO, type Tema } from './temas';
 import type { IntensidadeCores } from '@/constants/Colors';
 
 export const VARIANTES = ['caption', 'body', 'heading', 'title', 'display', 'hero'] as const;
@@ -24,6 +25,7 @@ export interface Preferencias {
   negrito: boolean;
   linhas: Espaco;
   letras: Espaco;
+  tema: Tema;
   intensidadeCores: IntensidadeCores;
 }
 
@@ -33,6 +35,7 @@ export const PREFERENCIAS_PADRAO: Preferencias = {
   negrito: false,
   linhas: 'padrao',
   letras: 'padrao',
+  tema: TEMA_PADRAO,
   intensidadeCores: 'normal',
 };
 

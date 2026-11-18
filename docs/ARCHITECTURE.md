@@ -254,7 +254,7 @@ A pessoa pode escolher entre três intensidades visuais de interface:
 - **Suaves:** reduz a saturação das cores em 50%, preservando a luminância relativa e o contraste, para pessoas com fotofobia ou sensibilidade visual.
 - **Sem cor:** converte a paleta para escala de cinza baseada na luminância relativa (Rec. 709), eliminando a percepção de cores sem perder hierarquia e legibilidade.
 
-A intensidade é ortogonal ao futuro sistema de temas: a função `resolverPaleta(tema, intensidade)` deriva as cores em tempo de execução a partir de qualquer paleta base (tema escuro, claro ou alto contraste), sem paletas fixas intermediárias. As cores chegam ao NativeWind por variáveis CSS (`vars()`) e ao JavaScript pelos proxies reativos de `constants/Colors.ts` e pelo hook `useThemeColors()`.
+A intensidade é ortogonal ao tema (escuro, claro e alto contraste, em `constants/temas.ts` e `constants/colors.json`, campo `tema` das preferências): a escolha do tema define a paleta base e a intensidade é aplicada por cima. A função `resolverPaleta(tema, intensidade)` deriva as cores em tempo de execução a partir de qualquer paleta base (tema escuro, claro ou alto contraste), sem paletas fixas intermediárias. As cores chegam ao NativeWind por variáveis CSS (`vars()`) e ao JavaScript pelos proxies reativos de `constants/Colors.ts` e pelo hook `useThemeColors()`.
 
 | Ajuste | Padrão | Médio ou Grande | Amplo ou Maior |
 |---|---|---|---|

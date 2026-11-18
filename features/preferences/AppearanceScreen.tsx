@@ -9,6 +9,7 @@ import ScreenHeader from '@/components/ui/ScreenHeader';
 import SwitchRow from '@/components/ui/SwitchRow';
 import Text from '@/components/ui/Text';
 import { resolverPaleta, type IntensidadeCores } from '@/constants/Colors';
+import { PALETAS, ROTULO_DO_TEMA, TEMAS as LISTA_DE_TEMAS, type Tema } from '@/constants/temas';
 import type { Espaco, Fonte, Tamanho } from '@/constants/typography';
 import { usePreferences } from '@/contexts/PreferencesContext';
 
@@ -90,6 +91,25 @@ const FONTES = comAmostra<Fonte>(
   ),
 );
 
+const TEMAS: ChoiceOption<Tema>[] = LISTA_DE_TEMAS.map((tema) => {
+  const { canvas, surface, primary, lineStrong } = PALETAS[tema].roles;
+  return {
+    value: tema,
+    label: ROTULO_DO_TEMA[tema],
+    renderSample: () => (
+      <View
+        accessible={false}
+        importantForAccessibility="no-hide-descendants"
+        className="h-8 w-8 overflow-hidden rounded-full border"
+        style={{ backgroundColor: canvas, borderColor: lineStrong }}
+      >
+        <View className="absolute bottom-0 left-0 right-0 h-3" style={{ backgroundColor: surface }} />
+        <View className="absolute right-1 top-1 h-3 w-3 rounded-full" style={{ backgroundColor: primary }} />
+      </View>
+    ),
+  };
+});
+
 const ESPACOS: readonly ChoiceOption<Espaco>[] = [
   { value: 'padrao', label: 'Padrão' },
   { value: 'medio', label: 'Médio' },
@@ -110,7 +130,7 @@ export default function AppearanceScreen() {
 
   const restaurarPadrao = () => {
     restaurar();
-    AccessibilityInfo.announceForAccessibility('Preferências restauradas');
+    AccessibilityInfo.announceForAccessibility('Preferências de aparência restauradas');
   };
 
   const mudarIntensidade = (intensidadeCores: IntensidadeCores) => {
@@ -125,7 +145,7 @@ export default function AppearanceScreen() {
 
   return (
     <Screen scroll>
-      <ScreenHeader title="Aparência" subtitle="Ajuste as cores e o texto do app" onBack={() => router.back()} />
+      <ScreenHeader title="Aparência" subtitle="Ajuste o tema, as cores e o texto do app" onBack={() => router.back()} />
 
       <View className="gap-6">
         <Card padding="sm" className="gap-2">
@@ -143,6 +163,16 @@ export default function AppearanceScreen() {
           </View>
           <Text>Você pode editar os detalhes depois.</Text>
         </Card>
+
+        <TituloDaSecao>Tema</TituloDaSecao>
+
+        <ChoiceGroup
+          label="Tema do app"
+          description="O escuro é o padrão do Livo. O alto contraste reforça bordas e cores."
+          options={TEMAS}
+          value={preferencias.tema}
+          onChange={(tema) => definir({ tema })}
+        />
 
         <TituloDaSecao>Cores</TituloDaSecao>
 

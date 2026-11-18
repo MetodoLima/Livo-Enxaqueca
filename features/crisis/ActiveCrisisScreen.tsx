@@ -15,7 +15,7 @@ import Screen from '@/components/ui/Screen';
 import SectionDivider from '@/components/ui/SectionDivider';
 import Text from '@/components/ui/Text';
 import TextField from '@/components/ui/TextField';
-import { color } from '@/constants/Colors';
+import { useTema } from '@/hooks/useTema';
 import { useCrisis } from '@/contexts/CrisisContext';
 import CrisisEmptyState from '@/features/crisis/components/CrisisEmptyState';
 import { IntensityEditor, LocationEditor, MedicationsEditor, SymptomsEditor } from '@/features/crisis/components/EditModals';
@@ -69,6 +69,7 @@ function NaoDefinido({ children }: { children: string }) {
 }
 
 export default function ActiveCrisisScreen() {
+  const { color } = useTema();
   const { activeCrisis, phases, updateActiveCrisis, addPhase, removePhase, clearCrisis, hasActiveCrisis, hydrated } = useCrisis();
   const reduceMotion = useReducedMotion();
 

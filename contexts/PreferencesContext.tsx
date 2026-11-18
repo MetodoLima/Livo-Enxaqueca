@@ -8,6 +8,7 @@ import {
   TAMANHOS,
   type Preferencias,
 } from '@/constants/typography';
+import { TEMAS } from '@/constants/temas';
 import { definirPaletaAtiva, resolverPaleta } from '@/constants/Colors';
 
 const CHAVE = 'livo.preferencias.v1';
@@ -42,6 +43,7 @@ function interpretar(bruto: string | null): Preferencias {
       negrito: typeof salvo.negrito === 'boolean' ? salvo.negrito : PREFERENCIAS_PADRAO.negrito,
       linhas: umDe(ESPACOS, salvo.linhas, PREFERENCIAS_PADRAO.linhas),
       letras: umDe(ESPACOS, salvo.letras, PREFERENCIAS_PADRAO.letras),
+      tema: umDe(TEMAS, salvo.tema, PREFERENCIAS_PADRAO.tema),
       intensidadeCores: umDe(INTENSIDADES_CORES, salvo.intensidadeCores, PREFERENCIAS_PADRAO.intensidadeCores),
     };
   } catch {
@@ -70,7 +72,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         if (!ativo || alteradas.current) return;
         const lidas = interpretar(bruto);
         atuais.current = lidas;
-        definirPaletaAtiva(resolverPaleta('escuro', lidas.intensidadeCores));
+        definirPaletaAtiva(resolverPaleta(lidas.tema, lidas.intensidadeCores));
         setPreferencias(lidas);
       })
       .catch(() => undefined)
@@ -93,7 +95,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     if (iguais) return;
     alteradas.current = true;
     atuais.current = proximas;
-    definirPaletaAtiva(resolverPaleta('escuro', proximas.intensidadeCores));
+    definirPaletaAtiva(resolverPaleta(proximas.tema, proximas.intensidadeCores));
     setPreferencias(proximas);
     salvar(proximas);
   }, []);

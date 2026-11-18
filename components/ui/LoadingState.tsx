@@ -1,6 +1,6 @@
 import { ActivityIndicator, View } from 'react-native';
 import Text from '@/components/ui/Text';
-import { color } from '@/constants/Colors';
+import { useTema } from '@/hooks/useTema';
 
 export interface LoadingStateProps {
   label?: string;
@@ -8,6 +8,7 @@ export interface LoadingStateProps {
 }
 
 export default function LoadingState({ label = 'Carregando…', className = '' }: LoadingStateProps) {
+  const { color } = useTema();
   return (
     <View
       accessibilityRole="progressbar"

@@ -5,7 +5,7 @@ import Card from '@/components/ui/Card';
 import Dialog from '@/components/ui/Dialog';
 import LoadingState from '@/components/ui/LoadingState';
 import Text from '@/components/ui/Text';
-import { color } from '@/constants/Colors';
+import { useTema } from '@/hooks/useTema';
 
 export const TIME_OPTIONS = [
   { months: 1, label: 'Último mês', sublabel: 'Crises dos últimos 30 dias' },
@@ -23,6 +23,7 @@ interface ExportModalProps {
 }
 
 export default function ExportModal({ visible, loading, onClose, onSelect, returnFocusTo }: ExportModalProps) {
+  const { color } = useTema();
   return (
     <Dialog
       visible={visible}

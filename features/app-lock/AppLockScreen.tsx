@@ -12,7 +12,7 @@ import ScreenHeader from '@/components/ui/ScreenHeader';
 import SwitchRow from '@/components/ui/SwitchRow';
 import Text from '@/components/ui/Text';
 import TextField from '@/components/ui/TextField';
-import { color } from '@/constants/Colors';
+import { useTema } from '@/hooks/useTema';
 import { useAppLock } from '@/features/app-lock/AppLockContext';
 import { isValidPin } from '@/features/app-lock/appLockStore';
 
@@ -27,12 +27,8 @@ function formatWait(ms: number): string {
   return `${Math.ceil(seconds / 60)} min`;
 }
 
-const TRILHO = {
-  get false() { return color.surfaceRaised; },
-  get true() { return color.primaryStrong; },
-};
-
 export default function AppLockScreen({ mode = 'unlock', onClose }: AppLockScreenProps) {
+  const { color } = useTema();
   const {
     config,
     biometricAvailable,
@@ -304,7 +300,7 @@ export default function AppLockScreen({ mode = 'unlock', onClose }: AppLockScree
               <Switch
                 value={useBiometric}
                 onValueChange={setUseBiometric}
-                trackColor={TRILHO}
+                trackColor={{ false: color.surfaceRaised, true: color.primaryStrong }}
                 thumbColor={color.content}
                 ios_backgroundColor={color.surfaceRaised}
                 accessibilityLabel="Ativar biometria"

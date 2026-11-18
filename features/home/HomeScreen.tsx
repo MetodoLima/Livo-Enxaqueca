@@ -5,7 +5,7 @@ import IconBadge from '@/components/ui/IconBadge';
 import Screen from '@/components/ui/Screen';
 import Text from '@/components/ui/Text';
 import TextField from '@/components/ui/TextField';
-import { color } from '@/constants/Colors';
+import { useTema } from '@/hooks/useTema';
 import { MoodId } from '@/constants/data';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCrisis } from '@/contexts/CrisisContext';
@@ -65,6 +65,7 @@ function fmtSecs(s: number): string {
 }
 
 export default function HomeScreen() {
+  const { color } = useTema();
   const { user } = useAuth();
   const router = useRouter();
   const { ultimaAtualizacao } = useSync();

@@ -2,7 +2,7 @@ import type { LucideIcon } from 'lucide-react-native';
 import { Check } from 'lucide-react-native';
 import { Pressable, View } from 'react-native';
 import Text from '@/components/ui/Text';
-import { color } from '@/constants/Colors';
+import { useTema } from '@/hooks/useTema';
 
 export type OptionCardMode = 'radio' | 'checkbox';
 
@@ -29,6 +29,7 @@ export default function OptionCard({
   onPress,
   className = '',
 }: OptionCardProps) {
+  const { color } = useTema();
   const superficie = checked ? 'border-primary bg-primary-subtle' : 'border-line-strong bg-surface-raised';
   const indicador = checked ? 'border-primary' : 'border-line-strong';
 

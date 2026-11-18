@@ -10,7 +10,7 @@ import {
 } from 'react-native';
 import { useRevelarAcimaDoTeclado } from '@/components/ui/KeyboardAwareScroll';
 import Text from '@/components/ui/Text';
-import { color } from '@/constants/Colors';
+import { useTema } from '@/hooks/useTema';
 import {
   AJUSTE_DE_LINHA_DA_FONTE,
   escalaMaximaDoSistema,
@@ -87,6 +87,7 @@ function ColunaDaRoda({
   onDigitado,
   onInteragir,
 }: ColunaProps) {
+  const { color } = useTema();
   const meio = Math.floor(visiveis / 2);
   const scrollRef = useRef<ScrollView>(null);
   const indice = useRef(total + valor);

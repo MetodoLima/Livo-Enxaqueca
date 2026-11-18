@@ -3,13 +3,14 @@ import { View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Card from '@/components/ui/Card';
 import Text from '@/components/ui/Text';
-import { color } from '@/constants/Colors';
+import { useTema } from '@/hooks/useTema';
 import { IntensityMarker } from '@/features/crisis/components/IntensityScale';
 import type { CrisisDay } from '@/features/crisis/useCrisisCalendar';
 import { formatDuration, formatTime, intensityLabel } from '@/lib/format';
 import { locationLabel } from '@/types/crisis';
 
 export default function CrisisListItem({ crisis }: { crisis: CrisisDay; index: number }) {
+  const { color } = useTema();
   const router = useRouter();
   const hora = formatTime(crisis.inicioCrise);
   const duracao = formatDuration(crisis.inicioCrise, crisis.fimCrise);

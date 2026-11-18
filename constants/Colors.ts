@@ -1,10 +1,11 @@
 import { useMemo } from 'react';
 import { vars } from 'nativewind';
 import rawPalette from './colors.json';
+import { PALETAS, type Tema } from './temas';
 import { usePreferences } from '@/contexts/PreferencesContext';
 
 export type IntensidadeCores = 'normal' | 'suaves' | 'sem-cor';
-export type ThemeMode = 'escuro' | 'claro' | 'alto-contraste';
+export type ThemeMode = Tema;
 
 export type ColorRoles = typeof rawPalette.roles;
 export type ColorPain = typeof rawPalette.pain;
@@ -78,11 +79,8 @@ export function gerarPaletaComIntensidade(base: ColorPalette, intensidade: Inten
 }
 
 export function obterPaletaDoTema(tema: ThemeMode): ColorPalette {
-  switch (tema) {
-    case 'escuro':
-    default:
-      return rawPalette as ColorPalette;
-  }
+  const { roles, pain, mood } = PALETAS[tema] ?? PALETAS.escuro;
+  return { roles, pain, mood, legacy: rawPalette.legacy };
 }
 
 export function resolverPaleta(tema: ThemeMode = 'escuro', intensidade: IntensidadeCores = 'normal'): ColorPalette {
@@ -190,15 +188,15 @@ export const Colors = new Proxy({} as ColorLegacy, {
 export function useThemeColors(): ColorPalette {
   const { preferencias } = usePreferences();
   return useMemo(
-    () => resolverPaleta('escuro', preferencias.intensidadeCores),
-    [preferencias.intensidadeCores],
+    () => resolverPaleta(preferencias.tema, preferencias.intensidadeCores),
+    [preferencias.tema, preferencias.intensidadeCores],
   );
 }
 
 export function useThemeVars() {
   const { preferencias } = usePreferences();
   return useMemo(() => {
-    const paleta = resolverPaleta('escuro', preferencias.intensidadeCores);
+    const paleta = resolverPaleta(preferencias.tema, preferencias.intensidadeCores);
     return vars(gerarVariaveisCss(paleta));
-  }, [preferencias.intensidadeCores]);
+  }, [preferencias.tema, preferencias.intensidadeCores]);
 }

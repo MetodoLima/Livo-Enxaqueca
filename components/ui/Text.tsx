@@ -18,7 +18,8 @@ export type TextTone =
   | 'attention'
   | 'danger'
   | 'success'
-  | 'canvas';
+  | 'canvas'
+  | 'onPrimary';
 
 export type TextWeight = Peso;
 
@@ -40,6 +41,7 @@ const TONE: Record<TextTone, string> = {
   danger: 'text-danger',
   success: 'text-success',
   canvas: 'text-canvas',
+  onPrimary: 'text-on-primary',
 };
 
 export interface TextProps extends NativeTextProps {

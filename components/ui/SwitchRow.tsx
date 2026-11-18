@@ -1,12 +1,7 @@
 import { Switch, View } from 'react-native';
 import Card from '@/components/ui/Card';
 import Text from '@/components/ui/Text';
-import { color } from '@/constants/Colors';
-
-const TRILHO = {
-  get false() { return color.surfaceRaised; },
-  get true() { return color.primaryStrong; },
-};
+import { useTema } from '@/hooks/useTema';
 
 export interface SwitchRowProps {
   label: string;
@@ -18,6 +13,7 @@ export interface SwitchRowProps {
 }
 
 export default function SwitchRow({ label, description, value, onValueChange, disabled, className = '' }: SwitchRowProps) {
+  const { color } = useTema();
   return (
     <Card padding="sm" className={className}>
       <View className="min-h-12 flex-row items-center gap-4">
@@ -33,7 +29,7 @@ export default function SwitchRow({ label, description, value, onValueChange, di
           value={value}
           onValueChange={onValueChange}
           disabled={disabled}
-          trackColor={TRILHO}
+          trackColor={{ false: color.surfaceRaised, true: color.primaryStrong }}
           thumbColor={color.content}
           ios_backgroundColor={color.surfaceRaised}
           accessibilityLabel={label}

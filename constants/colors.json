@@ -18,7 +18,9 @@
     "dangerSubtle": "#333945",
     "success": "#10B981",
     "successSubtle": "#154448",
-    "scrim": "rgba(0, 0, 0, 0.6)"
+    "scrim": "rgba(0, 0, 0, 0.6)",
+    "onPrimary": "#FFFFFF",
+    "focus": "#25B7BB"
   },
   "pain": {
     "0": "#10B981",
@@ -39,6 +41,98 @@
     "soSo": "#EAB308",
     "okay": "#22C55E",
     "great": "#10B981"
+  },
+  "themes": {
+    "claro": {
+      "roles": {
+        "canvas": "#F3F7F8",
+        "surface": "#FFFFFF",
+        "surfaceRaised": "#E7EFF2",
+        "line": "#CAD8DE",
+        "lineStrong": "#5F7B89",
+        "content": "#0F2733",
+        "contentMuted": "#44606C",
+        "primary": "#146F73",
+        "primaryStrong": "#17696D",
+        "primarySubtle": "#D4EDEF",
+        "secondary": "#5F4BA6",
+        "secondarySubtle": "#E8E3F5",
+        "attention": "#9A4309",
+        "attentionSubtle": "#FBE8D6",
+        "danger": "#B3261E",
+        "dangerSubtle": "#FBE2E0",
+        "success": "#0A7050",
+        "successSubtle": "#D6F0E5",
+        "scrim": "rgba(15, 39, 51, 0.5)",
+        "onPrimary": "#FFFFFF",
+        "focus": "#0F2733"
+      },
+      "pain": {
+        "0": "#0C997D",
+        "1": "#0D9C54",
+        "2": "#0D9E25",
+        "3": "#58990C",
+        "4": "#A58504",
+        "5": "#BE7A08",
+        "6": "#E36006",
+        "7": "#EF4444",
+        "8": "#DC2626",
+        "9": "#B91C1C",
+        "10": "#991B1B"
+      },
+      "mood": {
+        "terrible": "#EF4444",
+        "bad": "#E36006",
+        "soSo": "#A58504",
+        "okay": "#0D9E25",
+        "great": "#0C997D"
+      }
+    },
+    "alto-contraste": {
+      "roles": {
+        "canvas": "#000000",
+        "surface": "#071218",
+        "surfaceRaised": "#0E222C",
+        "line": "#7FA0AD",
+        "lineStrong": "#FFFFFF",
+        "content": "#FFFFFF",
+        "contentMuted": "#C7D8DD",
+        "primary": "#5CE8EC",
+        "primaryStrong": "#5CE8EC",
+        "primarySubtle": "#06343A",
+        "secondary": "#CDBEFF",
+        "secondarySubtle": "#21184A",
+        "attention": "#FFB36B",
+        "attentionSubtle": "#3D2105",
+        "danger": "#FF9E9E",
+        "dangerSubtle": "#4A0F0F",
+        "success": "#4DE3A8",
+        "successSubtle": "#06382A",
+        "scrim": "rgba(0, 0, 0, 0.8)",
+        "onPrimary": "#000000",
+        "focus": "#FFD400"
+      },
+      "pain": {
+        "0": "#10B981",
+        "1": "#34D399",
+        "2": "#6EE7B7",
+        "3": "#A3E635",
+        "4": "#FACC15",
+        "5": "#F59E0B",
+        "6": "#F97316",
+        "7": "#FF8080",
+        "8": "#FF5C5C",
+        "9": "#FF3D3D",
+        "10": "#FF1F1F"
+      },
+      "mood": {
+        "terrible": "#FF8080",
+        "bad": "#F97316",
+        "soSo": "#FACC15",
+        "okay": "#6EE7B7",
+        "great": "#10B981"
+      }
+    }
   },
   "legacy": {
     "accent": "#25B7BB",

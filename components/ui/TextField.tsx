@@ -2,7 +2,7 @@ import { useRef, useState, type ReactNode, type Ref } from 'react';
 import { TextInput, View, type TextInputProps } from 'react-native';
 import { useRevelarAcimaDoTeclado } from '@/components/ui/KeyboardAwareScroll';
 import Text from '@/components/ui/Text';
-import { color } from '@/constants/Colors';
+import { useTema } from '@/hooks/useTema';
 import { escalaMaximaDoSistema, estiloDeTexto } from '@/constants/typography';
 import { usePreferences } from '@/contexts/PreferencesContext';
 
@@ -27,6 +27,7 @@ export default function TextField({
   ref,
   ...props
 }: TextFieldProps) {
+  const { color } = useTema();
   const [focused, setFocused] = useState(false);
   const containerRef = useRef<View>(null);
   const revelar = useRevelarAcimaDoTeclado();

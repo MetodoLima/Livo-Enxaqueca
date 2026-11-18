@@ -7,7 +7,7 @@ import IconButton from '@/components/ui/IconButton';
 import OptionCard from '@/components/ui/OptionCard';
 import Text from '@/components/ui/Text';
 import TextField from '@/components/ui/TextField';
-import { color } from '@/constants/Colors';
+import { useTema } from '@/hooks/useTema';
 import SetupStep from '@/features/onboarding/SetupStep';
 import { useSetup } from '@/features/onboarding/SetupContext';
 
@@ -34,6 +34,7 @@ function conditionLabel(id: string): string {
 }
 
 export default function ComorbiditiesStep() {
+  const { color } = useTema();
     const { updateSetupData } = useSetup();
 
     const [search, setSearch] = useState('');
