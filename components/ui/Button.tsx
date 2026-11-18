@@ -2,7 +2,7 @@ import type { LucideIcon } from 'lucide-react-native';
 import type { Ref } from 'react';
 import { ActivityIndicator, Pressable, View, type PressableProps } from 'react-native';
 import Text, { type TextTone } from '@/components/ui/Text';
-import { color } from '@/constants/Colors';
+import { useColorPalette } from '@/contexts/ColorThemeContext';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 export type ButtonSize = 'md' | 'lg';
@@ -20,13 +20,6 @@ const LABEL_TONE: Record<ButtonVariant, TextTone> = {
   secondary: 'content',
   ghost: 'primary',
   danger: 'content',
-};
-
-const ICON_COLOR: Record<ButtonVariant, string> = {
-  primary: color.content,
-  secondary: color.primary,
-  ghost: color.primary,
-  danger: color.danger,
 };
 
 const SHAPE: Record<ButtonShape, string> = {
@@ -69,6 +62,13 @@ export default function Button({
   ref,
   ...props
 }: ButtonProps) {
+  const { roles } = useColorPalette();
+  const iconColor: Record<ButtonVariant, string> = {
+    primary: roles.content,
+    secondary: roles.primary,
+    ghost: roles.primary,
+    danger: roles.danger,
+  };
   const dimmed = !done && (disabled || loading);
   const inactive = disabled || loading || done;
 
@@ -83,16 +83,16 @@ export default function Button({
       {...props}
     >
       {loading ? (
-        <ActivityIndicator color={ICON_COLOR[variant]} />
+        <ActivityIndicator color={iconColor[variant]} />
       ) : (
         <>
-          {Icon && iconPosition === 'start' && <Icon size={20} color={ICON_COLOR[variant]} />}
+          {Icon && iconPosition === 'start' && <Icon size={20} color={iconColor[variant]} />}
           {iconOnly ? null : (
             <Text variant="body" weight="semibold" tone={LABEL_TONE[variant]} className="text-center">
               {title}
             </Text>
           )}
-          {Icon && iconPosition === 'end' && <Icon size={20} color={ICON_COLOR[variant]} />}
+          {Icon && iconPosition === 'end' && <Icon size={20} color={iconColor[variant]} />}
         </>
       )}
     </Pressable>

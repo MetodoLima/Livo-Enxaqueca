@@ -5,7 +5,7 @@ import IconBadge from '@/components/ui/IconBadge';
 import Screen from '@/components/ui/Screen';
 import Text from '@/components/ui/Text';
 import TextField from '@/components/ui/TextField';
-import { color } from '@/constants/Colors';
+import { useColorPalette } from '@/contexts/ColorThemeContext';
 import { MoodId } from '@/constants/data';
 import { useAuth } from '@/contexts/AuthContext';
 import { useCrisis } from '@/contexts/CrisisContext';
@@ -65,6 +65,7 @@ function fmtSecs(s: number): string {
 }
 
 export default function HomeScreen() {
+  const { roles } = useColorPalette();
   const { user } = useAuth();
   const router = useRouter();
   const { ultimaAtualizacao } = useSync();
@@ -343,11 +344,11 @@ export default function HomeScreen() {
                   className={`h-10 w-10 items-center justify-center rounded-full ${isRecordingVoice ? 'bg-danger' : 'bg-primary-subtle'}`}
                 >
                   {isTranscribing ? (
-                    <ActivityIndicator size="small" color={color.primary} />
+                    <ActivityIndicator size="small" color={roles.primary} />
                   ) : isRecordingVoice ? (
-                    <StopCircle size={20} color={color.content} />
+                    <StopCircle size={20} color={roles.content} />
                   ) : (
-                    <Mic size={20} color={color.primary} />
+                    <Mic size={20} color={roles.primary} />
                   )}
                 </TouchableOpacity>
               ) : (
@@ -356,7 +357,7 @@ export default function HomeScreen() {
                   accessibilityElementsHidden
                   className="h-10 w-10 items-center justify-center rounded-full bg-primary-subtle"
                 >
-                  <Mic size={20} color={color.primary} />
+                  <Mic size={20} color={roles.primary} />
                 </View>
               )
             }

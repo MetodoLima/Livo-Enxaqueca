@@ -2,7 +2,7 @@ import type { LucideIcon } from 'lucide-react-native';
 import { Check } from 'lucide-react-native';
 import { Pressable, View } from 'react-native';
 import Text from '@/components/ui/Text';
-import { color } from '@/constants/Colors';
+import { useColorPalette } from '@/contexts/ColorThemeContext';
 
 export type OptionCardMode = 'radio' | 'checkbox';
 
@@ -29,6 +29,7 @@ export default function OptionCard({
   onPress,
   className = '',
 }: OptionCardProps) {
+  const { roles } = useColorPalette();
   const superficie = checked ? 'border-primary bg-primary-subtle' : 'border-line-strong bg-surface-raised';
   const indicador = checked ? 'border-primary' : 'border-line-strong';
 
@@ -40,7 +41,7 @@ export default function OptionCard({
       onPress={onPress}
       className={`min-h-14 flex-row items-center gap-3 rounded-md border p-4 active:opacity-80 ${superficie} ${className}`}
     >
-      {Icon ? <Icon size={24} color={checked ? color.primary : color.contentMuted} /> : null}
+      {Icon ? <Icon size={24} color={checked ? roles.primary : roles.contentMuted} /> : null}
       {!Icon && emoji ? (
         <Text variant="heading" importantForAccessibility="no" accessibilityElementsHidden>
           {emoji}
@@ -67,7 +68,7 @@ export default function OptionCard({
         <View
           className={`h-6 w-6 items-center justify-center rounded-sm border-2 ${indicador} ${checked ? 'bg-primary' : ''}`}
         >
-          {checked ? <Check size={16} color={color.canvas} /> : null}
+          {checked ? <Check size={16} color={roles.canvas} /> : null}
         </View>
       )}
     </Pressable>

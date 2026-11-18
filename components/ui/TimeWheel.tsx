@@ -10,13 +10,13 @@ import {
 } from 'react-native';
 import { useRevelarAcimaDoTeclado } from '@/components/ui/KeyboardAwareScroll';
 import Text from '@/components/ui/Text';
-import { color } from '@/constants/Colors';
 import {
   AJUSTE_DE_LINHA_DA_FONTE,
   escalaMaximaDoSistema,
   estiloDeTexto,
   fatorDeEscala,
 } from '@/constants/typography';
+import { useColorPalette } from '@/contexts/ColorThemeContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import type { Horario } from '@/lib/format';
 
@@ -94,6 +94,7 @@ function ColunaDaRoda({
   const faixaRef = useRef<View>(null);
   const revelar = useRevelarAcimaDoTeclado();
   const { preferencias } = usePreferences();
+  const { roles } = useColorPalette();
   const quantidade = total * COPIAS;
   const [centros, setCentros] = useState<number[]>([total + valor]);
   const centrosRef = useRef(centros);
@@ -264,7 +265,7 @@ function ColunaDaRoda({
             returnKeyType="done"
             maxLength={2}
             value={texto}
-            selectionColor={color.primary}
+            selectionColor={roles.primary}
             onChangeText={(t) => {
               const digitos = t.replace(/\D/g, '');
               setTexto(digitos);

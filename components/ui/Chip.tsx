@@ -2,7 +2,7 @@ import type { LucideIcon } from 'lucide-react-native';
 import { X } from 'lucide-react-native';
 import { Pressable, View } from 'react-native';
 import Text from '@/components/ui/Text';
-import { SUBTLE_BACKGROUND, TONE_BORDER, TONE_COLOR, type Tone } from '@/components/ui/tone';
+import { SUBTLE_BACKGROUND, TONE_BORDER, useToneColor, type Tone } from '@/components/ui/tone';
 
 export interface ChipProps {
   label: string;
@@ -25,6 +25,8 @@ export default function Chip({
   onRemove,
   className = '',
 }: ChipProps) {
+  const activeColor = useToneColor(tone);
+  const neutralColor = useToneColor('neutral');
   const selectable = selected !== undefined;
   const active = selectable ? selected : true;
   const surface = active ? `${SUBTLE_BACKGROUND[tone]} ${TONE_BORDER[tone]}` : 'bg-surface-raised border-line-strong';
@@ -34,7 +36,7 @@ export default function Chip({
   const content = (
     <>
       {emoji ? <Text variant="body">{emoji}</Text> : null}
-      {Icon ? <Icon size={16} color={active ? TONE_COLOR[tone] : TONE_COLOR.neutral} /> : null}
+      {Icon ? <Icon size={16} color={active ? activeColor : neutralColor} /> : null}
       <Text variant="caption" weight="semibold" tone={active ? 'content' : 'muted'}>
         {label}
       </Text>
@@ -53,7 +55,7 @@ export default function Chip({
           onPress={onRemove}
           className="h-12 w-10 items-center justify-center active:opacity-70"
         >
-          <X size={16} color={TONE_COLOR.neutral} />
+          <X size={16} color={neutralColor} />
         </Pressable>
       </View>
     );

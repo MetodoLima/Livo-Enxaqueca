@@ -2,9 +2,14 @@
 const palette = require('./constants/colors.json');
 
 const kebab = (nome) => nome.replace(/[A-Z]/g, (l) => `-${l.toLowerCase()}`);
+const runtimeColor = (token) =>
+  `rgb(var(--color-${token}-rgb) / calc(var(--color-${token}-alpha) * <alpha-value>))`;
 
 const group = (cores, prefixo = '') =>
-  Object.fromEntries(Object.entries(cores).map(([nome, cor]) => [`${prefixo}${kebab(nome)}`, cor]));
+  Object.fromEntries(Object.keys(cores).map((nome) => {
+    const token = `${prefixo}${kebab(nome)}`;
+    return [token, runtimeColor(token)];
+  }));
 
 module.exports = {
   content: [

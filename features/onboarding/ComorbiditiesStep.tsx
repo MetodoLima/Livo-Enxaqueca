@@ -7,7 +7,7 @@ import IconButton from '@/components/ui/IconButton';
 import OptionCard from '@/components/ui/OptionCard';
 import Text from '@/components/ui/Text';
 import TextField from '@/components/ui/TextField';
-import { color } from '@/constants/Colors';
+import { useColorPalette } from '@/contexts/ColorThemeContext';
 import SetupStep from '@/features/onboarding/SetupStep';
 import { useSetup } from '@/features/onboarding/SetupContext';
 
@@ -34,6 +34,7 @@ function conditionLabel(id: string): string {
 }
 
 export default function ComorbiditiesStep() {
+    const { roles } = useColorPalette();
     const { updateSetupData } = useSetup();
 
     const [search, setSearch] = useState('');
@@ -114,7 +115,7 @@ export default function ComorbiditiesStep() {
                             accessibilityElementsHidden
                             className="h-12 w-12 items-center justify-center"
                         >
-                            <Search size={22} color={color.contentMuted} />
+                            <Search size={22} color={roles.contentMuted} />
                         </View>
                     )
                 }

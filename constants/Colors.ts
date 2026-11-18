@@ -1,9 +1,19 @@
 import palette from './colors.json';
 
-export const color = palette.roles;
+type ColorGroup<T> = {
+  readonly [Key in keyof T]: string;
+};
 
-export const painColor = palette.pain;
+export type ColorPalette = {
+  readonly [Group in keyof typeof palette]: ColorGroup<(typeof palette)[Group]>;
+};
 
-export const moodColor = palette.mood;
+export const originalPalette: ColorPalette = palette;
 
-export const Colors = palette.legacy;
+export const color = originalPalette.roles;
+
+export const painColor = originalPalette.pain;
+
+export const moodColor = originalPalette.mood;
+
+export const Colors = originalPalette.legacy;

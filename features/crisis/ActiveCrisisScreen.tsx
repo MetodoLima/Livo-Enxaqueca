@@ -15,7 +15,7 @@ import Screen from '@/components/ui/Screen';
 import SectionDivider from '@/components/ui/SectionDivider';
 import Text from '@/components/ui/Text';
 import TextField from '@/components/ui/TextField';
-import { color } from '@/constants/Colors';
+import { useColorPalette } from '@/contexts/ColorThemeContext';
 import { useCrisis } from '@/contexts/CrisisContext';
 import CrisisEmptyState from '@/features/crisis/components/CrisisEmptyState';
 import { IntensityEditor, LocationEditor, MedicationsEditor, SymptomsEditor } from '@/features/crisis/components/EditModals';
@@ -69,6 +69,7 @@ function NaoDefinido({ children }: { children: string }) {
 }
 
 export default function ActiveCrisisScreen() {
+  const { roles } = useColorPalette();
   const { activeCrisis, phases, updateActiveCrisis, addPhase, removePhase, clearCrisis, hasActiveCrisis, hydrated } = useCrisis();
   const reduceMotion = useReducedMotion();
 
@@ -158,7 +159,7 @@ export default function ActiveCrisisScreen() {
         }
       >
         <View className="h-12 w-12 items-center justify-center rounded-md bg-success-subtle">
-          <Check size={24} color={color.success} />
+          <Check size={24} color={roles.success} />
         </View>
         <Text variant="title" className="text-center">Crise registrada!</Text>
         <Text tone="muted" className="text-center">
@@ -376,7 +377,7 @@ export default function ActiveCrisisScreen() {
                   Salva a fase atual e começa uma nova
                 </Text>
               </View>
-              <ChevronRight size={20} color={color.contentMuted} />
+              <ChevronRight size={20} color={roles.contentMuted} />
             </View>
           </Card>
 
@@ -393,7 +394,7 @@ export default function ActiveCrisisScreen() {
                   </Text>
                   {gatilhos.map((g, i) => (
                     <View key={i} className="flex-row items-center gap-2">
-                      <Zap size={16} color={color.attention} />
+                      <Zap size={16} color={roles.attention} />
                       <Text className="flex-1">{g}</Text>
                       <IconButton
                         icon={X}
@@ -426,7 +427,7 @@ export default function ActiveCrisisScreen() {
                     Por voz ou texto
                   </Text>
                 </View>
-                <ChevronRight size={20} color={color.contentMuted} />
+                <ChevronRight size={20} color={roles.contentMuted} />
               </View>
             </Card>
           ) : null}

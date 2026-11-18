@@ -4,8 +4,8 @@ import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home, Calendar, Wind, BarChart2, User } from 'lucide-react-native';
 import Text from '@/components/ui/Text';
-import { color } from '@/constants/Colors';
 import { escalaMaximaDoSistema, estiloDeTexto } from '@/constants/typography';
+import { useColorPalette } from '@/contexts/ColorThemeContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { useCrisis } from '@/contexts/CrisisContext';
 
@@ -22,6 +22,7 @@ export default function TabLayout() {
   const insets = useSafeAreaInsets();
   const { fontScale } = useWindowDimensions();
   const { preferencias } = usePreferences();
+  const { roles } = useColorPalette();
   const linhaDoRotulo = Math.ceil(
     (estiloDeTexto('caption', 'regular', preferencias).lineHeight ?? 0) *
       Math.min(fontScale, escalaMaximaDoSistema(preferencias)),
@@ -30,10 +31,10 @@ export default function TabLayout() {
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: color.primary,
-        tabBarInactiveTintColor: color.contentMuted,
+        tabBarActiveTintColor: roles.primary,
+        tabBarInactiveTintColor: roles.contentMuted,
         tabBarStyle: {
-          backgroundColor: color.surface,
+          backgroundColor: roles.surface,
           borderTopWidth: 0,
           elevation: 0,
           shadowOpacity: 0,
@@ -70,7 +71,7 @@ export default function TabLayout() {
               className={`mb-5 h-14 w-14 items-center justify-center rounded-full ${hasActiveCrisis ? 'bg-danger' : 'bg-primary'}`}
               style={focused ? { transform: [{ scale: 1.08 }] } : undefined}
             >
-              <Wind size={24} color={color.canvas} />
+              <Wind size={24} color={roles.canvas} />
             </View>
           ),
           tabBarLabel: () => null,

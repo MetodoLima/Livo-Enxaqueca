@@ -4,7 +4,7 @@ import { Image, View, type ImageSourcePropType } from 'react-native';
 import Card from '@/components/ui/Card';
 import Chip from '@/components/ui/Chip';
 import Text from '@/components/ui/Text';
-import { color } from '@/constants/Colors';
+import { useColorPalette } from '@/contexts/ColorThemeContext';
 import { LOCATIONS, SIDES, type CrisisRecord, type LocationId, type SideId } from '@/types/crisis';
 
 export const LOCATION_ICONS: Record<LocationId, ImageSourcePropType> = {
@@ -25,6 +25,7 @@ interface LocationPickerProps {
 }
 
 export default function LocationPicker({ location, side, onChange }: LocationPickerProps) {
+  const { roles } = useColorPalette();
   const [larguraDaGrade, setLarguraDaGrade] = useState(0);
   const larguraDoItem = larguraDaGrade > 0 ? (larguraDaGrade - ESPACO * (COLUNAS - 1)) / COLUNAS : undefined;
 
@@ -60,7 +61,7 @@ export default function LocationPicker({ location, side, onChange }: LocationPic
               </Text>
               {isActive ? (
                 <View className="absolute right-3 top-3">
-                  <Check size={16} color={color.primary} />
+                  <Check size={16} color={roles.primary} />
                 </View>
               ) : null}
             </Card>

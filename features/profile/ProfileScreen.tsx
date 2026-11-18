@@ -10,8 +10,8 @@ import IconBadge from '@/components/ui/IconBadge';
 import Screen from '@/components/ui/Screen';
 import ScreenHeader from '@/components/ui/ScreenHeader';
 import Text from '@/components/ui/Text';
-import { color } from '@/constants/Colors';
 import { useAuth } from '@/contexts/AuthContext';
+import { ColorVariableScope, useColorPalette } from '@/contexts/ColorThemeContext';
 import { useAppLock } from '@/features/app-lock/AppLockContext';
 import AppLockScreen from '@/features/app-lock/AppLockScreen';
 import ExportModal from '@/features/profile/ExportModal';
@@ -27,6 +27,7 @@ interface ItemDoMenuProps {
 }
 
 function ItemDoMenu({ icon, label, desc, onPress, ref }: ItemDoMenuProps) {
+  const { roles } = useColorPalette();
   const conteudo = (
     <View className="flex-row items-center gap-3">
       <IconBadge icon={icon} tone="neutral" />
@@ -36,7 +37,7 @@ function ItemDoMenu({ icon, label, desc, onPress, ref }: ItemDoMenuProps) {
           {desc}
         </Text>
       </View>
-      {onPress ? <ChevronRight size={20} color={color.contentMuted} /> : <Chip label="Em breve" />}
+      {onPress ? <ChevronRight size={20} color={roles.contentMuted} /> : <Chip label="Em breve" />}
     </View>
   );
 
@@ -64,6 +65,7 @@ function ItemDoMenu({ icon, label, desc, onPress, ref }: ItemDoMenuProps) {
 }
 
 export default function ProfileScreen() {
+  const { roles } = useColorPalette();
   const { user } = useAuth();
   const router = useRouter();
   const [exportModalVisible, setExportModalVisible] = useState(false);
@@ -101,7 +103,7 @@ export default function ProfileScreen() {
         <Card padding="sm">
           <View className="flex-row items-center gap-3" accessible accessibilityLabel={`${nome}${user?.email ? `, ${user.email}` : ''}`}>
             <View className="h-14 w-14 items-center justify-center rounded-full bg-primary-subtle">
-              <User size={24} color={color.primary} />
+              <User size={24} color={roles.primary} />
             </View>
             <View className="flex-1 gap-1">
               <Text variant="heading">{nome}</Text>
@@ -175,7 +177,9 @@ export default function ProfileScreen() {
       </Dialog>
 
       <Modal visible={appLockModalVisible} animationType="slide" onRequestClose={() => setAppLockModalVisible(false)}>
-        <AppLockScreen mode={config ? 'manage' : 'setup'} onClose={() => setAppLockModalVisible(false)} />
+        <ColorVariableScope fill>
+          <AppLockScreen mode={config ? 'manage' : 'setup'} onClose={() => setAppLockModalVisible(false)} />
+        </ColorVariableScope>
       </Modal>
     </Screen>
   );

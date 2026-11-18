@@ -2,8 +2,8 @@ import { useRef, useState, type ReactNode, type Ref } from 'react';
 import { TextInput, View, type TextInputProps } from 'react-native';
 import { useRevelarAcimaDoTeclado } from '@/components/ui/KeyboardAwareScroll';
 import Text from '@/components/ui/Text';
-import { color } from '@/constants/Colors';
 import { escalaMaximaDoSistema, estiloDeTexto } from '@/constants/typography';
+import { useColorPalette } from '@/contexts/ColorThemeContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 
 export interface TextFieldProps extends Omit<TextInputProps, 'style' | 'placeholderTextColor'> {
@@ -31,6 +31,7 @@ export default function TextField({
   const containerRef = useRef<View>(null);
   const revelar = useRevelarAcimaDoTeclado();
   const { preferencias } = usePreferences();
+  const { roles } = useColorPalette();
   const border = error ? 'border-danger' : focused ? 'border-primary' : 'border-line-strong';
 
   return (
@@ -43,8 +44,8 @@ export default function TextField({
           ref={ref}
           accessibilityLabel={label}
           accessibilityHint={error ?? hint}
-          placeholderTextColor={color.contentMuted}
-          selectionColor={color.primary}
+          placeholderTextColor={roles.contentMuted}
+          selectionColor={roles.primary}
           multiline={multiline}
           textAlignVertical={multiline ? 'top' : 'center'}
           onFocus={(e) => {

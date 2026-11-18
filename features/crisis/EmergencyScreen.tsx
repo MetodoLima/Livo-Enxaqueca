@@ -3,16 +3,16 @@ import { View, Text, TouchableOpacity, SafeAreaView, ScrollView, AccessibilityIn
 import { X, Check } from 'lucide-react-native';
 import Animated, { ZoomIn, useReducedMotion } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
-import { Colors } from '@/constants/Colors';
+import { originalPalette } from '@/constants/Colors';
+import { emergencyIntensityColor } from '@/constants/emergencyColors';
+import { useColorPalette } from '@/contexts/ColorThemeContext';
 
 const INTENSITIES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
-const INTENSITY_COLORS = [
-  '#FEE2E2', '#FEE2E2', '#FECACA', '#FECACA',
-  '#FCA5A5', '#FCA5A5', '#F87171', '#F87171',
-  '#EF4444', '#B91C1C',
-];
 
 export default function EmergencyScreen() {
+  const palette = useColorPalette();
+  const { roles, legacy } = palette;
+  const original = palette === originalPalette;
   const [intensity, setIntensity] = useState<number | null>(null);
   const [step, setStep] = useState<'intensity' | 'done'>('intensity');
   const reduceMotion = useReducedMotion();
@@ -34,8 +34,11 @@ export default function EmergencyScreen() {
         accessibilityLabel={`Crise registrada. Intensidade ${intensity} de 10.`}
         accessibilityRole="alert"
       >
-        <Animated.View entering={reduceMotion ? undefined : ZoomIn} className="w-20 h-20 rounded-full bg-emerald-900/30 items-center justify-center mb-5">
-          <Check size={36} color="#10B981" />
+        <Animated.View
+          entering={reduceMotion ? undefined : ZoomIn}
+          className={`mb-5 h-20 w-20 items-center justify-center rounded-full ${original ? 'bg-emerald-900/30' : 'bg-success-subtle'}`}
+        >
+          <Check size={36} color={roles.success} />
         </Animated.View>
         <Text className="text-xl text-white mb-2 font-epilogue-bold">Crise registrada</Text>
         <Text className="text-sm text-muted text-center font-epilogue">
@@ -46,7 +49,7 @@ export default function EmergencyScreen() {
   }
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: Colors.bgDark }}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: legacy.bgDark }}>
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ flexGrow: 1, paddingBottom: 40, paddingHorizontal: 24 }}
@@ -60,7 +63,7 @@ export default function EmergencyScreen() {
             accessibilityRole="button"
             accessibilityLabel="Fechar registro rápido"
           >
-            <X size={24} color={Colors.muted} />
+            <X size={24} color={legacy.muted} />
           </TouchableOpacity>
           <Text className="text-base text-white font-epilogue-bold" accessibilityRole="header">Registrar crise</Text>
           <View className="w-10" />
@@ -85,12 +88,12 @@ export default function EmergencyScreen() {
                   key={n}
                   onPress={() => setIntensity(n)}
                   className={`w-12 h-12 rounded-xl items-center justify-center ${
-                    isActive ? 'shadow-lg' : 'bg-slate-800'
+                    isActive ? 'shadow-lg' : 'bg-card-dark'
                   }`}
                   style={[
                     { minWidth: 48, minHeight: 48 },
                     isActive ? {
-                      backgroundColor: INTENSITY_COLORS[n - 1],
+                      backgroundColor: emergencyIntensityColor(palette, n, original),
                       transform: [{ scale: 1.1 }],
                     } : undefined,
                   ]}
@@ -98,7 +101,7 @@ export default function EmergencyScreen() {
                   accessibilityLabel={`Intensidade ${n}`}
                   accessibilityState={{ checked: isActive }}
                 >
-                  <Text className={`font-epilogue-bold ${isActive ? 'text-white' : 'text-muted'}`}>
+                  <Text className={`font-epilogue-bold ${isActive ? (original ? 'text-white' : 'text-canvas') : 'text-muted'}`}>
                     {n}
                   </Text>
                 </TouchableOpacity>
@@ -110,14 +113,14 @@ export default function EmergencyScreen() {
             onPress={handleConfirm}
             disabled={!intensity}
             className={`w-full py-5 rounded-3xl items-center ${
-              intensity ? 'bg-accent shadow-lg' : 'bg-slate-800'
+              intensity ? 'bg-accent shadow-lg' : 'bg-card-dark'
             }`}
             style={{ minHeight: 56 }}
             accessibilityRole="button"
             accessibilityLabel={intensity ? 'Registrar crise agora' : 'Selecione a intensidade primeiro'}
             accessibilityState={{ disabled: !intensity }}
           >
-            <Text className={`text-lg font-epilogue-bold ${intensity ? 'text-white' : 'text-muted'}`}>
+            <Text className={`text-lg font-epilogue-bold ${intensity ? (original ? 'text-white' : 'text-canvas') : 'text-muted'}`}>
               {intensity ? 'Registrar agora' : 'Selecione a intensidade'}
             </Text>
           </TouchableOpacity>

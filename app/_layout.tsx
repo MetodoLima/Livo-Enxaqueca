@@ -5,7 +5,7 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { AppState, AppStateStatus } from 'react-native';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
@@ -25,8 +25,8 @@ import {
   Epilogue_600SemiBold,
   Epilogue_700Bold,
 } from '@expo-google-fonts/epilogue';
-import { color } from '@/constants/Colors';
 import { ARQUIVOS_DE_FONTE } from '@/constants/typography';
+import { ColorThemeProvider, useColorPalette } from '@/contexts/ColorThemeContext';
 import { PreferencesProvider, usePreferences } from '@/contexts/PreferencesContext';
 
 export {
@@ -38,15 +38,6 @@ export const unstable_settings = {
 };
 
 SplashScreen.preventAutoHideAsync();
-
-const LivoTheme = {
-  ...DarkTheme,
-  colors: {
-    ...DarkTheme.colors,
-    background: color.canvas,
-    card: color.canvas,
-  },
-};
 
 function AuthRefreshCoordinator() {
   const { status: connectivityStatus } = useConnectivity();
@@ -129,6 +120,18 @@ function RootLayoutNav() {
   const segments = useSegments();
   const router = useRouter();
   const navigationState = useRootNavigationState();
+  const { roles } = useColorPalette();
+  const livoTheme = useMemo(
+    () => ({
+      ...DarkTheme,
+      colors: {
+        ...DarkTheme.colors,
+        background: roles.canvas,
+        card: roles.canvas,
+      },
+    }),
+    [roles.canvas],
+  );
 
   useEffect(() => {
     if (localSessionStatus === 'loading' || !navigationState?.key) return;
@@ -169,7 +172,7 @@ function RootLayoutNav() {
   ]);
 
   return (
-    <ThemeProvider value={LivoTheme}>
+    <ThemeProvider value={livoTheme}>
       <Stack>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -196,7 +199,9 @@ function ProtectedAppProviders() {
 export default function RootLayout() {
   return (
     <PreferencesProvider>
-      <RootContent />
+      <ColorThemeProvider>
+        <RootContent />
+      </ColorThemeProvider>
     </PreferencesProvider>
   );
 }

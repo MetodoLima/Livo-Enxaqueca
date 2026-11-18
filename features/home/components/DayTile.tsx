@@ -4,7 +4,7 @@ import { useState, type Ref } from 'react';
 import { Image, View, type ImageSourcePropType, type LayoutChangeEvent } from 'react-native';
 import Card from '@/components/ui/Card';
 import Text from '@/components/ui/Text';
-import { color } from '@/constants/Colors';
+import { useColorPalette } from '@/contexts/ColorThemeContext';
 import Elipse from '@/features/home/components/Elipse';
 
 export type DayTileTone = 'primary' | 'secondary';
@@ -21,11 +21,6 @@ export interface Ilustracao {
 const BOLINHA: Record<DayTileTone, string> = {
   primary: 'bg-primary',
   secondary: 'bg-secondary',
-};
-
-const COR_DO_ICONE: Record<DayTileTone, string> = {
-  primary: color.primary,
-  secondary: color.secondary,
 };
 
 const PADDING = 12;
@@ -63,6 +58,8 @@ export default function DayTile({
   onPress,
   ref,
 }: DayTileProps) {
+  const { roles } = useColorPalette();
+  const iconColor = tone === 'primary' ? roles.primary : roles.secondary;
   const [nome, setNome] = useState(0);
   const [traco, setTraco] = useState(0);
   const [valor, setValor] = useState(0);
@@ -150,7 +147,7 @@ export default function DayTile({
         onLayout={(e) => setFimDoTexto(e.nativeEvent.layout.y + e.nativeEvent.layout.height)}
       >
         <View className="flex-row items-center gap-2">
-          <Icone size={ICONE} color={COR_DO_ICONE[tone]} />
+          <Icone size={ICONE} color={iconColor} />
           <Text weight="semibold" className="shrink">
             {title}
           </Text>
@@ -175,7 +172,7 @@ export default function DayTile({
         accessibilityElementsHidden
         className={`h-10 w-10 items-center justify-center self-end rounded-full ${BOLINHA[tone]}`}
       >
-        <IconeDaAcao size={20} color={color.canvas} />
+        <IconeDaAcao size={20} color={roles.canvas} />
       </View>
     </Card>
   );

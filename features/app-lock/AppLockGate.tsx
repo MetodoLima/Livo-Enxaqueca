@@ -1,5 +1,6 @@
 import React from 'react';
 import { Modal, View } from 'react-native';
+import { ColorVariableScope } from '@/contexts/ColorThemeContext';
 import AppLockScreen from '@/features/app-lock/AppLockScreen';
 import { useAppLock } from '@/features/app-lock/AppLockContext';
 
@@ -18,9 +19,11 @@ export function AppLockGate({ children }: { children: React.ReactNode }) {
         statusBarTranslucent
         onRequestClose={() => {}}
       >
-        {locked
-          ? <AppLockScreen />
-          : <View className="flex-1 bg-canvas" />}
+        <ColorVariableScope fill>
+          {locked
+            ? <AppLockScreen />
+            : <View className="flex-1 bg-canvas" />}
+        </ColorVariableScope>
       </Modal>
     </>
   );

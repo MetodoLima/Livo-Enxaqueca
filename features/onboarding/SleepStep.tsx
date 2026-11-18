@@ -4,7 +4,7 @@ import { cssInterop } from 'nativewind';
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import Text from '@/components/ui/Text';
-import { color } from '@/constants/Colors';
+import { useColorPalette } from '@/contexts/ColorThemeContext';
 import SetupStep from '@/features/onboarding/SetupStep';
 import { useSetup } from '@/features/onboarding/SetupContext';
 
@@ -20,6 +20,7 @@ function formatHours(value: number): string {
 }
 
 export default function SleepStep() {
+    const { roles } = useColorPalette();
     const { updateSetupData } = useSetup();
 
     const [hours, setHours] = useState<number>(7);
@@ -58,9 +59,9 @@ export default function SleepStep() {
                     onValueChange={(val) => {
                         setHours(val);
                     }}
-                    minimumTrackTintColor={color.primary}
-                    maximumTrackTintColor={color.surfaceRaised}
-                    thumbTintColor={color.primary}
+                    minimumTrackTintColor={roles.primary}
+                    maximumTrackTintColor={roles.surfaceRaised}
+                    thumbTintColor={roles.primary}
                     accessibilityLabel="Horas de sono por noite"
                     accessibilityValue={{ text: formatHours(hours) }}
                 />
