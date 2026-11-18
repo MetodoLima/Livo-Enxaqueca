@@ -1,7 +1,8 @@
 import type { LucideIcon } from 'lucide-react-native';
 import { View } from 'react-native';
 import Text from '@/components/ui/Text';
-import { SUBTLE_BACKGROUND, TONE_COLOR, type Tone } from '@/components/ui/tone';
+import { SUBTLE_BACKGROUND, corDoTom, type Tone } from '@/components/ui/tone';
+import { useTema } from '@/hooks/useTema';
 
 export interface IconBadgeProps {
   icon?: LucideIcon;
@@ -11,6 +12,8 @@ export interface IconBadgeProps {
 }
 
 export default function IconBadge({ icon: Icon, emoji, tone = 'primary', className = '' }: IconBadgeProps) {
+  const { color } = useTema();
+  const TONE_COLOR = corDoTom(color);
   return (
     <View
       importantForAccessibility="no-hide-descendants"
