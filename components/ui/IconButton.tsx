@@ -5,10 +5,10 @@ import { color } from '@/constants/Colors';
 export type IconButtonTone = 'content' | 'muted' | 'primary' | 'danger';
 
 const TONE_COLOR: Record<IconButtonTone, string> = {
-  content: color.content,
-  muted: color.contentMuted,
-  primary: color.primary,
-  danger: color.danger,
+  get content() { return color.content; },
+  get muted() { return color.contentMuted; },
+  get primary() { return color.primary; },
+  get danger() { return color.danger; },
 };
 
 export interface IconButtonProps extends Omit<PressableProps, 'children' | 'style'> {

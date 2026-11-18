@@ -23,10 +23,10 @@ const LABEL_TONE: Record<ButtonVariant, TextTone> = {
 };
 
 const ICON_COLOR: Record<ButtonVariant, string> = {
-  primary: color.content,
-  secondary: color.primary,
-  ghost: color.primary,
-  danger: color.danger,
+  get primary() { return color.content; },
+  get secondary() { return color.primary; },
+  get ghost() { return color.primary; },
+  get danger() { return color.danger; },
 };
 
 const SHAPE: Record<ButtonShape, string> = {

@@ -1,4 +1,5 @@
 import type { TextStyle } from 'react-native';
+import type { IntensidadeCores } from '@/constants/Colors';
 
 export const VARIANTES = ['caption', 'body', 'heading', 'title', 'display', 'hero'] as const;
 export type Variante = (typeof VARIANTES)[number];
@@ -15,12 +16,15 @@ export type Fonte = (typeof FONTES)[number];
 export const ESPACOS = ['padrao', 'medio', 'amplo'] as const;
 export type Espaco = (typeof ESPACOS)[number];
 
+export const INTENSIDADES_CORES = ['normal', 'suaves', 'sem-cor'] as const;
+
 export interface Preferencias {
   tamanho: Tamanho;
   fonte: Fonte;
   negrito: boolean;
   linhas: Espaco;
   letras: Espaco;
+  intensidadeCores: IntensidadeCores;
 }
 
 export const PREFERENCIAS_PADRAO: Preferencias = {
@@ -29,6 +33,7 @@ export const PREFERENCIAS_PADRAO: Preferencias = {
   negrito: false,
   linhas: 'padrao',
   letras: 'padrao',
+  intensidadeCores: 'normal',
 };
 
 export const ESCALA: Record<Variante, { tamanho: number; linha: number }> = {

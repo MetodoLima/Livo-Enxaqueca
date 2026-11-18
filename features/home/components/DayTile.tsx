@@ -24,8 +24,8 @@ const BOLINHA: Record<DayTileTone, string> = {
 };
 
 const COR_DO_ICONE: Record<DayTileTone, string> = {
-  primary: color.primary,
-  secondary: color.secondary,
+  get primary() { return color.primary; },
+  get secondary() { return color.secondary; },
 };
 
 const PADDING = 12;
