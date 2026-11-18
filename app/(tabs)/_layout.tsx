@@ -4,7 +4,7 @@ import { Tabs } from 'expo-router';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Home, Calendar, Wind, BarChart2, User } from 'lucide-react-native';
 import Text from '@/components/ui/Text';
-import { color } from '@/constants/Colors';
+import { useTema } from '@/hooks/useTema';
 import { escalaMaximaDoSistema, estiloDeTexto } from '@/constants/typography';
 import { usePreferences } from '@/contexts/PreferencesContext';
 import { useCrisis } from '@/contexts/CrisisContext';
@@ -18,6 +18,7 @@ function Rotulo({ texto, focused }: { texto: string; focused: boolean }) {
 }
 
 export default function TabLayout() {
+  const { color } = useTema();
   const { hasActiveCrisis } = useCrisis();
   const insets = useSafeAreaInsets();
   const { fontScale } = useWindowDimensions();

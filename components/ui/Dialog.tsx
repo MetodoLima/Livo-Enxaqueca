@@ -5,6 +5,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import IconButton from '@/components/ui/IconButton';
 import KeyboardAwareScroll from '@/components/ui/KeyboardAwareScroll';
 import Text from '@/components/ui/Text';
+import { useTema } from '@/hooks/useTema';
 
 const ESPERA_DO_FOCO_MS = 350;
 
@@ -35,6 +36,7 @@ export default function Dialog({
   posicao = 'centro',
   botaoFechar = false,
 }: DialogProps) {
+  const { color } = useTema();
   const [semMovimento, setSemMovimento] = useState(false);
   const tituloRef = useRef<View>(null);
   const estavaAberto = useRef(false);
@@ -74,7 +76,7 @@ export default function Dialog({
       onRequestClose={onClose}
     >
       <SafeAreaProvider>
-        <View className="flex-1 bg-scrim">
+        <View className="flex-1" style={{ backgroundColor: color.scrim }}>
           <Pressable
             accessible={false}
             importantForAccessibility="no"

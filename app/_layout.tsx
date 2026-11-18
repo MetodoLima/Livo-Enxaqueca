@@ -1,11 +1,11 @@
 import "../global.css";
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { AppState, AppStateStatus } from 'react-native';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
@@ -25,7 +25,9 @@ import {
   Epilogue_600SemiBold,
   Epilogue_700Bold,
 } from '@expo-google-fonts/epilogue';
-import { color } from '@/constants/Colors';
+import TemaRaiz from '@/components/ui/TemaRaiz';
+import { PALETAS } from '@/constants/temas';
+import { useTema } from '@/hooks/useTema';
 import { ARQUIVOS_DE_FONTE } from '@/constants/typography';
 import { PreferencesProvider, usePreferences } from '@/contexts/PreferencesContext';
 
@@ -38,15 +40,6 @@ export const unstable_settings = {
 };
 
 SplashScreen.preventAutoHideAsync();
-
-const LivoTheme = {
-  ...DarkTheme,
-  colors: {
-    ...DarkTheme.colors,
-    background: color.canvas,
-    card: color.canvas,
-  },
-};
 
 function AuthRefreshCoordinator() {
   const { status: connectivityStatus } = useConnectivity();
@@ -129,6 +122,22 @@ function RootLayoutNav() {
   const segments = useSegments();
   const router = useRouter();
   const navigationState = useRootNavigationState();
+  const { tema } = useTema();
+  const livoTheme = useMemo(() => {
+    const { roles } = PALETAS[tema];
+    const base = tema === 'claro' ? DefaultTheme : DarkTheme;
+    return {
+      ...base,
+      colors: {
+        ...base.colors,
+        background: roles.canvas,
+        card: roles.canvas,
+        text: roles.content,
+        border: roles.line,
+        primary: roles.primary,
+      },
+    };
+  }, [tema]);
 
   useEffect(() => {
     if (localSessionStatus === 'loading' || !navigationState?.key) return;
@@ -169,7 +178,7 @@ function RootLayoutNav() {
   ]);
 
   return (
-    <ThemeProvider value={LivoTheme}>
+    <ThemeProvider value={livoTheme}>
       <Stack>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -229,16 +238,18 @@ function RootContent() {
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
-      <ConnectivityProvider>
-        <AuthRefreshCoordinator />
-        <AuthProvider>
-          <AppLockProvider>
-            <AppLockGate>
-              <ProtectedAppProviders />
-            </AppLockGate>
-          </AppLockProvider>
-        </AuthProvider>
-      </ConnectivityProvider>
+      <TemaRaiz>
+        <ConnectivityProvider>
+          <AuthRefreshCoordinator />
+          <AuthProvider>
+            <AppLockProvider>
+              <AppLockGate>
+                <ProtectedAppProviders />
+              </AppLockGate>
+            </AppLockProvider>
+          </AuthProvider>
+        </ConnectivityProvider>
+      </TemaRaiz>
     </GestureHandlerRootView>
   );
 }

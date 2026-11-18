@@ -6,6 +6,18 @@ const kebab = (nome) => nome.replace(/[A-Z]/g, (l) => `-${l.toLowerCase()}`);
 const group = (cores, prefixo = '') =>
   Object.fromEntries(Object.entries(cores).map(([nome, cor]) => [`${prefixo}${kebab(nome)}`, cor]));
 
+// Cores temáticas: o valor vem de variáveis CSS (canais RGB) definidas por tema
+// em constants/temas.ts, o que mantém os modificadores de opacidade (bg-pain-3/30).
+const tematico = (cores, prefixo = '') =>
+  Object.fromEntries(
+    Object.keys(cores).map((nome) => {
+      const token = `${prefixo}${kebab(nome)}`;
+      return [token, `rgb(var(--c-${token}) / <alpha-value>)`];
+    }),
+  );
+
+const { scrim, ...papeis } = palette.roles;
+
 module.exports = {
   content: [
     "./app/**/*.{js,jsx,ts,tsx}",
@@ -17,9 +29,10 @@ module.exports = {
   theme: {
     extend: {
       colors: {
-        ...group(palette.roles),
-        ...group(palette.pain, 'pain-'),
-        ...group(palette.mood, 'mood-'),
+        ...tematico(papeis),
+        scrim,
+        ...tematico(palette.pain, 'pain-'),
+        ...tematico(palette.mood, 'mood-'),
         ...group(palette.legacy),
       },
       fontFamily: {

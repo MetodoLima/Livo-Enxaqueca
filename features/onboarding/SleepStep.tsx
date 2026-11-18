@@ -4,7 +4,7 @@ import { cssInterop } from 'nativewind';
 import React, { useState } from 'react';
 import { View } from 'react-native';
 import Text from '@/components/ui/Text';
-import { color } from '@/constants/Colors';
+import { useTema } from '@/hooks/useTema';
 import SetupStep from '@/features/onboarding/SetupStep';
 import { useSetup } from '@/features/onboarding/SetupContext';
 
@@ -20,6 +20,7 @@ function formatHours(value: number): string {
 }
 
 export default function SleepStep() {
+  const { color } = useTema();
     const { updateSetupData } = useSetup();
 
     const [hours, setHours] = useState<number>(7);

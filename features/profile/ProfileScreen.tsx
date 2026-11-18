@@ -10,7 +10,7 @@ import IconBadge from '@/components/ui/IconBadge';
 import Screen from '@/components/ui/Screen';
 import ScreenHeader from '@/components/ui/ScreenHeader';
 import Text from '@/components/ui/Text';
-import { color } from '@/constants/Colors';
+import { useTema } from '@/hooks/useTema';
 import { useAuth } from '@/contexts/AuthContext';
 import { useAppLock } from '@/features/app-lock/AppLockContext';
 import AppLockScreen from '@/features/app-lock/AppLockScreen';
@@ -27,6 +27,7 @@ interface ItemDoMenuProps {
 }
 
 function ItemDoMenu({ icon, label, desc, onPress, ref }: ItemDoMenuProps) {
+  const { color } = useTema();
   const conteudo = (
     <View className="flex-row items-center gap-3">
       <IconBadge icon={icon} tone="neutral" />
@@ -64,6 +65,7 @@ function ItemDoMenu({ icon, label, desc, onPress, ref }: ItemDoMenuProps) {
 }
 
 export default function ProfileScreen() {
+  const { color } = useTema();
   const { user } = useAuth();
   const router = useRouter();
   const [exportModalVisible, setExportModalVisible] = useState(false);

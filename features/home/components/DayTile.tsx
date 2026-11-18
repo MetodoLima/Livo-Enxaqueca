@@ -4,7 +4,7 @@ import { useState, type Ref } from 'react';
 import { Image, View, type ImageSourcePropType, type LayoutChangeEvent } from 'react-native';
 import Card from '@/components/ui/Card';
 import Text from '@/components/ui/Text';
-import { color } from '@/constants/Colors';
+import { useTema } from '@/hooks/useTema';
 import Elipse from '@/features/home/components/Elipse';
 
 export type DayTileTone = 'primary' | 'secondary';
@@ -21,11 +21,6 @@ export interface Ilustracao {
 const BOLINHA: Record<DayTileTone, string> = {
   primary: 'bg-primary',
   secondary: 'bg-secondary',
-};
-
-const COR_DO_ICONE: Record<DayTileTone, string> = {
-  primary: color.primary,
-  secondary: color.secondary,
 };
 
 const PADDING = 12;
@@ -63,6 +58,8 @@ export default function DayTile({
   onPress,
   ref,
 }: DayTileProps) {
+  const { color } = useTema();
+  const COR_DO_ICONE: Record<DayTileTone, string> = { primary: color.primary, secondary: color.secondary };
   const [nome, setNome] = useState(0);
   const [traco, setTraco] = useState(0);
   const [valor, setValor] = useState(0);

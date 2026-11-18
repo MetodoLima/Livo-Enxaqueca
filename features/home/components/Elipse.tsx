@@ -1,6 +1,6 @@
 import { View } from 'react-native';
 import Svg, { Ellipse } from 'react-native-svg';
-import { color } from '@/constants/Colors';
+import { useTema } from '@/hooks/useTema';
 
 interface ElipseProps {
   largura: number;
@@ -10,6 +10,7 @@ interface ElipseProps {
 }
 
 export default function Elipse({ largura, altura, centroX, centroY }: ElipseProps) {
+  const { color } = useTema();
   return (
     <View
       pointerEvents="none"

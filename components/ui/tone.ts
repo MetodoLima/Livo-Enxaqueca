@@ -1,4 +1,4 @@
-import { color } from '@/constants/Colors';
+import type { Papeis } from '@/constants/temas';
 
 export type Tone = 'neutral' | 'primary' | 'secondary' | 'attention' | 'danger' | 'success';
 
@@ -20,11 +20,11 @@ export const TONE_BORDER: Record<Tone, string> = {
   success: 'border-success',
 };
 
-export const TONE_COLOR: Record<Tone, string> = {
+export const corDoTom = (color: Papeis): Record<Tone, string> => ({
   neutral: color.contentMuted,
   primary: color.primary,
   secondary: color.secondary,
   attention: color.attention,
   danger: color.danger,
   success: color.success,
-};
+});

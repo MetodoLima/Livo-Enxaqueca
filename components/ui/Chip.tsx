@@ -2,7 +2,8 @@ import type { LucideIcon } from 'lucide-react-native';
 import { X } from 'lucide-react-native';
 import { Pressable, View } from 'react-native';
 import Text from '@/components/ui/Text';
-import { SUBTLE_BACKGROUND, TONE_BORDER, TONE_COLOR, type Tone } from '@/components/ui/tone';
+import { SUBTLE_BACKGROUND, TONE_BORDER, corDoTom, type Tone } from '@/components/ui/tone';
+import { useTema } from '@/hooks/useTema';
 
 export interface ChipProps {
   label: string;
@@ -25,6 +26,8 @@ export default function Chip({
   onRemove,
   className = '',
 }: ChipProps) {
+  const { color } = useTema();
+  const TONE_COLOR = corDoTom(color);
   const selectable = selected !== undefined;
   const active = selectable ? selected : true;
   const surface = active ? `${SUBTLE_BACKGROUND[tone]} ${TONE_BORDER[tone]}` : 'bg-surface-raised border-line-strong';

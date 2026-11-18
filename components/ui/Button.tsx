@@ -2,7 +2,7 @@ import type { LucideIcon } from 'lucide-react-native';
 import type { Ref } from 'react';
 import { ActivityIndicator, Pressable, View, type PressableProps } from 'react-native';
 import Text, { type TextTone } from '@/components/ui/Text';
-import { color } from '@/constants/Colors';
+import { useTema } from '@/hooks/useTema';
 
 export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger';
 export type ButtonSize = 'md' | 'lg';
@@ -16,17 +16,10 @@ const CONTAINER: Record<ButtonVariant, string> = {
 };
 
 const LABEL_TONE: Record<ButtonVariant, TextTone> = {
-  primary: 'content',
+  primary: 'onPrimary',
   secondary: 'content',
   ghost: 'primary',
   danger: 'content',
-};
-
-const ICON_COLOR: Record<ButtonVariant, string> = {
-  primary: color.content,
-  secondary: color.primary,
-  ghost: color.primary,
-  danger: color.danger,
 };
 
 const SHAPE: Record<ButtonShape, string> = {
@@ -69,6 +62,13 @@ export default function Button({
   ref,
   ...props
 }: ButtonProps) {
+  const { color } = useTema();
+  const ICON_COLOR: Record<ButtonVariant, string> = {
+    primary: color.onPrimary,
+    secondary: color.primary,
+    ghost: color.primary,
+    danger: color.danger,
+  };
   const dimmed = !done && (disabled || loading);
   const inactive = disabled || loading || done;
 

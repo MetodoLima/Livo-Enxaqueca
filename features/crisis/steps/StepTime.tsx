@@ -6,7 +6,7 @@ import DateField from '@/components/ui/DateField';
 import Notice from '@/components/ui/Notice';
 import Text from '@/components/ui/Text';
 import TimeField from '@/components/ui/TimeField';
-import { color } from '@/constants/Colors';
+import { useTema } from '@/hooks/useTema';
 import type { Horario } from '@/lib/format';
 import type { CrisisRecord, EndTimePreset, TimePreset } from '@/types/crisis';
 
@@ -84,6 +84,7 @@ function Secao({ titulo, iconColor, destaque = false, children }: SecaoProps) {
 }
 
 export default function StepTime({ data, onChange }: StepTimeProps) {
+  const { color } = useTema();
   const [startPreset, setStartPreset] = useState<TimePreset>('now');
   const [endPreset, setEndPreset] = useState<EndTimePreset>(data.endTime ? 'custom' : 'ongoing');
   const [larguraDaFileira, setLarguraDaFileira] = useState(0);

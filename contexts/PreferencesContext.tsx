@@ -7,6 +7,7 @@ import {
   TAMANHOS,
   type Preferencias,
 } from '@/constants/typography';
+import { TEMAS } from '@/constants/temas';
 
 const CHAVE = 'livo.preferencias.v1';
 const VERSAO = 1;
@@ -40,6 +41,7 @@ function interpretar(bruto: string | null): Preferencias {
       negrito: typeof salvo.negrito === 'boolean' ? salvo.negrito : PREFERENCIAS_PADRAO.negrito,
       linhas: umDe(ESPACOS, salvo.linhas, PREFERENCIAS_PADRAO.linhas),
       letras: umDe(ESPACOS, salvo.letras, PREFERENCIAS_PADRAO.letras),
+      tema: umDe(TEMAS, salvo.tema, PREFERENCIAS_PADRAO.tema),
     };
   } catch {
     return PREFERENCIAS_PADRAO;
