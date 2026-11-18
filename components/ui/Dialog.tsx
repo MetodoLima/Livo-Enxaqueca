@@ -5,6 +5,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import IconButton from '@/components/ui/IconButton';
 import KeyboardAwareScroll from '@/components/ui/KeyboardAwareScroll';
 import Text from '@/components/ui/Text';
+import { useThemeVars } from '@/constants/Colors';
 
 const ESPERA_DO_FOCO_MS = 350;
 
@@ -58,6 +59,7 @@ export default function Dialog({
     return () => clearTimeout(espera);
   }, [visible, returnFocusTo]);
 
+  const themeVars = useThemeVars();
   const titulo = (
     <View ref={tituloRef} accessible accessibilityRole="header" className={botaoFechar ? 'flex-1' : ''}>
       <Text variant={naBase ? 'heading' : 'title'}>{title}</Text>
@@ -74,7 +76,7 @@ export default function Dialog({
       onRequestClose={onClose}
     >
       <SafeAreaProvider>
-        <View className="flex-1 bg-scrim">
+        <View className="flex-1 bg-scrim" style={themeVars}>
           <Pressable
             accessible={false}
             importantForAccessibility="no"

@@ -3,10 +3,12 @@ import { createContext, useCallback, useContext, useEffect, useMemo, useRef, use
 import {
   ESPACOS,
   FONTES,
+  INTENSIDADES_CORES,
   PREFERENCIAS_PADRAO,
   TAMANHOS,
   type Preferencias,
 } from '@/constants/typography';
+import { definirPaletaAtiva, resolverPaleta } from '@/constants/Colors';
 
 const CHAVE = 'livo.preferencias.v1';
 const VERSAO = 1;
@@ -40,6 +42,7 @@ function interpretar(bruto: string | null): Preferencias {
       negrito: typeof salvo.negrito === 'boolean' ? salvo.negrito : PREFERENCIAS_PADRAO.negrito,
       linhas: umDe(ESPACOS, salvo.linhas, PREFERENCIAS_PADRAO.linhas),
       letras: umDe(ESPACOS, salvo.letras, PREFERENCIAS_PADRAO.letras),
+      intensidadeCores: umDe(INTENSIDADES_CORES, salvo.intensidadeCores, PREFERENCIAS_PADRAO.intensidadeCores),
     };
   } catch {
     return PREFERENCIAS_PADRAO;
@@ -67,6 +70,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         if (!ativo || alteradas.current) return;
         const lidas = interpretar(bruto);
         atuais.current = lidas;
+        definirPaletaAtiva(resolverPaleta('escuro', lidas.intensidadeCores));
         setPreferencias(lidas);
       })
       .catch(() => undefined)
@@ -89,6 +93,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     if (iguais) return;
     alteradas.current = true;
     atuais.current = proximas;
+    definirPaletaAtiva(resolverPaleta('escuro', proximas.intensidadeCores));
     setPreferencias(proximas);
     salvar(proximas);
   }, []);

@@ -5,7 +5,8 @@
   "scripts": {
     "start": "expo start",
     "android": "expo run:android",
-    "ios": "expo run:ios"
+    "ios": "expo run:ios",
+    "test": "node --test tests/*.test.mjs"
   },
   "dependencies": {
     "@expo-google-fonts/epilogue": "^0.4.2",

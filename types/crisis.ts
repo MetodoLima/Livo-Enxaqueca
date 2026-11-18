@@ -59,17 +59,17 @@ export function sideLabel(id: string): string {
 }
 
 export const INTENSITY_CONFIG = [
-  { value: 0,  label: 'Sem dor',        sublabel: 'Nenhuma dor',              emoji: '😌', color: painColor['0'] },
-  { value: 1,  label: 'Dói um pouco',   sublabel: 'Quase imperceptível',      emoji: '🙂', color: painColor['1'] },
-  { value: 2,  label: 'Leve',           sublabel: 'Consigo ignorar',          emoji: '🙂', color: painColor['2'] },
-  { value: 3,  label: 'Ligeira',        sublabel: 'Presente mas tolerável',   emoji: '😐', color: painColor['3'] },
-  { value: 4,  label: 'Incômoda',       sublabel: 'Dificulta concentração',   emoji: '😐', color: painColor['4'] },
-  { value: 5,  label: 'Moderada',       sublabel: 'Atrapalha as atividades',  emoji: '😟', color: painColor['5'] },
-  { value: 6,  label: 'Forte',          sublabel: 'Difícil de ignorar',       emoji: '😟', color: painColor['6'] },
-  { value: 7,  label: 'Severa',         sublabel: 'Preciso parar o que faço', emoji: '😣', color: painColor['7'] },
-  { value: 8,  label: 'Muito intensa',  sublabel: 'Quase incapacitante',      emoji: '😣', color: painColor['8'] },
-  { value: 9,  label: 'Excruciante',    sublabel: 'Impossível funcionar',     emoji: '😫', color: painColor['9'] },
-  { value: 10, label: 'Insuportável',   sublabel: 'A pior dor possível',      emoji: '🤯', color: painColor['10'] },
+  { value: 0,  label: 'Sem dor',        sublabel: 'Nenhuma dor',              emoji: '😌', get color() { return painColor['0']; } },
+  { value: 1,  label: 'Dói um pouco',   sublabel: 'Quase imperceptível',      emoji: '🙂', get color() { return painColor['1']; } },
+  { value: 2,  label: 'Leve',           sublabel: 'Consigo ignorar',          emoji: '🙂', get color() { return painColor['2']; } },
+  { value: 3,  label: 'Ligeira',        sublabel: 'Presente mas tolerável',   emoji: '😐', get color() { return painColor['3']; } },
+  { value: 4,  label: 'Incômoda',       sublabel: 'Dificulta concentração',   emoji: '😐', get color() { return painColor['4']; } },
+  { value: 5,  label: 'Moderada',       sublabel: 'Atrapalha as atividades',  emoji: '😟', get color() { return painColor['5']; } },
+  { value: 6,  label: 'Forte',          sublabel: 'Difícil de ignorar',       emoji: '😟', get color() { return painColor['6']; } },
+  { value: 7,  label: 'Severa',         sublabel: 'Preciso parar o que faço', emoji: '😣', get color() { return painColor['7']; } },
+  { value: 8,  label: 'Muito intensa',  sublabel: 'Quase incapacitante',      emoji: '😣', get color() { return painColor['8']; } },
+  { value: 9,  label: 'Excruciante',    sublabel: 'Impossível funcionar',     emoji: '😫', get color() { return painColor['9']; } },
+  { value: 10, label: 'Insuportável',   sublabel: 'A pior dor possível',      emoji: '🤯', get color() { return painColor['10']; } },
 ] as const;
 
 export type TimePreset = 'now' | '1h_ago' | 'custom';

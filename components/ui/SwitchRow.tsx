@@ -3,7 +3,10 @@ import Card from '@/components/ui/Card';
 import Text from '@/components/ui/Text';
 import { color } from '@/constants/Colors';
 
-const TRILHO = { false: color.surfaceRaised, true: color.primaryStrong };
+const TRILHO = {
+  get false() { return color.surfaceRaised; },
+  get true() { return color.primaryStrong; },
+};
 
 export interface SwitchRowProps {
   label: string;

@@ -27,7 +27,10 @@ function formatWait(ms: number): string {
   return `${Math.ceil(seconds / 60)} min`;
 }
 
-const TRILHO = { false: color.surfaceRaised, true: color.primaryStrong };
+const TRILHO = {
+  get false() { return color.surfaceRaised; },
+  get true() { return color.primaryStrong; },
+};
 
 export default function AppLockScreen({ mode = 'unlock', onClose }: AppLockScreenProps) {
   const {

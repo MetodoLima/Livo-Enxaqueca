@@ -5,7 +5,7 @@ import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { AppState, AppStateStatus } from 'react-native';
-import { useCallback, useEffect, useRef } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import 'react-native-reanimated';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { AuthProvider, useAuth } from '@/contexts/AuthContext';
@@ -25,7 +25,7 @@ import {
   Epilogue_600SemiBold,
   Epilogue_700Bold,
 } from '@expo-google-fonts/epilogue';
-import { color } from '@/constants/Colors';
+import { color, useThemeVars } from '@/constants/Colors';
 import { ARQUIVOS_DE_FONTE } from '@/constants/typography';
 import { PreferencesProvider, usePreferences } from '@/contexts/PreferencesContext';
 
@@ -126,9 +126,22 @@ function RootLayoutNav() {
     offlineSessionStatus,
   } = useAuth();
   const { status: connectivityStatus } = useConnectivity();
+  const { preferencias } = usePreferences();
   const segments = useSegments();
   const router = useRouter();
   const navigationState = useRootNavigationState();
+
+  const navTheme = useMemo(
+    () => ({
+      ...DarkTheme,
+      colors: {
+        ...DarkTheme.colors,
+        background: color.canvas,
+        card: color.canvas,
+      },
+    }),
+    [preferencias.intensidadeCores],
+  );
 
   useEffect(() => {
     if (localSessionStatus === 'loading' || !navigationState?.key) return;
@@ -169,7 +182,7 @@ function RootLayoutNav() {
   ]);
 
   return (
-    <ThemeProvider value={LivoTheme}>
+    <ThemeProvider value={navTheme}>
       <Stack>
         <Stack.Screen name="(auth)" options={{ headerShown: false }} />
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
@@ -203,6 +216,7 @@ export default function RootLayout() {
 
 function RootContent() {
   const { pronto } = usePreferences();
+  const themeVars = useThemeVars();
   const [loaded, error] = useFonts({
     Epilogue_300Light,
     Epilogue_400Regular,
@@ -228,7 +242,7 @@ function RootContent() {
   }
 
   return (
-    <GestureHandlerRootView style={{ flex: 1 }}>
+    <GestureHandlerRootView style={[{ flex: 1 }, themeVars]}>
       <ConnectivityProvider>
         <AuthRefreshCoordinator />
         <AuthProvider>

@@ -3,6 +3,7 @@ import { StatusBar, View } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { cssInterop } from 'nativewind';
 import KeyboardAwareScroll from '@/components/ui/KeyboardAwareScroll';
+import { useThemeVars } from '@/constants/Colors';
 
 cssInterop(SafeAreaView, { className: 'style' });
 
@@ -18,10 +19,11 @@ export interface ScreenProps {
 
 export default function Screen({ children, scroll = false, padded = true, footer, className = '' }: ScreenProps) {
   const insets = useSafeAreaInsets();
+  const themeVars = useThemeVars();
   const padding = padded ? 'px-gutter' : '';
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-canvas">
+    <SafeAreaView edges={['top', 'left', 'right']} className="flex-1 bg-canvas" style={themeVars}>
       <StatusBar barStyle="light-content" />
       {scroll ? (
         <KeyboardAwareScroll className="flex-1" contentContainerClassName={`grow pb-section ${padding} ${className}`}>
