@@ -1,10 +1,20 @@
 import { Check } from 'lucide-react-native';
 import { useState } from 'react';
-import { View } from 'react-native';
+
+import { Image, View, type ImageSourcePropType } from 'react-native';
 import Card from '@/components/ui/Card';
 import Text from '@/components/ui/Text';
 import { useTema } from '@/hooks/useTema';
 import { SYMPTOMS, type SymptomId } from '@/types/crisis';
+
+export const SYMPTOM_ICONS: Record<SymptomId, ImageSourcePropType> = {
+  nausea: require('@/assets/images/crisis/symptoms/Nausea.png'),
+  fotofobia: require('@/assets/images/crisis/symptoms/LuzIncomoda.png'),
+  fonofobia: require('@/assets/images/crisis/symptoms/SomIncomoda.png'),
+  tontura: require('@/assets/images/crisis/symptoms/Tontura.png'),
+  aura: require('@/assets/images/crisis/symptoms/AuraVisual.png'),
+  vomito: require('@/assets/images/crisis/symptoms/Vomito.png'),
+};
 
 const COLUNAS = 2;
 const ESPACO = 12;
@@ -41,7 +51,7 @@ export default function SymptomPicker({ symptoms, onChange }: SymptomPickerProps
               className="min-h-28 items-center justify-center gap-2"
               style={{ width: larguraDoItem }}
             >
-              <Text variant="heading" accessibilityRole="none">{symptom.emoji}</Text>
+              <Image source={SYMPTOM_ICONS[symptom.id]} resizeMode="contain" className="h-12 w-12" />
               <Text variant="caption" weight="semibold" tone={isActive ? 'content' : 'muted'} className="text-center">
                 {symptom.label}
               </Text>
