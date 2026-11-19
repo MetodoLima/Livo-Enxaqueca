@@ -1,12 +1,17 @@
-import { Plus } from 'lucide-react-native';
+import { Check, Plus } from 'lucide-react-native';
 import { useState } from 'react';
 import { View } from 'react-native';
+import Card from '@/components/ui/Card';
 import Chip from '@/components/ui/Chip';
 import IconButton from '@/components/ui/IconButton';
 import OptionCard from '@/components/ui/OptionCard';
 import Text from '@/components/ui/Text';
 import TextField from '@/components/ui/TextField';
+import { useTema } from '@/hooks/useTema';
 import { MEDICATIONS, type CrisisRecord, type MedicationId } from '@/types/crisis';
+
+const COLUNAS = 2;
+const ESPACO = 12;
 
 interface MedicationPickerProps {
   medications: MedicationId[];
@@ -15,7 +20,10 @@ interface MedicationPickerProps {
 }
 
 export default function MedicationPicker({ medications, customMedications, onChange }: MedicationPickerProps) {
+  const { color } = useTema();
   const [customText, setCustomText] = useState('');
+  const [larguraDaGrade, setLarguraDaGrade] = useState(0);
+  const larguraDoItem = larguraDaGrade > 0 ? (larguraDaGrade - ESPACO * (COLUNAS - 1)) / COLUNAS : undefined;
 
   const toggleMedication = (id: MedicationId) => {
     if (id === 'nenhum') {
@@ -58,39 +66,18 @@ export default function MedicationPicker({ medications, customMedications, onCha
 
   return (
     <View className="gap-6">
-      <OptionCard
-        label="Não tomei nenhum remédio"
-        emoji={nenhumMed.emoji}
-        mode="checkbox"
-        checked={medications.includes('nenhum')}
-        onPress={() => toggleMedication('nenhum')}
-      />
-
-      <View className="flex-row flex-wrap gap-2">
-        {regularMeds.map((med) => (
-          <Chip
-            key={med.id}
-            label={med.label}
-            emoji={med.emoji}
-            tone="primary"
-            selected={medications.includes(med.id)}
-            onPress={() => toggleMedication(med.id)}
-          />
-        ))}
-      </View>
-
-      <View className="gap-3">
-        <Text variant="heading">Outro remédio</Text>
-        <View className="flex-row items-end gap-3">
+      <View className="gap-2">
+        <Text variant="caption" weight="semibold" tone="muted">
+          Adicionar remédio
+        </Text>
+        <View className="flex-row items-center gap-3">
           <TextField
-            label="Nome do medicamento"
             value={customText}
             onChangeText={setCustomText}
             placeholder="Ex: Cefaliv, Dorflex..."
             onSubmitEditing={addCustomMedication}
             returnKeyType="done"
             accessibilityLabel="Nome do medicamento personalizado"
-            hint="Digite o nome e toque no botão de adicionar"
             className="flex-1"
           />
           <IconButton
@@ -101,24 +88,64 @@ export default function MedicationPicker({ medications, customMedications, onCha
             accessibilityHint={semTexto ? 'Digite o nome do remédio para adicionar.' : undefined}
             disabled={semTexto}
             onPress={addCustomMedication}
-            className="mb-1"
           />
         </View>
-
-        {customMedications.length > 0 ? (
-          <View className="flex-row flex-wrap gap-2">
-            {customMedications.map((name) => (
-              <Chip
-                key={name}
-                label={name}
-                emoji="💊"
-                tone="primary"
-                onRemove={() => removeCustomMedication(name)}
-              />
-            ))}
-          </View>
-        ) : null}
+        <Text variant="caption" tone="muted">
+          Digite o nome e toque no botão de adicionar
+        </Text>
       </View>
+
+      {customMedications.length > 0 ? (
+        <View className="flex-row flex-wrap gap-2">
+          {customMedications.map((name) => (
+            <Chip
+              key={name}
+              label={name}
+              emoji="💊"
+              tone="primary"
+              onRemove={() => removeCustomMedication(name)}
+            />
+          ))}
+        </View>
+      ) : null}
+
+      <View
+        className="flex-row flex-wrap justify-center gap-3"
+        onLayout={(e) => setLarguraDaGrade(e.nativeEvent.layout.width)}
+      >
+        {regularMeds.map((med) => {
+          const isActive = medications.includes(med.id);
+          return (
+            <Card
+              key={med.id}
+              padding="sm"
+              selected={isActive}
+              onPress={() => toggleMedication(med.id)}
+              accessibilityLabel={med.label}
+              className="min-h-28 items-center justify-center gap-2"
+              style={{ width: larguraDoItem }}
+            >
+              <Text variant="heading" accessibilityRole="none">{med.emoji}</Text>
+              <Text variant="caption" weight="semibold" tone={isActive ? 'content' : 'muted'} className="text-center">
+                {med.label}
+              </Text>
+              {isActive ? (
+                <View className="absolute right-3 top-3">
+                  <Check size={16} color={color.primary} />
+                </View>
+              ) : null}
+            </Card>
+          );
+        })}
+      </View>
+
+      <OptionCard
+        label="Não tomei nenhum remédio"
+        emoji={nenhumMed.emoji}
+        mode="checkbox"
+        checked={medications.includes('nenhum')}
+        onPress={() => toggleMedication('nenhum')}
+      />
 
       {totalSelected > 0 ? (
         <Text variant="caption" weight="semibold" tone="muted" accessibilityLiveRegion="polite">
