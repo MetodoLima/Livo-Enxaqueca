@@ -1,20 +1,35 @@
-import { createContext, createElement, useContext, type ReactNode } from 'react';
+import { createContext, createElement, useContext, useMemo, type ReactNode } from 'react';
 import type { ColorPalette } from '@/constants/Colors';
+import type { ColorPaletteMode } from '@/constants/colorPalettes';
 
-const ColorPaletteContext = createContext<ColorPalette | null>(null);
+interface ColorPaletteContextValue {
+  palette: ColorPalette;
+  mode: ColorPaletteMode;
+}
+
+const ColorPaletteContext = createContext<ColorPaletteContextValue | null>(null);
 
 export function ColorPaletteProvider({
   children,
   palette,
+  mode = 'original',
 }: {
   children: ReactNode;
   palette: ColorPalette;
+  mode?: ColorPaletteMode;
 }) {
-  return createElement(ColorPaletteContext.Provider, { value: palette }, children);
+  const value = useMemo(() => ({ palette, mode }), [palette, mode]);
+  return createElement(ColorPaletteContext.Provider, { value }, children);
 }
 
 export function useColorPalette(): ColorPalette {
-  const palette = useContext(ColorPaletteContext);
-  if (!palette) throw new Error('useColorPalette must be used within ColorThemeProvider');
-  return palette;
+  const value = useContext(ColorPaletteContext);
+  if (!value) throw new Error('useColorPalette must be used within ColorThemeProvider');
+  return value.palette;
+}
+
+export function useColorPaletteMode(): ColorPaletteMode {
+  const value = useContext(ColorPaletteContext);
+  if (!value) throw new Error('useColorPaletteMode must be used within ColorThemeProvider');
+  return value.mode;
 }

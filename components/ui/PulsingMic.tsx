@@ -9,8 +9,7 @@ import Animated, {
   withRepeat,
   withTiming,
 } from 'react-native-reanimated';
-import { originalPalette } from '@/constants/Colors';
-import { useColorPalette } from '@/contexts/ColorThemeContext';
+import { useColorPalette, useColorPaletteMode } from '@/contexts/ColorThemeContext';
 
 interface Props {
   onStop: () => void;
@@ -20,6 +19,7 @@ interface Props {
 
 export default function PulsingMic({ onStop, size = 80, iconSize = 32 }: Props) {
   const palette = useColorPalette();
+  const mode = useColorPaletteMode();
   const { pain, roles } = palette;
   const pulse = useSharedValue(1);
 
@@ -63,7 +63,7 @@ export default function PulsingMic({ onStop, size = 80, iconSize = 32 }: Props) 
           justifyContent: 'center',
         }}
       >
-        <StopCircle size={iconSize} color={palette === originalPalette ? 'white' : roles.canvas} />
+        <StopCircle size={iconSize} color={mode === 'original' ? 'white' : roles.canvas} />
       </TouchableOpacity>
     </View>
   );

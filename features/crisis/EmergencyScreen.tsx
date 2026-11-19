@@ -1,18 +1,23 @@
 import React, { useState } from 'react';
-import { View, Text, TouchableOpacity, SafeAreaView, ScrollView, AccessibilityInfo } from 'react-native';
+import { View, TouchableOpacity, SafeAreaView, ScrollView, AccessibilityInfo } from 'react-native';
 import { X, Check } from 'lucide-react-native';
 import Animated, { ZoomIn, useReducedMotion } from 'react-native-reanimated';
 import { useRouter } from 'expo-router';
-import { originalPalette } from '@/constants/Colors';
-import { emergencyIntensityColor } from '@/constants/emergencyColors';
-import { useColorPalette } from '@/contexts/ColorThemeContext';
+import Text from '@/components/ui/Text';
+import {
+  emergencyIntensityColor,
+  emergencyIntensityLabelUsesInnerSurface,
+} from '@/constants/emergencyColors';
+import { useColorPalette, useColorPaletteMode } from '@/contexts/ColorThemeContext';
 
 const INTENSITIES = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 export default function EmergencyScreen() {
   const palette = useColorPalette();
+  const mode = useColorPaletteMode();
   const { roles, legacy } = palette;
-  const original = palette === originalPalette;
+  const original = mode === 'original';
+  const intensityLabelUsesInnerSurface = emergencyIntensityLabelUsesInnerSurface(original);
   const [intensity, setIntensity] = useState<number | null>(null);
   const [step, setStep] = useState<'intensity' | 'done'>('intensity');
   const reduceMotion = useReducedMotion();
@@ -40,8 +45,8 @@ export default function EmergencyScreen() {
         >
           <Check size={36} color={roles.success} />
         </Animated.View>
-        <Text className="text-xl text-white mb-2 font-epilogue-bold">Crise registrada</Text>
-        <Text className="text-sm text-muted text-center font-epilogue">
+        <Text variant="title" weight="bold" className="mb-2 text-center">Crise registrada</Text>
+        <Text variant="caption" tone="muted" className="text-center">
           {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} · Intensidade {intensity}/10
         </Text>
       </View>
@@ -65,15 +70,15 @@ export default function EmergencyScreen() {
           >
             <X size={24} color={legacy.muted} />
           </TouchableOpacity>
-          <Text className="text-base text-white font-epilogue-bold" accessibilityRole="header">Registrar crise</Text>
+          <Text weight="bold" accessibilityRole="header">Registrar crise</Text>
           <View className="w-10" />
         </View>
 
         <View className="flex-1 items-center justify-center -mt-20">
-          <Text className="text-muted text-sm mb-3 font-epilogue">Intensidade da dor</Text>
-          <Text className="text-7xl text-accent mb-8 font-epilogue-bold" accessibilityLabel={`Intensidade: ${intensity ?? 'não selecionada'} de 10`}>
+          <Text variant="caption" tone="muted" className="mb-3">Intensidade da dor</Text>
+          <Text variant="hero" tone="primary" weight="bold" className="mb-8" accessibilityLabel={`Intensidade: ${intensity ?? 'não selecionada'} de 10`}>
             {intensity || '–'}
-            <Text className="text-xl text-muted font-epilogue">/10</Text>
+            <Text variant="heading" tone="muted">/10</Text>
           </Text>
 
           <View
@@ -87,7 +92,7 @@ export default function EmergencyScreen() {
                 <TouchableOpacity
                   key={n}
                   onPress={() => setIntensity(n)}
-                  className={`w-12 h-12 rounded-xl items-center justify-center ${
+                  className={`min-h-12 min-w-12 rounded-xl items-center justify-center px-2 py-2 ${
                     isActive ? 'shadow-lg' : 'bg-card-dark'
                   }`}
                   style={[
@@ -101,9 +106,17 @@ export default function EmergencyScreen() {
                   accessibilityLabel={`Intensidade ${n}`}
                   accessibilityState={{ checked: isActive }}
                 >
-                  <Text className={`font-epilogue-bold ${isActive ? (original ? 'text-white' : 'text-canvas') : 'text-muted'}`}>
-                    {n}
-                  </Text>
+                  <View
+                    className={
+                      isActive && intensityLabelUsesInnerSurface
+                        ? 'min-h-8 min-w-8 items-center justify-center rounded-full bg-canvas px-1'
+                        : ''
+                    }
+                  >
+                    <Text weight="bold" tone={isActive ? (original ? 'content' : 'canvas') : 'muted'}>
+                      {n}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
               );
             })}
@@ -120,13 +133,13 @@ export default function EmergencyScreen() {
             accessibilityLabel={intensity ? 'Registrar crise agora' : 'Selecione a intensidade primeiro'}
             accessibilityState={{ disabled: !intensity }}
           >
-            <Text className={`text-lg font-epilogue-bold ${intensity ? (original ? 'text-white' : 'text-canvas') : 'text-muted'}`}>
+            <Text variant="heading" weight="bold" tone={intensity ? 'canvas' : 'muted'} className="text-center">
               {intensity ? 'Registrar agora' : 'Selecione a intensidade'}
             </Text>
           </TouchableOpacity>
         </View>
 
-        <Text className="text-center text-[11px] text-muted pb-10 font-epilogue">
+        <Text variant="caption" tone="muted" className="pb-10 text-center">
           📍 {new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} · Registro automático
         </Text>
       </ScrollView>

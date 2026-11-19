@@ -1,35 +1,31 @@
 import type { TextStyle } from 'react-native';
+import {
+  ESPACOS,
+  FONTES,
+  PREFERENCIAS_PADRAO,
+  TAMANHOS,
+  type Espaco,
+  type Fonte,
+  type Preferencias,
+  type Tamanho,
+} from './preferences';
+
+export {
+  ESPACOS,
+  FONTES,
+  PREFERENCIAS_PADRAO,
+  TAMANHOS,
+  type Espaco,
+  type Fonte,
+  type Preferencias,
+  type Tamanho,
+} from './preferences';
 
 export const VARIANTES = ['caption', 'body', 'heading', 'title', 'display', 'hero'] as const;
 export type Variante = (typeof VARIANTES)[number];
 
 export const PESOS = ['regular', 'semibold', 'bold'] as const;
 export type Peso = (typeof PESOS)[number];
-
-export const TAMANHOS = ['padrao', 'grande', 'maior'] as const;
-export type Tamanho = (typeof TAMANHOS)[number];
-
-export const FONTES = ['padrao', 'legivel', 'dislexia'] as const;
-export type Fonte = (typeof FONTES)[number];
-
-export const ESPACOS = ['padrao', 'medio', 'amplo'] as const;
-export type Espaco = (typeof ESPACOS)[number];
-
-export interface Preferencias {
-  tamanho: Tamanho;
-  fonte: Fonte;
-  negrito: boolean;
-  linhas: Espaco;
-  letras: Espaco;
-}
-
-export const PREFERENCIAS_PADRAO: Preferencias = {
-  tamanho: 'padrao',
-  fonte: 'padrao',
-  negrito: false,
-  linhas: 'padrao',
-  letras: 'padrao',
-};
 
 export const ESCALA: Record<Variante, { tamanho: number; linha: number }> = {
   caption: { tamanho: 13, linha: 18 },

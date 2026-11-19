@@ -4,10 +4,12 @@ import { AccessibilityInfo, View } from 'react-native';
 import Button from '@/components/ui/Button';
 import Card from '@/components/ui/Card';
 import ChoiceGroup, { type ChoiceOption } from '@/components/ui/ChoiceGroup';
+import OptionCard from '@/components/ui/OptionCard';
 import Screen from '@/components/ui/Screen';
 import ScreenHeader from '@/components/ui/ScreenHeader';
 import SwitchRow from '@/components/ui/SwitchRow';
 import Text from '@/components/ui/Text';
+import { colorPalettes, type ColorPaletteMode } from '@/constants/colorPalettes';
 import type { Espaco, Fonte, Tamanho } from '@/constants/typography';
 import { usePreferences } from '@/contexts/PreferencesContext';
 
@@ -50,6 +52,38 @@ const ESPACOS: readonly ChoiceOption<Espaco>[] = [
   { value: 'amplo', label: 'Amplo' },
 ];
 
+const MODOS_DE_CORES: readonly {
+  value: ColorPaletteMode;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: 'original',
+    label: 'Original',
+    description: 'Mantém as cores padrão do Livo.',
+  },
+  {
+    value: 'deuteranopia',
+    label: 'Deuteranopia',
+    description: 'Adapta as cores para facilitar a diferenciação visual em casos de deficiência de percepção do verde.',
+  },
+  {
+    value: 'protanopia',
+    label: 'Protanopia',
+    description: 'Adapta as cores para facilitar a diferenciação visual em casos de deficiência de percepção do vermelho.',
+  },
+  {
+    value: 'tritanopia',
+    label: 'Tritanopia',
+    description: 'Adapta as cores para facilitar a diferenciação visual em casos de deficiência de percepção do azul.',
+  },
+];
+
+function previewColors(mode: ColorPaletteMode): readonly string[] {
+  const { roles, pain } = colorPalettes[mode];
+  return [roles.primary, roles.attention, roles.success, pain[8]];
+}
+
 function TituloDaSecao({ children }: { children: string }) {
   return (
     <Text variant="caption" weight="semibold" tone="muted" accessibilityRole="header" className="uppercase">
@@ -64,12 +98,17 @@ export default function AppearanceScreen() {
 
   const restaurarPadrao = () => {
     restaurar();
-    AccessibilityInfo.announceForAccessibility('Preferências de texto restauradas');
+    AccessibilityInfo.announceForAccessibility('Preferências de aparência restauradas');
+  };
+
+  const selecionarModoDeCores = (modoDeCores: ColorPaletteMode, label: string) => {
+    definir({ modoDeCores });
+    AccessibilityInfo.announceForAccessibility(`Modo de cores ${label} selecionado`);
   };
 
   return (
     <Screen scroll>
-      <ScreenHeader title="Aparência" subtitle="Ajuste o texto do app" onBack={() => router.back()} />
+      <ScreenHeader title="Aparência" subtitle="Ajuste o texto e as cores do app" onBack={() => router.back()} />
 
       <View className="gap-6">
         <Card padding="sm" className="gap-2">
@@ -118,6 +157,26 @@ export default function AppearanceScreen() {
           value={preferencias.letras}
           onChange={(letras) => definir({ letras })}
         />
+
+        <TituloDaSecao>Visão de cores</TituloDaSecao>
+
+        <View
+          accessibilityRole="radiogroup"
+          accessibilityLabel="Visão de cores"
+          className="gap-3"
+        >
+          {MODOS_DE_CORES.map((opcao) => (
+            <OptionCard
+              key={opcao.value}
+              label={opcao.label}
+              description={opcao.description}
+              mode="radio"
+              checked={preferencias.modoDeCores === opcao.value}
+              onPress={() => selecionarModoDeCores(opcao.value, opcao.label)}
+              previewColors={previewColors(opcao.value)}
+            />
+          ))}
+        </View>
 
         <Button title="Restaurar padrão" variant="secondary" onPress={restaurarPadrao} />
       </View>

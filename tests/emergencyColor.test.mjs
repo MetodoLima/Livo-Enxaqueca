@@ -5,6 +5,7 @@ import { deuteranopiaPalette } from '../constants/accessibilityPalettes.ts';
 import {
   ORIGINAL_EMERGENCY_INTENSITY_COLORS,
   emergencyIntensityColor,
+  emergencyIntensityLabelUsesInnerSurface,
 } from '../constants/emergencyColors.ts';
 
 test('preserves every Original emergency intensity color exactly', () => {
@@ -27,4 +28,9 @@ test('uses the active semantic pain scale outside Original mode', () => {
       deuteranopiaPalette.pain[intensity],
     );
   }
+});
+
+test('uses a dedicated high-contrast text surface only for Original intensity labels', () => {
+  assert.equal(emergencyIntensityLabelUsesInnerSurface(true), true);
+  assert.equal(emergencyIntensityLabelUsesInnerSurface(false), false);
 });

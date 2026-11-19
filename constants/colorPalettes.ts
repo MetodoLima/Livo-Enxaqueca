@@ -4,8 +4,9 @@ import {
   protanopiaPalette,
   tritanopiaPalette,
 } from './accessibilityPalettes';
+import type { ColorPaletteMode } from './colorPaletteMode';
 
-export type ColorPaletteMode = 'original' | 'deuteranopia' | 'protanopia' | 'tritanopia';
+export type { ColorPaletteMode } from './colorPaletteMode';
 
 export const colorPalettes = {
   original: originalPalette,

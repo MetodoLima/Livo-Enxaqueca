@@ -4,6 +4,7 @@ import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { useState } from 'react';
 import { formatDuration } from '@/lib/format';
+import { PDF_COLORS, pdfIntensityBackground } from '@/features/profile/pdfPresentation';
 
 const REGION_LABELS: Record<string, string> = {
   frontal: 'Frontal',
@@ -29,12 +30,6 @@ function formatDateTime(dateStr: string) {
     hour: '2-digit',
     minute: '2-digit',
   });
-}
-
-function intensityColor(v: number): string {
-  if (v <= 3) return '#22c55e';
-  if (v <= 6) return '#f59e0b';
-  return '#ef4444';
 }
 
 function phaseLabels(r: any): { sintomas: string[]; medicamentos: string[]; fatores: string[] } {
@@ -147,7 +142,7 @@ function buildHtml(crises: any[], userName: string, months: number): string {
       ] as string[];
 
       const resumo = registros.map((r: any) => r.resumo).filter(Boolean)[0] as string | undefined;
-      const color = maxIntensity >= 0 ? intensityColor(maxIntensity) : '#aaa';
+      const color = maxIntensity >= 0 ? pdfIntensityBackground(maxIntensity) : PDF_COLORS.line;
 
       return `
       <div class="crisis-item">
@@ -174,30 +169,30 @@ function buildHtml(crises: any[], userName: string, months: number): string {
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'Helvetica Neue', Arial, sans-serif; background: #fff; color: #1a1a2e; padding: 28px; font-size: 13px; line-height: 1.5; }
-  .header { background: #112F3D; color: white; padding: 24px 28px; border-radius: 12px; margin-bottom: 28px; }
-  .app-name { font-size: 26px; font-weight: 700; color: #25B7BB; letter-spacing: 1px; }
-  .report-subtitle { font-size: 14px; color: rgba(255,255,255,0.7); margin-top: 4px; }
-  .header-meta { margin-top: 14px; font-size: 11px; color: rgba(255,255,255,0.5); display: flex; flex-wrap: wrap; gap: 16px; }
+  body { font-family: 'Helvetica Neue', Arial, sans-serif; background: ${PDF_COLORS.page}; color: ${PDF_COLORS.bodyText}; padding: 28px; font-size: 13px; line-height: 1.5; }
+  .header { background: ${PDF_COLORS.header}; color: ${PDF_COLORS.headerText}; padding: 24px 28px; border-radius: 12px; margin-bottom: 28px; }
+  .app-name { font-size: 26px; font-weight: 700; color: ${PDF_COLORS.brand}; letter-spacing: 1px; }
+  .report-subtitle { font-size: 14px; color: ${PDF_COLORS.headerMuted}; margin-top: 4px; }
+  .header-meta { margin-top: 14px; font-size: 11px; color: ${PDF_COLORS.headerMuted}; display: flex; flex-wrap: wrap; gap: 16px; }
   .section { margin-bottom: 28px; }
-  .section-title { font-size: 12px; font-weight: 700; color: #112F3D; text-transform: uppercase; letter-spacing: 0.6px; border-bottom: 2px solid #25B7BB; padding-bottom: 6px; margin-bottom: 14px; }
+  .section-title { font-size: 12px; font-weight: 700; color: ${PDF_COLORS.bodyText}; text-transform: uppercase; letter-spacing: 0.6px; border-bottom: 2px solid ${PDF_COLORS.brand}; padding-bottom: 6px; margin-bottom: 14px; }
   .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
-  .stat-card { background: #f0fafa; border: 1px solid #ceeaea; border-radius: 10px; padding: 14px 10px; text-align: center; }
-  .stat-value { font-size: 22px; font-weight: 700; color: #112F3D; }
-  .stat-label { font-size: 10px; color: #777; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .stat-card { background: ${PDF_COLORS.statCard}; border: 1px solid ${PDF_COLORS.line}; border-radius: 10px; padding: 14px 10px; text-align: center; }
+  .stat-value { font-size: 22px; font-weight: 700; color: ${PDF_COLORS.bodyText}; }
+  .stat-label { font-size: 10px; color: ${PDF_COLORS.statLabel}; margin-top: 2px; text-transform: uppercase; letter-spacing: 0.3px; }
   .pills-row { display: flex; flex-wrap: wrap; gap: 6px; }
-  .pill { background: #e8f9f9; color: #0e8a8d; border: 1px solid #b2e8e8; border-radius: 20px; padding: 4px 10px; font-size: 11px; font-weight: 500; }
-  .no-items { font-size: 12px; color: #bbb; font-style: italic; }
-  .crisis-item { border: 1px solid #e8e8e8; border-radius: 10px; padding: 14px; margin-bottom: 10px; background: #fafafa; }
+  .pill { background: ${PDF_COLORS.pillBackground}; color: ${PDF_COLORS.pillText}; border: 1px solid ${PDF_COLORS.line}; border-radius: 20px; padding: 4px 10px; font-size: 11px; font-weight: 500; }
+  .no-items { font-size: 12px; color: ${PDF_COLORS.subtleText}; font-style: italic; }
+  .crisis-item { border: 1px solid ${PDF_COLORS.line}; border-radius: 10px; padding: 14px; margin-bottom: 10px; background: ${PDF_COLORS.card}; }
   .crisis-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px; }
-  .crisis-date { font-size: 13px; font-weight: 700; color: #112F3D; }
-  .crisis-duration { font-size: 11px; color: #888; margin-top: 2px; }
-  .intensity-badge { color: white; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; white-space: nowrap; }
-  .crisis-row { margin-top: 5px; font-size: 11px; color: #555; }
-  .crisis-row strong { color: #112F3D; }
-  .resumo { color: #777; font-style: italic; margin-top: 8px; padding-top: 8px; border-top: 1px solid #eee; }
-  .no-data { text-align: center; padding: 32px; color: #bbb; font-style: italic; }
-  .footer { margin-top: 36px; padding-top: 14px; border-top: 1px solid #eee; font-size: 10px; color: #bbb; text-align: center; }
+  .crisis-date { font-size: 13px; font-weight: 700; color: ${PDF_COLORS.bodyText}; }
+  .crisis-duration { font-size: 11px; color: ${PDF_COLORS.subtleText}; margin-top: 2px; }
+  .intensity-badge { color: ${PDF_COLORS.badgeText}; padding: 4px 10px; border-radius: 12px; font-size: 11px; font-weight: 700; white-space: nowrap; }
+  .crisis-row { margin-top: 5px; font-size: 11px; color: ${PDF_COLORS.subtleText}; }
+  .crisis-row strong { color: ${PDF_COLORS.bodyText}; }
+  .resumo { color: ${PDF_COLORS.subtleText}; font-style: italic; margin-top: 8px; padding-top: 8px; border-top: 1px solid ${PDF_COLORS.line}; }
+  .no-data { text-align: center; padding: 32px; color: ${PDF_COLORS.subtleText}; font-style: italic; }
+  .footer { margin-top: 36px; padding-top: 14px; border-top: 1px solid ${PDF_COLORS.line}; font-size: 10px; color: ${PDF_COLORS.subtleText}; text-align: center; }
 </style>
 </head>
 <body>

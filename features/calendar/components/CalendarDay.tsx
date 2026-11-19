@@ -1,5 +1,7 @@
 import { Pressable, View } from 'react-native';
 import Text from '@/components/ui/Text';
+import { painNeedsContrastOutline } from '@/constants/painPresentation';
+import { useColorPaletteMode } from '@/contexts/ColorThemeContext';
 import { PAIN_BG } from '@/features/crisis/components/IntensityScale';
 
 const PAIN_BG_SUAVE: Record<number, string> = {
@@ -51,9 +53,15 @@ export default function CalendarDay({
   selecionado,
   onPress,
 }: CalendarDayProps) {
+  const mode = useColorPaletteMode();
   const temCrise = crises > 0 && dorMaxima !== null;
   const fundo = temCrise ? PAIN_BG_SUAVE[dorMaxima] : '';
-  const corDeHoje = temCrise ? PAIN_BORDER[dorMaxima] : 'border-line-strong';
+  const precisaDeContorno = temCrise && painNeedsContrastOutline(mode, dorMaxima);
+  const corDeHoje = precisaDeContorno
+    ? 'border-content'
+    : temCrise
+      ? PAIN_BORDER[dorMaxima]
+      : 'border-line-strong';
   return (
     <Pressable
       onPress={onPress}
@@ -67,7 +75,11 @@ export default function CalendarDay({
         {day}
       </Text>
       <View className="min-h-1.5 flex-row items-center gap-1">
-        {temCrise ? <View className={`h-1.5 w-1.5 rounded-full ${PAIN_BG[dorMaxima]}`} /> : null}
+        {temCrise ? (
+          <View
+            className={`h-1.5 w-1.5 rounded-full ${PAIN_BG[dorMaxima]} ${precisaDeContorno ? 'border border-content' : ''}`}
+          />
+        ) : null}
         {temEvento ? <View className="h-1.5 w-1.5 bg-secondary" /> : null}
       </View>
       {hoje && !selecionado ? (

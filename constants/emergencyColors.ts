@@ -13,3 +13,7 @@ export function emergencyIntensityColor(
   if (original) return ORIGINAL_EMERGENCY_INTENSITY_COLORS[intensity - 1];
   return palette.pain[String(intensity) as keyof ColorPalette['pain']];
 }
+
+export function emergencyIntensityLabelUsesInnerSurface(original: boolean): boolean {
+  return original;
+}

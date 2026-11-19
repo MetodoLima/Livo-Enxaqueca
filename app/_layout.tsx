@@ -26,6 +26,8 @@ import {
   Epilogue_700Bold,
 } from '@expo-google-fonts/epilogue';
 import { ARQUIVOS_DE_FONTE } from '@/constants/typography';
+import { colorPalettes } from '@/constants/colorPalettes';
+import { selectColorPalette } from '@/constants/colorPaletteMode';
 import { ColorThemeProvider, useColorPalette } from '@/contexts/ColorThemeContext';
 import { PreferencesProvider, usePreferences } from '@/contexts/PreferencesContext';
 
@@ -199,10 +201,22 @@ function ProtectedAppProviders() {
 export default function RootLayout() {
   return (
     <PreferencesProvider>
-      <ColorThemeProvider>
+      <PreferredColorTheme>
         <RootContent />
-      </ColorThemeProvider>
+      </PreferredColorTheme>
     </PreferencesProvider>
+  );
+}
+
+function PreferredColorTheme({ children }: { children: React.ReactNode }) {
+  const { preferencias } = usePreferences();
+  const mode = preferencias.modoDeCores;
+  const palette = selectColorPalette(colorPalettes, mode);
+
+  return (
+    <ColorThemeProvider palette={palette} mode={mode}>
+      {children}
+    </ColorThemeProvider>
   );
 }
 

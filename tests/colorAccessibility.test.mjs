@@ -8,11 +8,17 @@ import {
 } from '../constants/accessibilityPalettes.ts';
 import { ORIGINAL_EMERGENCY_INTENSITY_COLORS } from '../constants/emergencyColors.ts';
 import { createColorVariables, parseColor } from '../constants/colorTheme.ts';
+import { optionCardSupportingTextTone } from '../components/ui/optionCardPresentation.ts';
 
 const alternatives = {
   deuteranopia: deuteranopiaPalette,
   protanopia: protanopiaPalette,
   tritanopia: tritanopiaPalette,
+};
+
+const allPalettes = {
+  original: originalPalette,
+  ...alternatives,
 };
 
 const MACHADO_DICHROMACY = {
@@ -156,6 +162,10 @@ test('alternative Emergency intensity labels meet normal-text contrast', () => {
   }
 });
 
+test('Original Emergency inner label surface meets normal-text contrast', () => {
+  assert.ok(contrast(originalPalette.roles.content, originalPalette.roles.canvas) >= 4.5);
+});
+
 test('targeted CVD screening keeps key semantic roles and pain bands separated', () => {
   for (const [mode, palette] of Object.entries(alternatives)) {
     const matrix = MACHADO_DICHROMACY[mode];
@@ -197,4 +207,15 @@ test('Original graphical contrast failures are identified separately from altern
     .filter(({ ratio }) => ratio < 4.5)
     .map(({ intensity }) => intensity);
   assert.deepEqual(emergencyTextFailures, [1, 2, 3, 4, 5, 6, 7, 8, 9]);
+});
+
+test('OptionCard supporting text passes in selected, unselected and disabled states', () => {
+  for (const [mode, palette] of Object.entries(allPalettes)) {
+    const selectedRole = optionCardSupportingTextTone(true) === 'content' ? 'content' : 'contentMuted';
+    const unselectedRole = optionCardSupportingTextTone(false) === 'content' ? 'content' : 'contentMuted';
+
+    assert.ok(contrast(palette.roles[selectedRole], palette.roles.primarySubtle) >= 4.5, `${mode}: selected`);
+    assert.ok(contrast(palette.roles[unselectedRole], palette.roles.surfaceRaised) >= 4.5, `${mode}: unselected`);
+    assert.equal(optionCardSupportingTextTone(true), 'content', `${mode}: disabled selected keeps contrast`);
+  }
 });

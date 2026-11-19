@@ -8,7 +8,11 @@ import {
   protanopiaPalette,
   tritanopiaPalette,
 } from '../constants/accessibilityPalettes.ts';
-import { ColorPaletteProvider, useColorPalette } from '../contexts/ColorPaletteContext.ts';
+import {
+  ColorPaletteProvider,
+  useColorPalette,
+  useColorPaletteMode,
+} from '../contexts/ColorPaletteContext.ts';
 
 globalThis.IS_REACT_ACT_ENVIRONMENT = true;
 
@@ -72,6 +76,52 @@ test('switches reactively through all four production palettes without remountin
   assert.equal(observed.length, 4);
   assert.equal(new Set(observed.map((values) => values.join('|'))).size, 4);
   assert.deepEqual(observed[0], ['#25B7BB', '#991B1B', '#10B981', '#25B7BB']);
+
+  await act(async () => renderer.unmount());
+});
+
+test('updates the explicit palette mode reactively and does not infer Original from object identity', async () => {
+  const observed = [];
+  const copiedOriginal = {
+    ...palette,
+    roles: { ...palette.roles },
+    pain: { ...palette.pain },
+    mood: { ...palette.mood },
+    legacy: { ...palette.legacy },
+  };
+
+  function Probe() {
+    observed.push({
+      mode: useColorPaletteMode(),
+      primary: useColorPalette().roles.primary,
+    });
+    return null;
+  }
+
+  let renderer;
+  await act(async () => {
+    renderer = TestRenderer.create(
+      createElement(
+        ColorPaletteProvider,
+        { palette: copiedOriginal, mode: 'original' },
+        createElement(Probe),
+      ),
+    );
+  });
+  await act(async () => {
+    renderer.update(
+      createElement(
+        ColorPaletteProvider,
+        { palette: deuteranopiaPalette, mode: 'deuteranopia' },
+        createElement(Probe),
+      ),
+    );
+  });
+
+  assert.deepEqual(observed, [
+    { mode: 'original', primary: '#25B7BB' },
+    { mode: 'deuteranopia', primary: '#00D5E0' },
+  ]);
 
   await act(async () => renderer.unmount());
 });
