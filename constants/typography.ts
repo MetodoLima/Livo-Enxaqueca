@@ -11,6 +11,7 @@ import {
 } from './preferences';
 
 export {
+  INTENSIDADES_CORES,
   ESPACOS,
   FONTES,
   PREFERENCIAS_PADRAO,

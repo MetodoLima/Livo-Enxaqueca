@@ -1,6 +1,6 @@
 import "../global.css";
 import FontAwesome from '@expo/vector-icons/FontAwesome';
-import { DarkTheme, ThemeProvider } from '@react-navigation/native';
+import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
@@ -26,8 +26,7 @@ import {
   Epilogue_700Bold,
 } from '@expo-google-fonts/epilogue';
 import { ARQUIVOS_DE_FONTE } from '@/constants/typography';
-import { colorPalettes } from '@/constants/colorPalettes';
-import { selectColorPalette } from '@/constants/colorPaletteMode';
+import { resolverPaleta } from '@/constants/Colors';
 import { ColorThemeProvider, useColorPalette } from '@/contexts/ColorThemeContext';
 import { PreferencesProvider, usePreferences } from '@/contexts/PreferencesContext';
 
@@ -123,17 +122,21 @@ function RootLayoutNav() {
   const router = useRouter();
   const navigationState = useRootNavigationState();
   const { roles } = useColorPalette();
-  const livoTheme = useMemo(
-    () => ({
-      ...DarkTheme,
+  const { preferencias: { tema } } = usePreferences();
+  const livoTheme = useMemo(() => {
+    const base = tema === 'claro' ? DefaultTheme : DarkTheme;
+    return {
+      ...base,
       colors: {
-        ...DarkTheme.colors,
+        ...base.colors,
         background: roles.canvas,
         card: roles.canvas,
+        text: roles.content,
+        border: roles.line,
+        primary: roles.primary,
       },
-    }),
-    [roles.canvas],
-  );
+    };
+  }, [tema, roles]);
 
   useEffect(() => {
     if (localSessionStatus === 'loading' || !navigationState?.key) return;
@@ -209,9 +212,8 @@ export default function RootLayout() {
 }
 
 function PreferredColorTheme({ children }: { children: React.ReactNode }) {
-  const { preferencias } = usePreferences();
-  const mode = preferencias.modoDeCores;
-  const palette = selectColorPalette(colorPalettes, mode);
+  const { preferencias: { tema, intensidadeCores, modoDeCores: mode } } = usePreferences();
+  const palette = useMemo(() => resolverPaleta(tema, intensidadeCores, mode), [tema, intensidadeCores, mode]);
 
   return (
     <ColorThemeProvider palette={palette} mode={mode}>

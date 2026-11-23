@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import React, { createElement } from 'react';
 import TestRenderer, { act } from 'react-test-renderer';
+import { resolverPaleta } from '../constants/Colors.ts';
 import palette from '../constants/colors.json' with { type: 'json' };
 import {
   deuteranopiaPalette,
@@ -123,5 +124,33 @@ test('updates the explicit palette mode reactively and does not infer Original f
     { mode: 'deuteranopia', primary: '#00D5E0' },
   ]);
 
+  await act(async () => renderer.unmount());
+});
+
+test('changes theme and daltonism independently without remounting the consumer', async () => {
+  const observed = [];
+  let mounts = 0;
+  function Probe() {
+    React.useEffect(() => { mounts += 1; }, []);
+    const { roles, pain } = useColorPalette();
+    observed.push([useColorPaletteMode(), roles.canvas, roles.primary, pain[8]]);
+    return null;
+  }
+
+  const render = (theme, mode) => createElement(
+    ColorPaletteProvider,
+    { palette: resolverPaleta(theme, 'normal', mode), mode },
+    createElement(Probe),
+  );
+  let renderer;
+  await act(async () => { renderer = TestRenderer.create(render('escuro', 'deuteranopia')); });
+  await act(async () => { renderer.update(render('claro', 'deuteranopia')); });
+  await act(async () => { renderer.update(render('claro', 'tritanopia')); });
+  assert.equal(mounts, 1);
+  assert.equal(observed[0][0], observed[1][0]);
+  assert.notEqual(observed[0][1], observed[1][1]);
+  assert.equal(observed[1][1], observed[2][1]);
+  assert.notEqual(observed[1][2], observed[2][2]);
+  assert.notEqual(observed[1][3], observed[2][3]);
   await act(async () => renderer.unmount());
 });

@@ -241,11 +241,29 @@ ficam em `constants/typography.ts`, e `estiloDeTexto(variante, peso, preferênci
 família, tamanho, altura de linha e espaço entre letras. O `TextField` e a digitação do
 `TimeWheel` usam a mesma função. Não existem classes de tamanho de texto no Tailwind.
 
-A pessoa ajusta o texto em Perfil → Aparência. As preferências ficam no aparelho, não na
+A pessoa ajusta o texto e as cores em Perfil → Aparência. As preferências ficam no aparelho, não na
 conta, em `livo.preferencias.v1` no AsyncStorage, com um campo de versão. Valor inválido ou
 de outra versão volta ao padrão. A splash espera a leitura por até 500 ms; se estourar ou
 falhar, o app abre no padrão. O `PreferencesProvider` só troca o valor quando uma preferência
-muda de fato, então os textos só são redesenhados nessa hora.
+muda de fato, então os textos e cores só são redesenhados nessa hora.
+
+### Intensidade de cores
+
+A pessoa pode escolher entre três intensidades visuais de interface:
+- **Normal:** cores originais do app, sem alterações.
+- **Suaves:** reduz a saturação das cores em 50%, preservando a luminância relativa e o contraste, para pessoas com fotofobia ou sensibilidade visual.
+- **Sem cor:** converte a paleta para escala de cinza baseada na luminância relativa (Rec. 709), eliminando a percepção de cores sem perder hierarquia e legibilidade.
+
+Tema, intensidade e visão de cores são preferências independentes. Escuro, Claro e Alto contraste
+definem a base em `constants/temas.ts` e `constants/colors.json`. O modo Original usa essa base
+com a intensidade selecionada. Deuteranopia, Protanopia e Tritanopia usam a base e as tonalidades
+adaptadas para resolver as cores semânticas, com limites de contraste para texto, controles e
+indicadores clínicos. Os fundos, as superfícies e as bordas continuam vinculados ao tema.
+
+`resolverPaleta(tema, intensidade, modoDeCores)` alimenta o `ColorThemeProvider`.
+`useColorPalette` e `useTema` leem a mesma paleta para as cores usadas em JavaScript. O escopo
+do provedor gera as variáveis do NativeWind, inclusive no Dialog, e o React Navigation recebe as
+cores resolvidas. Os proxies em `constants/Colors.ts` conservam o acesso legado.
 
 | Ajuste | Padrão | Médio ou Grande | Amplo ou Maior |
 |---|---|---|---|
@@ -390,21 +408,11 @@ DS16. **Controle desabilitado diz por quê.** Botão desabilitado leva no `acces
 o que falta para habilitá-lo. Sem isso, quem usa leitor de tela toca, nada acontece e não há
 explicação.
 
-### O que falta para trocar de tema
+### Personalização visual
 
-Hoje existe um tema só, e os valores dos tokens são fixos. Para suportar troca:
-
-- **Tokens como variáveis:** os papéis de `colors.json` viram um conjunto por tema. As cores
-  do `tailwind.config.js` passam a apontar para variáveis CSS
-  (`rgb(var(--canvas) / <alpha-value>)`), aplicadas por um provedor de tema no
-  `app/_layout.tsx` com o `vars()` do NativeWind.
-- **Cores em JavaScript:** o `color` de `constants/Colors.ts` é lido uma vez, na importação,
-  e não muda com o tema. Ele vira um hook (`useThemeColors()`).
-- **Desligar animação** entra na mesma personalização, ao lado dos temas claro e alto
-  contraste: uma preferência do app que se soma ao "reduzir movimento" do sistema.
-- **Lacunas atuais:** falta um token `on-primary` para o texto do botão, e a barra de
-  status do `Screen` é fixa em clara. Telas não migradas, com hex e `legacy`, não mudam de
-  tema.
+Os tokens semânticos são aplicados em tempo de execução e o `Screen` ajusta a barra de status
+ao tema. A opção de desligar animações no app, além da preferência de reduzir movimento do
+sistema, permanece como trabalho futuro.
 
 ## Rotas e telas
 

@@ -2,8 +2,10 @@ import { isColorPaletteMode } from '../constants/colorPaletteMode.ts';
 import {
   ESPACOS,
   FONTES,
+  INTENSIDADES_CORES,
   PREFERENCIAS_PADRAO,
   TAMANHOS,
+  TEMAS,
   type Preferencias,
 } from '../constants/preferences.ts';
 
@@ -29,6 +31,8 @@ export function interpretPreferences(raw: string | null): Preferencias {
       negrito: typeof value.negrito === 'boolean' ? value.negrito : PREFERENCIAS_PADRAO.negrito,
       linhas: oneOf(ESPACOS, value.linhas, PREFERENCIAS_PADRAO.linhas),
       letras: oneOf(ESPACOS, value.letras, PREFERENCIAS_PADRAO.letras),
+      tema: oneOf(TEMAS, value.tema, PREFERENCIAS_PADRAO.tema),
+      intensidadeCores: oneOf(INTENSIDADES_CORES, value.intensidadeCores, PREFERENCIAS_PADRAO.intensidadeCores),
       modoDeCores: isColorPaletteMode(value.modoDeCores)
         ? value.modoDeCores
         : PREFERENCIAS_PADRAO.modoDeCores,

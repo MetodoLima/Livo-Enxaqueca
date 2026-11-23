@@ -16,7 +16,7 @@ const CONTAINER: Record<ButtonVariant, string> = {
 };
 
 const LABEL_TONE: Record<ButtonVariant, TextTone> = {
-  primary: 'content',
+  primary: 'onPrimary',
   secondary: 'content',
   ghost: 'primary',
   danger: 'content',
@@ -64,7 +64,7 @@ export default function Button({
 }: ButtonProps) {
   const { roles } = useColorPalette();
   const iconColor: Record<ButtonVariant, string> = {
-    primary: roles.content,
+    primary: roles.onPrimary,
     secondary: roles.primary,
     ghost: roles.primary,
     danger: roles.danger,

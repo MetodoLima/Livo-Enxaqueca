@@ -1,3 +1,4 @@
+import { definirPaletaAtiva, resolverPaleta } from '@/constants/Colors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { PREFERENCIAS_PADRAO, type Preferencias } from '@/constants/typography';
@@ -49,6 +50,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
         if (!ativo || !shouldApplyHydration(revisaoAoIniciar, revisao.current)) return;
         const lidas = interpretPreferences(bruto);
         atuais.current = lidas;
+        definirPaletaAtiva(resolverPaleta(lidas.tema, lidas.intensidadeCores, lidas.modoDeCores));
         setPreferencias(lidas);
       })
       .catch(() => undefined)
@@ -71,6 +73,7 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
     if (iguais) return;
     revisao.current += 1;
     atuais.current = proximas;
+    definirPaletaAtiva(resolverPaleta(proximas.tema, proximas.intensidadeCores, proximas.modoDeCores));
     setPreferencias(proximas);
     void filaDeGravacao.current?.(proximas).catch(() => undefined);
   }, []);

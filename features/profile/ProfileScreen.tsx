@@ -120,7 +120,7 @@ export default function ProfileScreen() {
         <ItemDoMenu
           icon={Type}
           label="Aparência"
-          desc="Tamanho, fonte, espaçamento e cores"
+          desc="Tema, cores, tamanho, fonte e espaçamento"
           onPress={() => router.push('/appearance')}
         />
         <ItemDoMenu icon={Bell} label="Lembretes" desc="Medicações e hidratação" />

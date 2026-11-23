@@ -9,6 +9,13 @@ export type Fonte = (typeof FONTES)[number];
 export const ESPACOS = ['padrao', 'medio', 'amplo'] as const;
 export type Espaco = (typeof ESPACOS)[number];
 
+export const TEMAS = ['escuro', 'claro', 'alto-contraste'] as const;
+export type Tema = (typeof TEMAS)[number];
+export const TEMA_PADRAO: Tema = 'escuro';
+
+export const INTENSIDADES_CORES = ['normal', 'suaves', 'sem-cor'] as const;
+export type IntensidadeCores = (typeof INTENSIDADES_CORES)[number];
+
 export interface Preferencias {
   tamanho: Tamanho;
   fonte: Fonte;
@@ -16,6 +23,8 @@ export interface Preferencias {
   linhas: Espaco;
   letras: Espaco;
   modoDeCores: ColorPaletteMode;
+  tema: Tema;
+  intensidadeCores: IntensidadeCores;
 }
 
 export const PREFERENCIAS_PADRAO: Preferencias = {
@@ -25,4 +34,6 @@ export const PREFERENCIAS_PADRAO: Preferencias = {
   linhas: 'padrao',
   letras: 'padrao',
   modoDeCores: 'original',
+  tema: TEMA_PADRAO,
+  intensidadeCores: 'normal',
 };

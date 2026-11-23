@@ -1,22 +1,10 @@
 import { Pressable, View } from 'react-native';
 import Text from '@/components/ui/Text';
-import { painNeedsContrastOutline } from '@/constants/painPresentation';
-import { useColorPaletteMode } from '@/contexts/ColorThemeContext';
+import { hexToRgba, rgbaToHex } from '@/constants/Colors';
+import { calendarPainTintOpacity, painNeedsContrastOutline } from '@/constants/painPresentation';
+import { useColorPalette, useColorPaletteMode } from '@/contexts/ColorThemeContext';
 import { PAIN_BG } from '@/features/crisis/components/IntensityScale';
-
-const PAIN_BG_SUAVE: Record<number, string> = {
-  0: 'bg-pain-0/30',
-  1: 'bg-pain-1/30',
-  2: 'bg-pain-2/30',
-  3: 'bg-pain-3/30',
-  4: 'bg-pain-4/30',
-  5: 'bg-pain-5/30',
-  6: 'bg-pain-6/30',
-  7: 'bg-pain-7/30',
-  8: 'bg-pain-8/30',
-  9: 'bg-pain-9/30',
-  10: 'bg-pain-10/30',
-};
+import { usePreferences } from '@/contexts/PreferencesContext';
 
 const PAIN_BORDER: Record<number, string> = {
   0: 'border-pain-0',
@@ -54,8 +42,15 @@ export default function CalendarDay({
   onPress,
 }: CalendarDayProps) {
   const mode = useColorPaletteMode();
+  const { pain } = useColorPalette();
+  const { preferencias: { tema } } = usePreferences();
   const temCrise = crises > 0 && dorMaxima !== null;
-  const fundo = temCrise ? PAIN_BG_SUAVE[dorMaxima] : '';
+  const tint = temCrise ? pain[String(dorMaxima) as keyof typeof pain] : undefined;
+  let backgroundColor: string | undefined;
+  if (tint) {
+    const [r, g, b] = hexToRgba(tint);
+    backgroundColor = rgbaToHex([r, g, b, calendarPainTintOpacity(tema, mode)]);
+  }
   const precisaDeContorno = temCrise && painNeedsContrastOutline(mode, dorMaxima);
   const corDeHoje = precisaDeContorno
     ? 'border-content'
@@ -68,8 +63,8 @@ export default function CalendarDay({
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ selected: selecionado }}
-      className={`min-h-11 flex-1 items-center justify-center gap-0.5 overflow-visible rounded-sm pb-1.5 ${fundo} active:opacity-80`}
-      style={crises > 1 ? { zIndex: 1 } : undefined}
+      className={`min-h-11 flex-1 items-center justify-center gap-0.5 overflow-visible rounded-sm pb-1.5 active:opacity-80`}
+      style={{ backgroundColor, zIndex: crises > 1 ? 1 : undefined }}
     >
       <Text weight={temCrise ? 'bold' : 'regular'} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
         {day}

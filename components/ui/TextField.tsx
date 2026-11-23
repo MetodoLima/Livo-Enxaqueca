@@ -7,7 +7,7 @@ import { useColorPalette } from '@/contexts/ColorThemeContext';
 import { usePreferences } from '@/contexts/PreferencesContext';
 
 export interface TextFieldProps extends Omit<TextInputProps, 'style' | 'placeholderTextColor'> {
-  label: string;
+  label?: string;
   error?: string;
   hint?: string;
   accessory?: ReactNode;
@@ -36,9 +36,11 @@ export default function TextField({
 
   return (
     <View ref={containerRef} className={`gap-2 ${className}`}>
-      <Text variant="caption" weight="semibold" tone="muted">
-        {label}
-      </Text>
+      {label ? (
+        <Text variant="caption" weight="semibold" tone="muted">
+          {label}
+        </Text>
+      ) : null}
       <View>
         <TextInput
           ref={ref}

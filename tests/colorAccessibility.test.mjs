@@ -108,7 +108,7 @@ test('each accessibility palette preserves the complete semantic shape and suppo
   for (const [mode, palette] of Object.entries(alternatives)) {
     assert.deepEqual(Object.keys(palette), expectedGroups, mode);
     for (const group of expectedGroups) {
-      assert.deepEqual(Object.keys(palette[group]), Object.keys(originalPalette[group]), `${mode}.${group}`);
+      assert.deepEqual(Object.keys(palette[group]).sort(), Object.keys(originalPalette[group]).sort(), `${mode}.${group}`);
       for (const [token, value] of Object.entries(palette[group])) {
         assert.equal(typeof value, 'string', `${mode}.${group}.${token}`);
         assert.ok(parseColor(value), `${mode}.${group}.${token}: ${value}`);
@@ -117,10 +117,10 @@ test('each accessibility palette preserves the complete semantic shape and suppo
   }
 });
 
-test('each accessibility palette produces raw RGB and alpha variables for all 43 tokens', () => {
+test('each accessibility palette produces raw RGB and alpha variables for all 45 tokens', () => {
   for (const [mode, palette] of Object.entries(alternatives)) {
     const variables = createColorVariables(palette);
-    assert.equal(Object.keys(variables).length, 129, mode);
+    assert.equal(Object.keys(variables).length, 135, mode);
     assert.equal(variables['--color-primary-rgb']?.split(' ').length, 3, mode);
     assert.equal(variables['--color-scrim-alpha'], '0.6', mode);
     assert.equal(variables['--color-pain-10-alpha'], '1', mode);

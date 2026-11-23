@@ -8,14 +8,18 @@ import { ColorPaletteProvider, useColorPalette } from '@/contexts/ColorPaletteCo
 
 export { useColorPalette, useColorPaletteMode } from '@/contexts/ColorPaletteContext';
 
+export function useThemeVars() {
+  const palette = useColorPalette();
+  return useMemo(() => vars(createColorVariables(palette)), [palette]);
+}
+
 export function ColorVariableScope({
   children,
   fill = false,
   style,
   ...viewProps
 }: ViewProps & { children: ReactNode; fill?: boolean }) {
-  const palette = useColorPalette();
-  const variableStyle = useMemo(() => vars(createColorVariables(palette)), [palette]);
+  const variableStyle = useThemeVars();
 
   return (
     <View {...viewProps} style={[fill ? styles.root : undefined, variableStyle, style]}>

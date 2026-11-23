@@ -1,10 +1,12 @@
 import assert from 'node:assert/strict';
 import Module, { createRequire } from 'node:module';
 import test from 'node:test';
-import palette from '../constants/colors.json' with { type: 'json' };
+import rawPalette from '../constants/colors.json' with { type: 'json' };
 import { createColorVariables, parseColor } from '../constants/colorTheme.ts';
 
 const require = createRequire(import.meta.url);
+const { roles, pain, mood, legacy } = rawPalette;
+const palette = { roles, pain, mood, legacy };
 
 test('derives raw, RGB and alpha variables from the original palette', () => {
   const variables = createColorVariables(palette);
@@ -23,9 +25,9 @@ test('derives raw, RGB and alpha variables from the original palette', () => {
   const rawVariables = Object.keys(variables).filter((name) => !name.endsWith('-rgb') && !name.endsWith('-alpha'));
   const rgbVariables = Object.keys(variables).filter((name) => name.endsWith('-rgb'));
   const alphaVariables = Object.keys(variables).filter((name) => name.endsWith('-alpha'));
-  assert.equal(rawVariables.length, 43);
-  assert.equal(rgbVariables.length, 43);
-  assert.equal(alphaVariables.length, 43);
+  assert.equal(rawVariables.length, 45);
+  assert.equal(rgbVariables.length, 45);
+  assert.equal(alphaVariables.length, 45);
 });
 
 test('parses supported opaque and transparent CSS color forms', () => {
@@ -67,21 +69,24 @@ test('maps every semantic NativeWind token to runtime RGB and alpha variables', 
   }
 
   const colors = config.theme.extend.colors;
-  const runtime = (token) =>
-    `rgb(var(--color-${token}-rgb) / calc(var(--color-${token}-alpha) * <alpha-value>))`;
+  const runtime = (token, value) => {
+    const { channels, alpha } = parseColor(value);
+    return `rgb(var(--color-${token}-rgb, ${channels}) / calc(var(--color-${token}-alpha, ${alpha}) * <alpha-value>))`;
+  };
   const expectedTokens = [
     'canvas', 'surface', 'surface-raised', 'line', 'line-strong', 'content', 'content-muted',
     'primary', 'primary-strong', 'primary-subtle', 'secondary', 'secondary-subtle', 'attention',
-    'attention-subtle', 'danger', 'danger-subtle', 'success', 'success-subtle', 'scrim',
+    'attention-subtle', 'danger', 'danger-subtle', 'success', 'success-subtle', 'scrim', 'on-primary', 'focus',
     'pain-0', 'pain-1', 'pain-2', 'pain-3', 'pain-4', 'pain-5', 'pain-6', 'pain-7', 'pain-8',
     'pain-9', 'pain-10', 'mood-terrible', 'mood-bad', 'mood-so-so', 'mood-okay', 'mood-great', 'accent', 'bg-dark',
     'muted', 'soft', 'card-dark', 'border-dark', 'purple', 'orange',
   ];
 
-  assert.deepEqual(Object.keys(colors), expectedTokens);
-  for (const token of expectedTokens) assert.equal(colors[token], runtime(token));
-  assert.equal(colors.scrim, runtime('scrim'));
-  assert.equal(colors['pain-6'], runtime('pain-6'));
+  assert.deepEqual(Object.keys(colors).sort(), expectedTokens.sort());
+  const variables = createColorVariables(palette);
+  for (const token of expectedTokens) {
+    assert.equal(colors[token], runtime(token, variables[`--color-${token}`]));
+  }
 });
 
 test('derives a deliberately different test palette without mutating the original', () => {

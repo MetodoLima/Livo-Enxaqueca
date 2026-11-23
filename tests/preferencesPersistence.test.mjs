@@ -14,6 +14,8 @@ import {
 } from '../constants/colorPaletteMode.ts';
 import { PREFERENCIAS_PADRAO } from '../constants/preferences.ts';
 
+const DISPLAY_DEFAULTS = { tema: 'escuro', intensidadeCores: 'normal' };
+
 const TYPOGRAPHY = {
   tamanho: 'maior',
   fonte: 'dislexia',
@@ -29,6 +31,7 @@ test('defaults a fresh installation to Original without changing typography defa
     negrito: false,
     linhas: 'padrao',
     letras: 'padrao',
+    ...DISPLAY_DEFAULTS,
     modoDeCores: 'original',
   });
 });
@@ -38,6 +41,18 @@ test('migrates an old v1 payload by preserving typography and adding Original', 
 
   assert.deepEqual(interpretPreferences(stored), {
     ...TYPOGRAPHY,
+    ...DISPLAY_DEFAULTS,
+    modoDeCores: 'original',
+  });
+});
+
+test('restores theme and intensity from a pre-daltonism v1 payload', () => {
+  const stored = JSON.stringify({ versao: 1, ...TYPOGRAPHY, tema: 'claro', intensidadeCores: 'suaves' });
+
+  assert.deepEqual(interpretPreferences(stored), {
+    ...TYPOGRAPHY,
+    tema: 'claro',
+    intensidadeCores: 'suaves',
     modoDeCores: 'original',
   });
 });
@@ -54,7 +69,7 @@ test('reads every valid color mode from a v1 payload', () => {
 test('falls back only an invalid color mode while preserving valid typography', () => {
   assert.deepEqual(
     interpretPreferences(JSON.stringify({ versao: 1, ...TYPOGRAPHY, modoDeCores: 'inexistente' })),
-    { ...TYPOGRAPHY, modoDeCores: 'original' },
+    { ...TYPOGRAPHY, ...DISPLAY_DEFAULTS, modoDeCores: 'original' },
   );
 });
 
@@ -65,6 +80,7 @@ test('falls back safely when stored JSON is malformed', () => {
     negrito: false,
     linhas: 'padrao',
     letras: 'padrao',
+    ...DISPLAY_DEFAULTS,
     modoDeCores: 'original',
   });
 });
@@ -86,17 +102,19 @@ test('normalizes invalid typography fields independently', () => {
     negrito: false,
     linhas: 'amplo',
     letras: 'padrao',
+    ...DISPLAY_DEFAULTS,
     modoDeCores: 'protanopia',
   });
 });
 
 test('merges a mode change without overwriting typography and serializes the complete v1 payload', () => {
-  const next = mergePreferences({ ...TYPOGRAPHY, modoDeCores: 'original' }, { modoDeCores: 'tritanopia' });
+  const next = mergePreferences({ ...TYPOGRAPHY, ...DISPLAY_DEFAULTS, modoDeCores: 'original' }, { modoDeCores: 'tritanopia' });
 
-  assert.deepEqual(next, { ...TYPOGRAPHY, modoDeCores: 'tritanopia' });
+  assert.deepEqual(next, { ...TYPOGRAPHY, ...DISPLAY_DEFAULTS, modoDeCores: 'tritanopia' });
   assert.deepEqual(JSON.parse(serializePreferences(next)), {
     versao: 1,
     ...TYPOGRAPHY,
+    ...DISPLAY_DEFAULTS,
     modoDeCores: 'tritanopia',
   });
 });
@@ -108,6 +126,7 @@ test('the complete default used by restore selects Original', () => {
     negrito: false,
     linhas: 'padrao',
     letras: 'padrao',
+    ...DISPLAY_DEFAULTS,
     modoDeCores: 'original',
   });
 });
@@ -115,6 +134,7 @@ test('the complete default used by restore selects Original', () => {
 test('restoring defaults replaces every typography preference and the color mode together', () => {
   const customized = {
     ...TYPOGRAPHY,
+    ...DISPLAY_DEFAULTS,
     modoDeCores: 'tritanopia',
   };
 
@@ -180,4 +200,12 @@ test('continues the write queue after a failed persistence attempt', async () =>
   await assert.rejects(enqueue({ ...PREFERENCIAS_PADRAO, modoDeCores: 'deuteranopia' }));
   await enqueue({ ...PREFERENCIAS_PADRAO, modoDeCores: 'protanopia' });
   assert.deepEqual(persisted, ['protanopia']);
+});
+
+test('persists changes to theme and color mode independently', () => {
+  const withMode = mergePreferences(PREFERENCIAS_PADRAO, { modoDeCores: 'protanopia' });
+  const withTheme = mergePreferences(withMode, { tema: 'alto-contraste' });
+  assert.equal(interpretPreferences(serializePreferences(withTheme)).modoDeCores, 'protanopia');
+  const updatedMode = mergePreferences(withTheme, { modoDeCores: 'tritanopia' });
+  assert.equal(interpretPreferences(serializePreferences(updatedMode)).tema, 'alto-contraste');
 });
