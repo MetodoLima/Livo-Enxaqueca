@@ -5,7 +5,7 @@ import Card from '@/components/ui/Card';
 import Dialog from '@/components/ui/Dialog';
 import LoadingState from '@/components/ui/LoadingState';
 import Text from '@/components/ui/Text';
-import { useTema } from '@/hooks/useTema';
+import { useColorPalette } from '@/contexts/ColorThemeContext';
 
 export const TIME_OPTIONS = [
   { months: 1, label: 'Último mês', sublabel: 'Crises dos últimos 30 dias' },
@@ -23,7 +23,8 @@ interface ExportModalProps {
 }
 
 export default function ExportModal({ visible, loading, onClose, onSelect, returnFocusTo }: ExportModalProps) {
-  const { color } = useTema();
+  const { roles } = useColorPalette();
+
   return (
     <Dialog
       visible={visible}
@@ -49,14 +50,14 @@ export default function ExportModal({ visible, loading, onClose, onSelect, retur
               onPress={() => onSelect(opt.months)}
             >
               <View className="flex-row items-center gap-3">
-                <CalendarDays size={22} color={color.contentMuted} />
+                <CalendarDays size={22} color={roles.contentMuted} />
                 <View className="flex-1">
                   <Text weight="semibold">{opt.label}</Text>
                   <Text variant="caption" tone="muted">
                     {opt.sublabel}
                   </Text>
                 </View>
-                <ChevronRight size={20} color={color.contentMuted} />
+                <ChevronRight size={20} color={roles.contentMuted} />
               </View>
             </Card>
           ))}

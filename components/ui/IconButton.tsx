@@ -1,6 +1,6 @@
 import type { LucideIcon } from 'lucide-react-native';
 import { Pressable, type PressableProps } from 'react-native';
-import { useTema } from '@/hooks/useTema';
+import { useColorPalette } from '@/contexts/ColorThemeContext';
 
 export type IconButtonTone = 'content' | 'muted' | 'primary' | 'danger';
 
@@ -21,13 +21,14 @@ export default function IconButton({
   className = '',
   ...props
 }: IconButtonProps) {
-  const { color } = useTema();
-  const TONE_COLOR: Record<IconButtonTone, string> = {
-    content: color.content,
-    muted: color.contentMuted,
-    primary: color.primary,
-    danger: color.danger,
+  const { roles } = useColorPalette();
+  const toneColor: Record<IconButtonTone, string> = {
+    content: roles.content,
+    muted: roles.contentMuted,
+    primary: roles.primary,
+    danger: roles.danger,
   };
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -37,7 +38,7 @@ export default function IconButton({
       className={`h-12 w-12 items-center justify-center rounded-full ${filled ? 'bg-surface-raised' : 'bg-transparent'} ${disabled ? 'opacity-50' : 'active:opacity-70'} ${className}`}
       {...props}
     >
-      <Icon size={22} color={TONE_COLOR[tone]} />
+      <Icon size={22} color={toneColor[tone]} />
     </Pressable>
   );
 }

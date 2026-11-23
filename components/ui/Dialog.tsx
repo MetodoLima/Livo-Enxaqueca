@@ -5,7 +5,7 @@ import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import IconButton from '@/components/ui/IconButton';
 import KeyboardAwareScroll from '@/components/ui/KeyboardAwareScroll';
 import Text from '@/components/ui/Text';
-import { useThemeVars } from '@/constants/Colors';
+import { ColorVariableScope } from '@/contexts/ColorThemeContext';
 
 const ESPERA_DO_FOCO_MS = 350;
 
@@ -59,7 +59,6 @@ export default function Dialog({
     return () => clearTimeout(espera);
   }, [visible, returnFocusTo]);
 
-  const themeVars = useThemeVars();
   const titulo = (
     <View ref={tituloRef} accessible accessibilityRole="header" className={botaoFechar ? 'flex-1' : ''}>
       <Text variant={naBase ? 'heading' : 'title'}>{title}</Text>
@@ -75,50 +74,52 @@ export default function Dialog({
       navigationBarTranslucent
       onRequestClose={onClose}
     >
-      <SafeAreaProvider>
-        <View className="flex-1 bg-scrim" style={themeVars}>
-          <Pressable
-            accessible={false}
-            importantForAccessibility="no"
-            onPress={onClose}
-            className="absolute bottom-0 left-0 right-0 top-0"
-          />
-          <SafeAreaView style={{ flex: 1 }} edges={naBase ? ['top', 'left', 'right'] : undefined}>
-            <KeyboardAwareScroll
-              className="flex-1"
-              contentContainerClassName={naBase ? 'grow justify-end pt-section' : 'grow justify-center px-gutter py-section'}
-            >
-              <Pressable
-                accessible={false}
-                importantForAccessibility="no"
-                onPress={onClose}
-                className="absolute bottom-0 left-0 right-0 top-0"
-              />
-              <View
-                accessibilityViewIsModal
-                onAccessibilityEscape={onClose}
-                className={
-                  naBase
-                    ? 'rounded-t-lg border border-b-0 border-line bg-surface px-gutter pt-6'
-                    : 'rounded-lg border border-line bg-surface p-6'
-                }
+      <ColorVariableScope fill>
+        <SafeAreaProvider>
+          <View className="flex-1 bg-scrim">
+            <Pressable
+              accessible={false}
+              importantForAccessibility="no"
+              onPress={onClose}
+              className="absolute bottom-0 left-0 right-0 top-0"
+            />
+            <SafeAreaView style={{ flex: 1 }} edges={naBase ? ['top', 'left', 'right'] : undefined}>
+              <KeyboardAwareScroll
+                className="flex-1"
+                contentContainerClassName={naBase ? 'grow justify-end pt-section' : 'grow justify-center px-gutter py-section'}
               >
-                {botaoFechar ? (
-                  <View className="flex-row items-center gap-3">
-                    {titulo}
-                    <IconButton icon={X} accessibilityLabel="Fechar" onPress={onClose} className="-mr-3" />
-                  </View>
-                ) : (
-                  titulo
-                )}
-                <View className={naBase ? 'mt-5' : 'mt-6'}>{children}</View>
-                {footer ? <View className={naBase ? 'mt-5' : 'mt-8'}>{footer}</View> : null}
-                {naBase ? <SafeAreaView edges={['bottom']} style={{ minHeight: 24 }} /> : null}
-              </View>
-            </KeyboardAwareScroll>
-          </SafeAreaView>
-        </View>
-      </SafeAreaProvider>
+                <Pressable
+                  accessible={false}
+                  importantForAccessibility="no"
+                  onPress={onClose}
+                  className="absolute bottom-0 left-0 right-0 top-0"
+                />
+                <View
+                  accessibilityViewIsModal
+                  onAccessibilityEscape={onClose}
+                  className={
+                    naBase
+                      ? 'rounded-t-lg border border-b-0 border-line bg-surface px-gutter pt-6'
+                      : 'rounded-lg border border-line bg-surface p-6'
+                  }
+                >
+                  {botaoFechar ? (
+                    <View className="flex-row items-center gap-3">
+                      {titulo}
+                      <IconButton icon={X} accessibilityLabel="Fechar" onPress={onClose} className="-mr-3" />
+                    </View>
+                  ) : (
+                    titulo
+                  )}
+                  <View className={naBase ? 'mt-5' : 'mt-6'}>{children}</View>
+                  {footer ? <View className={naBase ? 'mt-5' : 'mt-8'}>{footer}</View> : null}
+                  {naBase ? <SafeAreaView edges={['bottom']} style={{ minHeight: 24 }} /> : null}
+                </View>
+              </KeyboardAwareScroll>
+            </SafeAreaView>
+          </View>
+        </SafeAreaProvider>
+      </ColorVariableScope>
     </Modal>
   );
 }

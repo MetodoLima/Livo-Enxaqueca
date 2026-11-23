@@ -3,13 +3,13 @@ import { Image, View } from 'react-native';
 import { useRouter } from 'expo-router';
 import Card from '@/components/ui/Card';
 import Text from '@/components/ui/Text';
-import { useTema } from '@/hooks/useTema';
+import { useColorPalette } from '@/contexts/ColorThemeContext';
 import { MOODS } from '@/constants/data';
 import type { RegistroCalendarDay } from '@/features/daily-record/useDailyRecordCalendar';
 import { formatLitros, formatSleep, moodLabel } from '@/lib/format';
 
 export default function DailyRecordListItem({ registro }: { registro: RegistroCalendarDay; index: number }) {
-  const { color } = useTema();
+  const { roles } = useColorPalette();
   const router = useRouter();
   const hora = new Date(registro.createdAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
   const rotina = [
@@ -59,8 +59,8 @@ export default function DailyRecordListItem({ registro }: { registro: RegistroCa
         <Text numberOfLines={2} className="flex-1">
           {texto}
         </Text>
-        {!registro.enviado ? <Clock size={20} color={color.attention} /> : null}
-        <ChevronRight size={20} color={color.contentMuted} />
+        {!registro.enviado ? <Clock size={20} color={roles.attention} /> : null}
+        <ChevronRight size={20} color={roles.contentMuted} />
       </View>
     </Card>
   );

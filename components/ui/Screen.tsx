@@ -4,7 +4,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { cssInterop } from 'nativewind';
 import KeyboardAwareScroll from '@/components/ui/KeyboardAwareScroll';
 import { useTema } from '@/hooks/useTema';
-import { useThemeVars } from '@/constants/Colors';
+import { useThemeVars } from '@/contexts/ColorThemeContext';
 
 cssInterop(SafeAreaView, { className: 'style' });
 

@@ -25,9 +25,9 @@ import {
   Epilogue_600SemiBold,
   Epilogue_700Bold,
 } from '@expo-google-fonts/epilogue';
-import { useThemeVars } from '@/constants/Colors';
-import { useTema } from '@/hooks/useTema';
 import { ARQUIVOS_DE_FONTE } from '@/constants/typography';
+import { resolverPaleta } from '@/constants/Colors';
+import { ColorThemeProvider, useColorPalette } from '@/contexts/ColorThemeContext';
 import { PreferencesProvider, usePreferences } from '@/contexts/PreferencesContext';
 
 export {
@@ -121,21 +121,22 @@ function RootLayoutNav() {
   const segments = useSegments();
   const router = useRouter();
   const navigationState = useRootNavigationState();
-  const { tema, color } = useTema();
+  const { roles } = useColorPalette();
+  const { preferencias: { tema } } = usePreferences();
   const livoTheme = useMemo(() => {
     const base = tema === 'claro' ? DefaultTheme : DarkTheme;
     return {
       ...base,
       colors: {
         ...base.colors,
-        background: color.canvas,
-        card: color.canvas,
-        text: color.content,
-        border: color.line,
-        primary: color.primary,
+        background: roles.canvas,
+        card: roles.canvas,
+        text: roles.content,
+        border: roles.line,
+        primary: roles.primary,
       },
     };
-  }, [tema, color]);
+  }, [tema, roles]);
 
   useEffect(() => {
     if (localSessionStatus === 'loading' || !navigationState?.key) return;
@@ -203,14 +204,26 @@ function ProtectedAppProviders() {
 export default function RootLayout() {
   return (
     <PreferencesProvider>
-      <RootContent />
+      <PreferredColorTheme>
+        <RootContent />
+      </PreferredColorTheme>
     </PreferencesProvider>
+  );
+}
+
+function PreferredColorTheme({ children }: { children: React.ReactNode }) {
+  const { preferencias: { tema, intensidadeCores, modoDeCores: mode } } = usePreferences();
+  const palette = useMemo(() => resolverPaleta(tema, intensidadeCores, mode), [tema, intensidadeCores, mode]);
+
+  return (
+    <ColorThemeProvider palette={palette} mode={mode}>
+      {children}
+    </ColorThemeProvider>
   );
 }
 
 function RootContent() {
   const { pronto } = usePreferences();
-  const themeVars = useThemeVars();
   const [loaded, error] = useFonts({
     Epilogue_300Light,
     Epilogue_400Regular,
@@ -236,7 +249,7 @@ function RootContent() {
   }
 
   return (
-    <GestureHandlerRootView style={[{ flex: 1 }, themeVars]}>
+    <GestureHandlerRootView style={{ flex: 1 }}>
       <ConnectivityProvider>
         <AuthRefreshCoordinator />
         <AuthProvider>

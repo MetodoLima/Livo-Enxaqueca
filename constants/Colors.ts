@@ -1,36 +1,34 @@
-import { useMemo } from 'react';
-import { vars } from 'nativewind';
-import rawPalette from './colors.json';
-import { PALETAS, type Tema } from './temas';
-import { usePreferences } from '@/contexts/PreferencesContext';
+import rawPalette from './colors.json' with { type: 'json' };
+import { PALETAS, type Tema } from './temas.ts';
+import { deuteranopiaPalette, protanopiaPalette, tritanopiaPalette } from './accessibilityPalettes.ts';
+import { parseColor } from './colorTheme.ts';
+import type { ColorPaletteMode } from './colorPaletteMode.ts';
+import type { IntensidadeCores } from './preferences.ts';
 
-export type IntensidadeCores = 'normal' | 'suaves' | 'sem-cor';
+export type { IntensidadeCores } from './preferences.ts';
 export type ThemeMode = Tema;
 
-export type ColorRoles = typeof rawPalette.roles;
-export type ColorPain = typeof rawPalette.pain;
-export type ColorMood = typeof rawPalette.mood;
-export type ColorLegacy = typeof rawPalette.legacy;
-
 export interface ColorPalette {
-  roles: ColorRoles;
-  pain: ColorPain;
-  mood: ColorMood;
-  legacy: ColorLegacy;
+  roles: typeof rawPalette.roles;
+  pain: typeof rawPalette.pain;
+  mood: typeof rawPalette.mood;
+  legacy: typeof rawPalette.legacy;
 }
 
+const { roles, pain, mood, legacy } = rawPalette;
+export const originalPalette: ColorPalette = { roles, pain, mood, legacy };
+
+const alternativas = {
+  deuteranopia: deuteranopiaPalette,
+  protanopia: protanopiaPalette,
+  tritanopia: tritanopiaPalette,
+};
+
 export function hexToRgba(cor: string): [number, number, number, number] {
-  if (cor.startsWith('rgba')) {
-    const m = cor.match(/rgba\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*([\d.]+)\s*\)/);
-    if (m) {
-      return [parseInt(m[1], 10), parseInt(m[2], 10), parseInt(m[3], 10), parseFloat(m[4])];
-    }
-  }
-  const limpo = cor.replace('#', '');
-  const r = parseInt(limpo.substring(0, 2), 16) || 0;
-  const g = parseInt(limpo.substring(2, 4), 16) || 0;
-  const b = parseInt(limpo.substring(4, 6), 16) || 0;
-  return [r, g, b, 1];
+  const parsed = parseColor(cor);
+  if (!parsed) return [0, 0, 0, 1];
+  const [r, g, b] = parsed.channels.split(' ').map(Number);
+  return [r, g, b, Number(parsed.alpha)];
 }
 
 export function rgbaToHex([r, g, b, a]: [number, number, number, number]): string {
@@ -79,124 +77,112 @@ export function gerarPaletaComIntensidade(base: ColorPalette, intensidade: Inten
 }
 
 export function obterPaletaDoTema(tema: ThemeMode): ColorPalette {
-  const { roles, pain, mood } = PALETAS[tema] ?? PALETAS.escuro;
-  return { roles, pain, mood, legacy: rawPalette.legacy };
+  if (tema === 'escuro') return originalPalette;
+  return { ...(PALETAS[tema] ?? PALETAS.escuro), legacy };
 }
 
-export function resolverPaleta(tema: ThemeMode = 'escuro', intensidade: IntensidadeCores = 'normal'): ColorPalette {
-  const base = obterPaletaDoTema(tema);
-  return gerarPaletaComIntensidade(base, intensidade);
+const tons = ['primary', 'secondary', 'attention', 'danger', 'success'] as const;
+
+function linearRgb(cor: string) {
+  return hexToRgba(cor).slice(0, 3).map((channel) => {
+    const value = channel / 255;
+    return value <= 0.04045 ? value / 12.92 : ((value + 0.055) / 1.055) ** 2.4;
+  }) as [number, number, number];
 }
 
-const kebab = (nome: string) => nome.replace(/[A-Z]/g, (l) => `-${l.toLowerCase()}`);
+function luminancia(cor: string): number {
+  return calcularLuminanciaRelativa(...linearRgb(cor));
+}
 
-export function gerarVariaveisCss(paleta: ColorPalette): Record<string, string | number> {
-  const variaveis: Record<string, string | number> = {};
+/** Recolore um token com a tonalidade adaptada e a luminância exigida pelo tema. */
+function ajustarLuminancia(cor: string, alvo: number, claro: boolean): string {
+  const rgb = linearRgb(cor);
+  const atual = calcularLuminanciaRelativa(...rgb);
+  const canais = rgb.map((canal) => {
+    const linear = alvo <= atual
+      ? canal * (atual ? alvo / atual : 0)
+      : canal + (1 - canal) * ((alvo - atual) / (1 - atual));
+    const srgb = linear <= 0.0031308 ? 12.92 * linear : 1.055 * linear ** (1 / 2.4) - 0.055;
+    return claro ? Math.floor(srgb * 255 + 1e-8) : Math.ceil(srgb * 255 - 1e-8);
+  });
+  return rgbaToHex([canais[0], canais[1], canais[2], 1]);
+}
 
-  const registrar = (grupo: Record<string, string>, prefixo = '') => {
-    for (const [chave, cor] of Object.entries(grupo)) {
-      const token = `${prefixo}${kebab(chave)}`;
-      const [r, g, b, a] = hexToRgba(cor);
-      variaveis[`--color-${token}-rgb`] = `${Math.round(r)} ${Math.round(g)} ${Math.round(b)}`;
-      variaveis[`--color-${token}-alpha`] = a;
-      variaveis[`--color-${token}`] = cor;
-    }
+function adaptarDaltonismo(base: ColorPalette, alternativa: ColorPalette, tema: ThemeMode): ColorPalette {
+  const claro = tema === 'claro';
+  const superficies = [base.roles.canvas, base.roles.surface, base.roles.surfaceRaised];
+  const limite = (fundos: string[], proporcao: number) => {
+    const niveis = fundos.map(luminancia);
+    return claro
+      ? (Math.min(...niveis) + 0.05) / proporcao - 0.05
+      : (Math.max(...niveis) + 0.05) * proporcao - 0.05;
+  };
+  const adaptar = (original: string, cor: string, fundos: string[], proporcao: number, manterNivel = true) => {
+    const nivel = luminancia(manterNivel ? original : cor);
+    const minimo = limite(fundos, proporcao);
+    const alvo = claro ? Math.min(nivel, minimo) : Math.max(nivel, minimo);
+    return ajustarLuminancia(cor, Math.min(1, Math.max(0, alvo)), claro);
   };
 
-  registrar(paleta.roles);
-  registrar(paleta.pain, 'pain-');
-  registrar(paleta.mood, 'mood-');
-  registrar(paleta.legacy);
+  const roles = { ...base.roles };
+  for (const tom of tons) {
+    roles[tom] = adaptar(base.roles[tom], alternativa.roles[tom], [...superficies, base.roles[`${tom}Subtle`]], 4.5);
+  }
+  // O preenchimento do botão contrasta com onPrimary, que pertence ao tema.
+  const textoDoBotaoClaro = luminancia(base.roles.onPrimary) > luminancia(base.roles.primaryStrong);
+  roles.primaryStrong = ajustarLuminancia(
+    alternativa.roles.primaryStrong,
+    luminancia(base.roles.primaryStrong),
+    textoDoBotaoClaro,
+  );
 
-  return variaveis;
+  const adaptarGrupo = <T extends Record<string, string>>(grupo: T, cores: T, fundos: string[], proporcao: number): T =>
+    Object.fromEntries(Object.keys(grupo).map((chave) => [
+      chave,
+      adaptar(grupo[chave], cores[chave], fundos, proporcao, tema === 'alto-contraste'),
+    ])) as T;
+
+  return {
+    roles,
+    pain: adaptarGrupo(base.pain, alternativa.pain, [base.roles.canvas], 4.5),
+    mood: adaptarGrupo(base.mood, alternativa.mood, superficies, 3),
+    legacy: { ...base.legacy, accent: roles.primary, purple: roles.secondary, orange: roles.attention },
+  };
 }
 
-let paletaAtiva: ColorPalette = rawPalette as ColorPalette;
+export function resolverPaleta(
+  tema: ThemeMode = 'escuro',
+  intensidade: IntensidadeCores = 'normal',
+  modoDeCores: ColorPaletteMode = 'original',
+): ColorPalette {
+  const base = gerarPaletaComIntensidade(obterPaletaDoTema(tema), intensidade);
+  if (modoDeCores === 'original') return base;
+  const alternativa = gerarPaletaComIntensidade(alternativas[modoDeCores], intensidade);
+  return adaptarDaltonismo(base, alternativa, tema);
+}
 
-export function definirPaletaAtiva(novaPaleta: ColorPalette) {
-  paletaAtiva = novaPaleta;
+let paletaAtiva = originalPalette;
+
+export function definirPaletaAtiva(paleta: ColorPalette) {
+  paletaAtiva = paleta;
 }
 
 export function obterPaletaAtiva(): ColorPalette {
   return paletaAtiva;
 }
 
-export const color = new Proxy({} as ColorRoles, {
-  get(_target, prop: string) {
-    return Reflect.get(paletaAtiva.roles, prop) ?? Reflect.get(rawPalette.roles, prop);
-  },
-  ownKeys() {
-    return Reflect.ownKeys(paletaAtiva.roles);
-  },
-  getOwnPropertyDescriptor(_target, prop) {
-    return {
-      value: Reflect.get(paletaAtiva.roles, prop),
-      enumerable: true,
-      configurable: true,
-    };
-  },
-});
-
-export const painColor = new Proxy({} as ColorPain, {
-  get(_target, prop: string) {
-    return Reflect.get(paletaAtiva.pain, prop) ?? Reflect.get(rawPalette.pain, prop);
-  },
-  ownKeys() {
-    return Reflect.ownKeys(paletaAtiva.pain);
-  },
-  getOwnPropertyDescriptor(_target, prop) {
-    return {
-      value: Reflect.get(paletaAtiva.pain, prop),
-      enumerable: true,
-      configurable: true,
-    };
-  },
-});
-
-export const moodColor = new Proxy({} as ColorMood, {
-  get(_target, prop: string) {
-    return Reflect.get(paletaAtiva.mood, prop) ?? Reflect.get(rawPalette.mood, prop);
-  },
-  ownKeys() {
-    return Reflect.ownKeys(paletaAtiva.mood);
-  },
-  getOwnPropertyDescriptor(_target, prop) {
-    return {
-      value: Reflect.get(paletaAtiva.mood, prop),
-      enumerable: true,
-      configurable: true,
-    };
-  },
-});
-
-export const Colors = new Proxy({} as ColorLegacy, {
-  get(_target, prop: string) {
-    return Reflect.get(paletaAtiva.legacy, prop) ?? Reflect.get(rawPalette.legacy, prop);
-  },
-  ownKeys() {
-    return Reflect.ownKeys(paletaAtiva.legacy);
-  },
-  getOwnPropertyDescriptor(_target, prop) {
-    return {
-      value: Reflect.get(paletaAtiva.legacy, prop),
-      enumerable: true,
-      configurable: true,
-    };
-  },
-});
-
-export function useThemeColors(): ColorPalette {
-  const { preferencias } = usePreferences();
-  return useMemo(
-    () => resolverPaleta(preferencias.tema, preferencias.intensidadeCores),
-    [preferencias.tema, preferencias.intensidadeCores],
-  );
+function grupoAtivo<K extends keyof ColorPalette>(grupo: K): ColorPalette[K] {
+  return new Proxy(originalPalette[grupo], {
+    get(alvo, chave) {
+      return Reflect.get(paletaAtiva[grupo], chave) ?? Reflect.get(alvo, chave);
+    },
+    getOwnPropertyDescriptor(alvo, chave) {
+      return Reflect.getOwnPropertyDescriptor(paletaAtiva[grupo], chave) ?? Reflect.getOwnPropertyDescriptor(alvo, chave);
+    },
+  });
 }
 
-export function useThemeVars() {
-  const { preferencias } = usePreferences();
-  return useMemo(() => {
-    const paleta = resolverPaleta(preferencias.tema, preferencias.intensidadeCores);
-    return vars(gerarVariaveisCss(paleta));
-  }, [preferencias.tema, preferencias.intensidadeCores]);
-}
+export const color = grupoAtivo('roles');
+export const painColor = grupoAtivo('pain');
+export const moodColor = grupoAtivo('mood');
+export const Colors = grupoAtivo('legacy');

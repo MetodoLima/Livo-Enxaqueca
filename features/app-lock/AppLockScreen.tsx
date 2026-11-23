@@ -12,7 +12,7 @@ import ScreenHeader from '@/components/ui/ScreenHeader';
 import SwitchRow from '@/components/ui/SwitchRow';
 import Text from '@/components/ui/Text';
 import TextField from '@/components/ui/TextField';
-import { useTema } from '@/hooks/useTema';
+import { useColorPalette } from '@/contexts/ColorThemeContext';
 import { useAppLock } from '@/features/app-lock/AppLockContext';
 import { isValidPin } from '@/features/app-lock/appLockStore';
 
@@ -28,7 +28,8 @@ function formatWait(ms: number): string {
 }
 
 export default function AppLockScreen({ mode = 'unlock', onClose }: AppLockScreenProps) {
-  const { color } = useTema();
+  const { roles } = useColorPalette();
+  const trackColor = { false: roles.surfaceRaised, true: roles.primaryStrong };
   const {
     config,
     biometricAvailable,
@@ -300,9 +301,9 @@ export default function AppLockScreen({ mode = 'unlock', onClose }: AppLockScree
               <Switch
                 value={useBiometric}
                 onValueChange={setUseBiometric}
-                trackColor={{ false: color.surfaceRaised, true: color.primaryStrong }}
-                thumbColor={color.content}
-                ios_backgroundColor={color.surfaceRaised}
+                trackColor={trackColor}
+                thumbColor={roles.content}
+                ios_backgroundColor={roles.surfaceRaised}
                 accessibilityLabel="Ativar biometria"
               />
             </View>

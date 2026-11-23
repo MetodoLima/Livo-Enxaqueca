@@ -9,7 +9,7 @@ import Notice from '@/components/ui/Notice';
 import OptionCard from '@/components/ui/OptionCard';
 import Text from '@/components/ui/Text';
 import TextField from '@/components/ui/TextField';
-import { useTema } from '@/hooks/useTema';
+import { useColorPalette } from '@/contexts/ColorThemeContext';
 import SetupStep from '@/features/onboarding/SetupStep';
 import { useSetup } from '@/features/onboarding/SetupContext';
 
@@ -82,7 +82,7 @@ const CATEGORY_LABELS: Record<Medication['category'], string> = {
 };
 
 export default function MedicationsStep() {
-  const { color } = useTema();
+    const { roles } = useColorPalette();
     const { updateSetupData } = useSetup();
 
     const [search, setSearch] = useState('');
@@ -170,7 +170,7 @@ export default function MedicationsStep() {
         if (loading) {
             return (
                 <View className="h-12 w-12 items-center justify-center">
-                    <ActivityIndicator color={color.primary} accessibilityLabel="Buscando" />
+                    <ActivityIndicator color={roles.primary} accessibilityLabel="Buscando" />
                 </View>
             );
         }
@@ -191,7 +191,7 @@ export default function MedicationsStep() {
                 accessibilityElementsHidden
                 className="h-12 w-12 items-center justify-center"
             >
-                <Pill size={22} color={color.contentMuted} />
+                <Pill size={22} color={roles.contentMuted} />
             </View>
         );
     }

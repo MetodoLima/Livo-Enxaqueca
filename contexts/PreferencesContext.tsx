@@ -1,18 +1,15 @@
+import { definirPaletaAtiva, resolverPaleta } from '@/constants/Colors';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { PREFERENCIAS_PADRAO, type Preferencias } from '@/constants/typography';
 import {
-  ESPACOS,
-  FONTES,
-  INTENSIDADES_CORES,
-  PREFERENCIAS_PADRAO,
-  TAMANHOS,
-  type Preferencias,
-} from '@/constants/typography';
-import { TEMAS } from '@/constants/temas';
-import { definirPaletaAtiva, resolverPaleta } from '@/constants/Colors';
+  createPreferenceWriteQueue,
+  interpretPreferences,
+  mergePreferences,
+  PREFERENCES_STORAGE_KEY,
+  shouldApplyHydration,
+} from '@/contexts/preferencesPersistence';
 
-const CHAVE = 'livo.preferencias.v1';
-const VERSAO = 1;
 const TEMPO_MAXIMO_DE_LEITURA_MS = 500;
 
 interface PreferencesContextValue {
@@ -29,50 +26,31 @@ const PreferencesContext = createContext<PreferencesContextValue>({
   restaurar: () => {},
 });
 
-const umDe = <T extends string>(lista: readonly T[], valor: unknown, padrao: T): T =>
-  lista.includes(valor as T) ? (valor as T) : padrao;
-
-function interpretar(bruto: string | null): Preferencias {
-  if (!bruto) return PREFERENCIAS_PADRAO;
-  try {
-    const salvo = JSON.parse(bruto);
-    if (!salvo || salvo.versao !== VERSAO) return PREFERENCIAS_PADRAO;
-    return {
-      tamanho: umDe(TAMANHOS, salvo.tamanho, PREFERENCIAS_PADRAO.tamanho),
-      fonte: umDe(FONTES, salvo.fonte, PREFERENCIAS_PADRAO.fonte),
-      negrito: typeof salvo.negrito === 'boolean' ? salvo.negrito : PREFERENCIAS_PADRAO.negrito,
-      linhas: umDe(ESPACOS, salvo.linhas, PREFERENCIAS_PADRAO.linhas),
-      letras: umDe(ESPACOS, salvo.letras, PREFERENCIAS_PADRAO.letras),
-      tema: umDe(TEMAS, salvo.tema, PREFERENCIAS_PADRAO.tema),
-      intensidadeCores: umDe(INTENSIDADES_CORES, salvo.intensidadeCores, PREFERENCIAS_PADRAO.intensidadeCores),
-    };
-  } catch {
-    return PREFERENCIAS_PADRAO;
-  }
-}
-
-function salvar(preferencias: Preferencias) {
-  AsyncStorage.setItem(CHAVE, JSON.stringify({ versao: VERSAO, ...preferencias })).catch(() => undefined);
-}
-
 export function PreferencesProvider({ children }: { children: ReactNode }) {
   const [preferencias, setPreferencias] = useState<Preferencias>(PREFERENCIAS_PADRAO);
   const [pronto, setPronto] = useState(false);
   const atuais = useRef(PREFERENCIAS_PADRAO);
-  const alteradas = useRef(false);
+  const revisao = useRef(0);
+  const filaDeGravacao = useRef<ReturnType<typeof createPreferenceWriteQueue> | null>(null);
+  if (!filaDeGravacao.current) {
+    filaDeGravacao.current = createPreferenceWriteQueue((serialized) =>
+      AsyncStorage.setItem(PREFERENCES_STORAGE_KEY, serialized),
+    );
+  }
 
   useEffect(() => {
     let ativo = true;
+    const revisaoAoIniciar = revisao.current;
     const limite = setTimeout(() => {
       if (ativo) setPronto(true);
     }, TEMPO_MAXIMO_DE_LEITURA_MS);
 
-    AsyncStorage.getItem(CHAVE)
+    AsyncStorage.getItem(PREFERENCES_STORAGE_KEY)
       .then((bruto) => {
-        if (!ativo || alteradas.current) return;
-        const lidas = interpretar(bruto);
+        if (!ativo || !shouldApplyHydration(revisaoAoIniciar, revisao.current)) return;
+        const lidas = interpretPreferences(bruto);
         atuais.current = lidas;
-        definirPaletaAtiva(resolverPaleta(lidas.tema, lidas.intensidadeCores));
+        definirPaletaAtiva(resolverPaleta(lidas.tema, lidas.intensidadeCores, lidas.modoDeCores));
         setPreferencias(lidas);
       })
       .catch(() => undefined)
@@ -88,16 +66,16 @@ export function PreferencesProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const definir = useCallback((mudanca: Partial<Preferencias>) => {
-    const proximas = { ...atuais.current, ...mudanca };
+    const proximas = mergePreferences(atuais.current, mudanca);
     const iguais = (Object.keys(proximas) as (keyof Preferencias)[]).every(
       (chave) => proximas[chave] === atuais.current[chave],
     );
     if (iguais) return;
-    alteradas.current = true;
+    revisao.current += 1;
     atuais.current = proximas;
-    definirPaletaAtiva(resolverPaleta(proximas.tema, proximas.intensidadeCores));
+    definirPaletaAtiva(resolverPaleta(proximas.tema, proximas.intensidadeCores, proximas.modoDeCores));
     setPreferencias(proximas);
-    salvar(proximas);
+    void filaDeGravacao.current?.(proximas).catch(() => undefined);
   }, []);
 
   const restaurar = useCallback(() => definir(PREFERENCIAS_PADRAO), [definir]);

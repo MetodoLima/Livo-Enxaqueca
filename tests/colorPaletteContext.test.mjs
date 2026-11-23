@@ -1,0 +1,156 @@
+import assert from 'node:assert/strict';
+import test from 'node:test';
+import React, { createElement } from 'react';
+import TestRenderer, { act } from 'react-test-renderer';
+import { resolverPaleta } from '../constants/Colors.ts';
+import palette from '../constants/colors.json' with { type: 'json' };
+import {
+  deuteranopiaPalette,
+  protanopiaPalette,
+  tritanopiaPalette,
+} from '../constants/accessibilityPalettes.ts';
+import {
+  ColorPaletteProvider,
+  useColorPalette,
+  useColorPaletteMode,
+} from '../contexts/ColorPaletteContext.ts';
+
+globalThis.IS_REACT_ACT_ENVIRONMENT = true;
+
+test('updates JavaScript palette consumers immediately when the provider palette changes', async () => {
+  const observed = [];
+  const testPalette = {
+    ...palette,
+    roles: { ...palette.roles, primary: '#010203' },
+    pain: { ...palette.pain, 6: '#070809' },
+    mood: { ...palette.mood, great: '#0A0B0C' },
+    legacy: { ...palette.legacy, accent: '#0D0E0F' },
+  };
+
+  function Probe() {
+    const active = useColorPalette();
+    observed.push({
+      primary: active.roles.primary,
+      pain: active.pain[6],
+      mood: active.mood.great,
+      legacy: active.legacy.accent,
+    });
+    return null;
+  }
+
+  let renderer;
+  await act(async () => {
+    renderer = TestRenderer.create(
+      createElement(ColorPaletteProvider, { palette }, createElement(Probe)),
+    );
+  });
+  await act(async () => {
+    renderer.update(
+      createElement(ColorPaletteProvider, { palette: testPalette }, createElement(Probe)),
+    );
+  });
+
+  assert.deepEqual(observed, [
+    { primary: '#25B7BB', pain: '#F97316', mood: '#10B981', legacy: '#25B7BB' },
+    { primary: '#010203', pain: '#070809', mood: '#0A0B0C', legacy: '#0D0E0F' },
+  ]);
+
+  await act(async () => renderer.unmount());
+});
+
+test('switches reactively through all four production palettes without remounting consumers', async () => {
+  const observed = [];
+
+  function Probe() {
+    const active = useColorPalette();
+    observed.push([active.roles.primary, active.pain[10], active.mood.great, active.legacy.accent]);
+    return null;
+  }
+
+  let renderer;
+  const render = (active) => createElement(ColorPaletteProvider, { palette: active }, createElement(Probe));
+  await act(async () => { renderer = TestRenderer.create(render(palette)); });
+  await act(async () => { renderer.update(render(deuteranopiaPalette)); });
+  await act(async () => { renderer.update(render(protanopiaPalette)); });
+  await act(async () => { renderer.update(render(tritanopiaPalette)); });
+
+  assert.equal(observed.length, 4);
+  assert.equal(new Set(observed.map((values) => values.join('|'))).size, 4);
+  assert.deepEqual(observed[0], ['#25B7BB', '#991B1B', '#10B981', '#25B7BB']);
+
+  await act(async () => renderer.unmount());
+});
+
+test('updates the explicit palette mode reactively and does not infer Original from object identity', async () => {
+  const observed = [];
+  const copiedOriginal = {
+    ...palette,
+    roles: { ...palette.roles },
+    pain: { ...palette.pain },
+    mood: { ...palette.mood },
+    legacy: { ...palette.legacy },
+  };
+
+  function Probe() {
+    observed.push({
+      mode: useColorPaletteMode(),
+      primary: useColorPalette().roles.primary,
+    });
+    return null;
+  }
+
+  let renderer;
+  await act(async () => {
+    renderer = TestRenderer.create(
+      createElement(
+        ColorPaletteProvider,
+        { palette: copiedOriginal, mode: 'original' },
+        createElement(Probe),
+      ),
+    );
+  });
+  await act(async () => {
+    renderer.update(
+      createElement(
+        ColorPaletteProvider,
+        { palette: deuteranopiaPalette, mode: 'deuteranopia' },
+        createElement(Probe),
+      ),
+    );
+  });
+
+  assert.deepEqual(observed, [
+    { mode: 'original', primary: '#25B7BB' },
+    { mode: 'deuteranopia', primary: '#00D5E0' },
+  ]);
+
+  await act(async () => renderer.unmount());
+});
+
+test('changes theme and daltonism independently without remounting the consumer', async () => {
+  const observed = [];
+  let mounts = 0;
+  function Probe() {
+    React.useEffect(() => { mounts += 1; }, []);
+    const { roles, pain } = useColorPalette();
+    observed.push([useColorPaletteMode(), roles.canvas, roles.primary, pain[8]]);
+    return null;
+  }
+
+  const render = (theme, mode) => createElement(
+    ColorPaletteProvider,
+    { palette: resolverPaleta(theme, 'normal', mode), mode },
+    createElement(Probe),
+  );
+  let renderer;
+  await act(async () => { renderer = TestRenderer.create(render('escuro', 'deuteranopia')); });
+  await act(async () => { renderer.update(render('claro', 'deuteranopia')); });
+  await act(async () => { renderer.update(render('claro', 'tritanopia')); });
+  assert.equal(mounts, 1);
+  assert.equal(observed[0][0], observed[1][0]);
+  assert.notEqual(observed[0][1], observed[1][1]);
+  assert.equal(observed[1][1], observed[2][1]);
+  assert.notEqual(observed[1][2], observed[2][2]);
+  assert.notEqual(observed[1][3], observed[2][3]);
+  await act(async () => renderer.unmount());
+});

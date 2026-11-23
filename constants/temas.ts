@@ -1,9 +1,8 @@
-import palette from './colors.json';
+import palette from './colors.json' with { type: 'json' };
 
-export const TEMAS = ['escuro', 'claro', 'alto-contraste'] as const;
-export type Tema = (typeof TEMAS)[number];
+import type { Tema } from './preferences.ts';
 
-export const TEMA_PADRAO: Tema = 'escuro';
+export { TEMAS, TEMA_PADRAO, type Tema } from './preferences.ts';
 
 export type Papeis = typeof palette.roles;
 export type EscalaDeDor = typeof palette.pain;

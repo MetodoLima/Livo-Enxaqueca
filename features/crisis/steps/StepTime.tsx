@@ -6,7 +6,7 @@ import DateField from '@/components/ui/DateField';
 import Notice from '@/components/ui/Notice';
 import Text from '@/components/ui/Text';
 import TimeField from '@/components/ui/TimeField';
-import { useTema } from '@/hooks/useTema';
+import { useColorPalette } from '@/contexts/ColorThemeContext';
 import type { Horario } from '@/lib/format';
 import type { CrisisRecord, EndTimePreset, TimePreset } from '@/types/crisis';
 
@@ -84,7 +84,7 @@ function Secao({ titulo, iconColor, destaque = false, children }: SecaoProps) {
 }
 
 export default function StepTime({ data, onChange }: StepTimeProps) {
-  const { color } = useTema();
+  const { roles } = useColorPalette();
   const [startPreset, setStartPreset] = useState<TimePreset>('now');
   const [endPreset, setEndPreset] = useState<EndTimePreset>(data.endTime ? 'custom' : 'ongoing');
   const [larguraDaFileira, setLarguraDaFileira] = useState(0);
@@ -164,7 +164,7 @@ export default function StepTime({ data, onChange }: StepTimeProps) {
     <View className="gap-6">
       <Text variant="title">Horário da crise</Text>
 
-      <Secao titulo="Hora de início" iconColor={color.primary}>
+      <Secao titulo="Hora de início" iconColor={roles.primary}>
         <View className="flex-row flex-wrap gap-2">
           {START_PRESETS.map(({ key, label }) => (
             <Chip
@@ -179,7 +179,7 @@ export default function StepTime({ data, onChange }: StepTimeProps) {
         {campos('Hora de início', 'Data de início', data.startTime, mudarInicio)}
       </Secao>
 
-      <Secao titulo="Hora de fim" iconColor={color.attention} destaque={data.endTime === null}>
+      <Secao titulo="Hora de fim" iconColor={roles.attention} destaque={data.endTime === null}>
         {data.endTime ? (
           campos('Hora de fim', 'Data de fim', data.endTime, mudarFim)
         ) : (

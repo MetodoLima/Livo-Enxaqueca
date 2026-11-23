@@ -1,4 +1,4 @@
-import type { Papeis } from '@/constants/temas';
+import { useColorPalette } from '@/contexts/ColorThemeContext';
 
 export type Tone = 'neutral' | 'primary' | 'secondary' | 'attention' | 'danger' | 'success';
 
@@ -20,11 +20,16 @@ export const TONE_BORDER: Record<Tone, string> = {
   success: 'border-success',
 };
 
-export const corDoTom = (color: Papeis): Record<Tone, string> => ({
-  neutral: color.contentMuted,
-  primary: color.primary,
-  secondary: color.secondary,
-  attention: color.attention,
-  danger: color.danger,
-  success: color.success,
-});
+const TONE_ROLE = {
+  neutral: 'contentMuted',
+  primary: 'primary',
+  secondary: 'secondary',
+  attention: 'attention',
+  danger: 'danger',
+  success: 'success',
+} as const satisfies Record<Tone, 'contentMuted' | 'primary' | 'secondary' | 'attention' | 'danger' | 'success'>;
+
+export function useToneColor(tone: Tone): string {
+  const { roles } = useColorPalette();
+  return roles[TONE_ROLE[tone]];
+}

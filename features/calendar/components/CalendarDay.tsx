@@ -1,20 +1,10 @@
 import { Pressable, View } from 'react-native';
 import Text from '@/components/ui/Text';
+import { hexToRgba, rgbaToHex } from '@/constants/Colors';
+import { calendarPainTintOpacity, painNeedsContrastOutline } from '@/constants/painPresentation';
+import { useColorPalette, useColorPaletteMode } from '@/contexts/ColorThemeContext';
 import { PAIN_BG } from '@/features/crisis/components/IntensityScale';
-
-const PAIN_BG_SUAVE: Record<number, string> = {
-  0: 'bg-pain-0/30',
-  1: 'bg-pain-1/30',
-  2: 'bg-pain-2/30',
-  3: 'bg-pain-3/30',
-  4: 'bg-pain-4/30',
-  5: 'bg-pain-5/30',
-  6: 'bg-pain-6/30',
-  7: 'bg-pain-7/30',
-  8: 'bg-pain-8/30',
-  9: 'bg-pain-9/30',
-  10: 'bg-pain-10/30',
-};
+import { usePreferences } from '@/contexts/PreferencesContext';
 
 const PAIN_BORDER: Record<number, string> = {
   0: 'border-pain-0',
@@ -51,23 +41,40 @@ export default function CalendarDay({
   selecionado,
   onPress,
 }: CalendarDayProps) {
+  const mode = useColorPaletteMode();
+  const { pain } = useColorPalette();
+  const { preferencias: { tema } } = usePreferences();
   const temCrise = crises > 0 && dorMaxima !== null;
-  const fundo = temCrise ? PAIN_BG_SUAVE[dorMaxima] : '';
-  const corDeHoje = temCrise ? PAIN_BORDER[dorMaxima] : 'border-line-strong';
+  const tint = temCrise ? pain[String(dorMaxima) as keyof typeof pain] : undefined;
+  let backgroundColor: string | undefined;
+  if (tint) {
+    const [r, g, b] = hexToRgba(tint);
+    backgroundColor = rgbaToHex([r, g, b, calendarPainTintOpacity(tema, mode)]);
+  }
+  const precisaDeContorno = temCrise && painNeedsContrastOutline(mode, dorMaxima);
+  const corDeHoje = precisaDeContorno
+    ? 'border-content'
+    : temCrise
+      ? PAIN_BORDER[dorMaxima]
+      : 'border-line-strong';
   return (
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
       accessibilityLabel={accessibilityLabel}
       accessibilityState={{ selected: selecionado }}
-      className={`min-h-11 flex-1 items-center justify-center gap-0.5 overflow-visible rounded-sm pb-1.5 ${fundo} active:opacity-80`}
-      style={crises > 1 ? { zIndex: 1 } : undefined}
+      className={`min-h-11 flex-1 items-center justify-center gap-0.5 overflow-visible rounded-sm pb-1.5 active:opacity-80`}
+      style={{ backgroundColor, zIndex: crises > 1 ? 1 : undefined }}
     >
       <Text weight={temCrise ? 'bold' : 'regular'} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
         {day}
       </Text>
       <View className="min-h-1.5 flex-row items-center gap-1">
-        {temCrise ? <View className={`h-1.5 w-1.5 rounded-full ${PAIN_BG[dorMaxima]}`} /> : null}
+        {temCrise ? (
+          <View
+            className={`h-1.5 w-1.5 rounded-full ${PAIN_BG[dorMaxima]} ${precisaDeContorno ? 'border border-content' : ''}`}
+          />
+        ) : null}
         {temEvento ? <View className="h-1.5 w-1.5 bg-secondary" /> : null}
       </View>
       {hoje && !selecionado ? (

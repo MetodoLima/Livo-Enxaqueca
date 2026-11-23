@@ -9,6 +9,8 @@ import {
   type ViewStyle,
 } from 'react-native';
 import Text from '@/components/ui/Text';
+import { painNeedsContrastOutline } from '@/constants/painPresentation';
+import { useColorPaletteMode } from '@/contexts/ColorThemeContext';
 import { INTENSITY_CONFIG } from '@/types/crisis';
 
 const VALORES = [10, 9, 8, 7, 6, 5, 4, 3, 2, 1, 0];
@@ -54,10 +56,12 @@ interface IntensityMarkerProps {
 }
 
 export function IntensityMarker({ value, showLabel = true }: IntensityMarkerProps) {
+  const mode = useColorPaletteMode();
   const label = INTENSITY_CONFIG[value].label;
+  const outline = painNeedsContrastOutline(mode, value) ? 'border border-content' : '';
   return (
     <View className="flex-row items-center gap-2">
-      <View className={`h-3 w-3 rounded-full ${PAIN_BG[value]}`} />
+      <View className={`h-3 w-3 rounded-full ${PAIN_BG[value]} ${outline}`} />
       <Text weight="semibold">{showLabel && label ? `${value} · ${label}` : `${value}`}</Text>
     </View>
   );
@@ -71,6 +75,7 @@ interface IntensityScaleProps {
 }
 
 export default function IntensityScale({ value: inicial, onChange, className = '', style }: IntensityScaleProps) {
+  const mode = useColorPaletteMode();
   const [value, setValue] = useState<number | null>(inicial);
   const [alturaDisponivel, setAlturaDisponivel] = useState(0);
 
@@ -195,7 +200,7 @@ export default function IntensityScale({ value: inicial, onChange, className = '
               {VALORES.map((n) => (
                 <View key={n} className="items-center justify-center" style={{ height: alturaDaLinha }}>
                   <View
-                    className={`w-4 rounded-sm ${PAIN_BG[n]}`}
+                    className={`w-4 rounded-sm ${PAIN_BG[n]} ${painNeedsContrastOutline(mode, n) ? 'border border-content' : ''}`}
                     style={{ height: Math.max(0, alturaDaLinha - 4) }}
                   />
                 </View>
